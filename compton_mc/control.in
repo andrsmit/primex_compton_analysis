@@ -1,0 +1,37 @@
+INFILE 'compton_gen.hddm'
+
+TRIG 1000000
+RUNG 61321
+
+BEAM 11.6061 0.0 3.0 76.00 0.005 10.e-9 20.e-6 1e-3 -0.0 +0.0
+c BGRATE 0
+
+VERTEX 'beam_spot(0.0784,-0.0532,64.939,0.0625,0.0,0.0729,0.0,0.0) * 1.7755'
+
+OUTFILE 'compton_rec.hddm'
+
+POSTSMEAR 1
+DELETEUNSMEARED 0
+c MCSMEAROPTS '-t5 -d0'
+
+RNDM 3
+
+TOFMAX 1e-5
+
+CKOV 1
+LABS 1
+
+c The following card tells the simulation to store particle trajectories
+c in the event output stream.  This output can be verbose, use with caution.
+c The value set here determines the amount of output recorded:
+c
+c TRAJECTORIES = 0  don't store trajectory info
+c TRAJECTORIES = 1  store birth and death points of primary tracks
+c TRAJECTORIES = 2  store birth and death points of all particles
+c TRAJECTORIES = 3  store full trajectory of primary tracks
+c TRAJECTORIES = 4  store full trajectory of primary tracks and birth/death points of secondaries
+c TRAJECTORIES = 5  store full trajectory for all particles
+c
+c TRAJECTORIES 4
+
+END
