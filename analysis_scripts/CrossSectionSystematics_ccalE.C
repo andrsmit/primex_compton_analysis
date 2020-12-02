@@ -4,6 +4,7 @@ char   tagh_flux_fname[256],  empty_target_tagh_flux_fname[256];
 char   tagm_flux_fname[256],  empty_target_tagm_flux_fname[256];
 char tagh_xscale_fname[256],             tagm_xscale_fname[256];
 char        hname_tagh[256],                    hname_tagm[256];
+char    hname_tagh_sim[256],                hname_tagm_sim[256];
 char            mc_dir[256];
 
 double endpoint_energy, endpoint_energy_calib;
@@ -17,15 +18,18 @@ double       tagh_fluxE[274],       tagm_fluxE[102];
 double  tagh_flux_empty[274],  tagm_flux_empty[102];
 double tagh_fluxE_empty[274], tagm_fluxE_empty[102];
 
-double tagh_acc[274], tagh_accE[274];
-double tagm_acc[102], tagm_accE[102];
+double  tagh_yield[274],  tagm_yield[102];
+double tagh_yieldE[274], tagm_yieldE[102];
+double    tagh_acc[274],    tagm_acc[102];
+double   tagh_accE[274],   tagm_accE[102];
+double     tagh_cs[274],     tagm_cs[102];
+double    tagh_csE[274],    tagm_csE[102];
+
 
 //----------   Function Declarations   ----------//
 
 void get_flux();
 void get_counter_energies();
-
-void get_acc();
 
 int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE, double &chi2 );
 int get_acc(   int tag_sys, int counter, double &acc, double &accE );
@@ -42,7 +46,7 @@ Double_t line_shape_fit( Double_t *x, Double_t *par );
 double bin_size = 8. / 2000.;
 int rebins, n_mev;
 
-double ne, mb;
+double ne, neE, mb;
 TF1 *f_theory;
 
 vector<double> comp_sim_hist;
@@ -55,16 +59,20 @@ TPad *top_pad, *bot_pad;
 
 
 
-void CrossSection()
+void CrossSectionSystematics_ccalE()
 {
+	
+	
+	double ccalE  = 6.0;
+	int ccalE_int = (int)(ccalE*10);
 	
 	
 	const char pathName[256] = "/work/halld/home/andrsmit/primex_compton_analysis";
 	
 	// file names for the full and empty target root files:
 	
-	sprintf( root_fname,              "%s/data/rootFiles/Be.root",       pathName );
-	sprintf( empty_target_root_fname, "%s/data/rootFiles/Be_empty.root", pathName );
+	sprintf( root_fname,              "%s/data/rootFiles_systematics/Be.root",       pathName );
+	sprintf( empty_target_root_fname, "%s/data/rootFiles_systematics/Be_empty.root", pathName );
 	
 	// photon flux file names:
 	
@@ -85,12 +93,14 @@ void CrossSection()
 	
 	// Name of histograms for fitting yield:
 	
-	sprintf( hname_tagh, "DeltaK/deltaK_tagh_ep" );
-	sprintf( hname_tagm, "DeltaK/deltaK_tagm_ep" );
+	sprintf( hname_tagh, "compton_systematics/ccalE/deltaK_tagh_%02dccalE", ccalE_int );
+	sprintf( hname_tagm, "compton_systematics/ccalE/deltaK_tagm_%02dccalE", ccalE_int );
+	sprintf( hname_tagh_sim, "compton_systematics_sim/ccalE/deltaK_tagh_%02dccalE", ccalE_int );
+	sprintf( hname_tagm_sim, "compton_systematics_sim/ccalE/deltaK_tagm_%02dccalE", ccalE_int );
 	
 	// Directory where mc rootFiles are stored:
 	
-	sprintf( mc_dir, "%s/compton_mc/recRootFiles", pathName );
+	sprintf( mc_dir, "%s/compton_mc/recRootFiles_systematics", pathName );
 	
 	
 	
@@ -120,13 +130,15 @@ void CrossSection()
 	const bool DRAW_FITS_TAGM = false;
 	
 	CS_FROM_FIT    = true;
-	FIX_BACKGROUND = false;
+	FIX_BACKGROUND = true;
 	
 	
 	// Number of electrons in target:
 	
 	ne = 8.77937e+23; // number of electrons per cm^2
 	mb = 1.e-27;
+	
+	neE = ne * 0.0015;
 	
 	
 	//------------------------------------------------//
@@ -135,7 +147,23 @@ void CrossSection()
 	
 	get_flux();
 	get_counter_energies();
-	get_acc();
+	
+	for( int ic = 0; ic < 274; ic++ ) {
+		tagh_yield[ic]  = 0.;
+		tagh_yieldE[ic] = 0.;
+		tagh_acc[ic]    = 0.;
+		tagh_accE[ic]   = 0.;
+		tagh_cs[ic]     = 0.;
+		tagh_csE[ic]    = 0.;
+	}
+	for( int ic = 0; ic < 102; ic++ ) {
+		tagm_yield[ic]  = 0.;
+		tagm_yieldE[ic] = 0.;
+		tagm_acc[ic]    = 0.;
+		tagm_accE[ic]   = 0.;
+		tagm_cs[ic]     = 0.;
+		tagm_csE[ic]    = 0.;
+	}
 	
 	
 	TFile *fFull  = new TFile( root_fname,               "READ" );
@@ -178,7 +206,6 @@ void CrossSection()
 	canvas2->cd();
 	top_pad->Draw();
 	bot_pad->Draw();
-	
 	
 	
 	
@@ -271,7 +298,7 @@ void CrossSection()
 		// Skip counters that have no flux:
 		
 		if( loc_flux <= 0. || loc_flux_empty <= 0. ) {
-			cout << "Skipping TAGH counter " << tagh_counter << endl;
+			cout << "Skipping TAGH counter " << tagh_counter << " (no flux)" << endl;
 			continue;
 		}
 		
@@ -281,7 +308,7 @@ void CrossSection()
 			tagh_counter, tagh_counter );
 		
 		if( h1->Integral() < 1.e1 ) {
-			cout << "Skipping TAGH counter " << tagh_counter << endl;
+			cout << "Skipping TAGH counter " << tagh_counter << " (no events)" << endl;
 			continue;
 		}
 		
@@ -325,6 +352,22 @@ void CrossSection()
 		acc1EVec.push_back( loc_accE );
 		
 		chi21Vec.push_back( loc_chi2 );
+		
+		tagh_yield[tagh_counter-1]  = loc_yield;
+		tagh_yieldE[tagh_counter-1] = loc_yieldE;
+		tagh_acc[tagh_counter-1]    = loc_acc;
+		tagh_accE[tagh_counter-1]   = loc_accE;
+		
+		double locCS   = loc_yield / (loc_flux * loc_acc * ne * mb);
+		double locCSE  = sqrt( 
+			  pow( loc_yieldE / (loc_flux*loc_acc*ne*mb), 2.0)
+			+ pow( loc_yield*loc_fluxE/(loc_flux*loc_flux*loc_acc*ne*mb), 
+				2.0 )
+			+ pow( loc_yield*loc_accE/(loc_flux*loc_acc*loc_acc*ne*mb), 2.0 )
+			+ pow( loc_yield*neE/(loc_flux*loc_acc*ne*ne*mb), 2.0 ) );
+		
+		tagh_cs[tagh_counter-1]     = locCS;
+		tagh_csE[tagh_counter-1]    = locCSE;
 		
 		if( DRAW_FITS_TAGH ) {
 			canvas->Update();
@@ -397,6 +440,22 @@ void CrossSection()
 		acc2EVec.push_back( loc_accE );
 		
 		chi22Vec.push_back( loc_chi2 );
+		
+		tagm_yield[tagm_counter-1]  = loc_yield;
+		tagm_yieldE[tagm_counter-1] = loc_yieldE;
+		tagm_acc[tagm_counter-1]    = loc_acc;
+		tagm_accE[tagm_counter-1]   = loc_accE;
+		
+		double locCS   = loc_yield / (loc_flux * loc_acc * ne * mb);
+		double locCSE  = sqrt( 
+			  pow( loc_yieldE / (loc_flux*loc_acc*ne*mb), 2.0)
+			+ pow( loc_yield*loc_fluxE/(loc_flux*loc_flux*loc_acc*ne*mb), 
+				2.0 )
+			+ pow( loc_yield*loc_accE/(loc_flux*loc_acc*loc_acc*ne*mb), 2.0 )
+			+ pow( loc_yield*neE/(loc_flux*loc_acc*ne*ne*mb), 2.0 ) );
+		
+		tagm_cs[tagm_counter-1]     = locCS;
+		tagm_csE[tagm_counter-1]    = locCSE;
 		
 		if( DRAW_FITS_TAGM ) {
 			canvas->Update();
@@ -663,43 +722,28 @@ void CrossSection()
 	lat3.DrawLatexNDC(0.15,0.80,"Preliminary");
 	
 	
+	char buf[256];
 	
-	
-	return;
-}
-
-
-
-
-void get_acc() 
-{
-	
-	int a; double b, c, d;
-	
-	for( int i=0; i<274; i++ ) {
-		tagh_acc[i]  = 0.;
-		tagh_accE[i] = 0.;
+	ofstream outf_tagh( Form("tagh_ccalE_%02d.txt", ccalE_int) );
+	for( int tagh_counter = 1; tagh_counter <= 274; tagh_counter++ ) {
+		sprintf( buf, "%03d   %2.4f   %f   %f   %f   %f   %f   %f", tagh_counter, 
+			tagh_en[tagh_counter-1], tagh_cs[tagh_counter-1], tagh_csE[tagh_counter-1], 
+			tagh_yield[tagh_counter-1], tagh_yieldE[tagh_counter-1], 
+			tagh_acc[tagh_counter-1], tagh_accE[tagh_counter-1] );
+		outf_tagh << buf << "\n";
 	}
-	for( int i=0; i<102; i++ ) {
-		tagm_acc[i]  = 0.;
-		tagm_accE[i] = 0.;
-	}
+	outf_tagh.close();
 	
-	ifstream inf1( "tagh_acc.dat" );
-	for( int i=0; i<274; i++ ) {
-		inf1 >> a >> b >> c >> d;
-		tagh_acc[i]  = c;
-		tagh_accE[i] = d;
+	ofstream outf_tagm( Form("tagm_ccalE_%02d.txt", ccalE_int) );
+	for( int tagm_counter = 1; tagm_counter <= 102; tagm_counter++ ) {
+		sprintf( buf, "%03d   %2.4f   %f   %f   %f   %f   %f   %f", tagm_counter, 
+			tagm_en[tagm_counter-1], tagm_cs[tagm_counter-1], tagm_csE[tagm_counter-1], 
+			tagm_yield[tagm_counter-1], tagm_yieldE[tagm_counter-1], 
+			tagm_acc[tagm_counter-1], tagm_accE[tagm_counter-1] );
+		outf_tagm << buf << "\n";
 	}
-	inf1.close();
+	outf_tagm.close();
 	
-	ifstream inf2( "tagm_acc.dat" );
-	for( int i=0; i<102; i++ ) {
-		inf2 >> a >> b >> c >> d;
-		tagm_acc[i]  = c;
-		tagm_accE[i] = d;
-	}
-	inf2.close();
 	
 	
 	return;
@@ -1052,11 +1096,16 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 	f_fit->Draw("same");
 	f_draw->Draw("same");
 	
+	
+	TH1F *h1_log = (TH1F*)h1->Clone( Form("h1_log_%d_%d",tag_sys,counter) );
+	h1_log->SetMinimum(1.);
+	
 	pad_log->cd();
-	h1->Draw();
+	h1_log->Draw();
 	f_fit->Draw("same");
 	f_draw->Draw("same");
 	
+	//canvas->Update();
 	
 	TH1F *h1_dev = new TH1F( Form("h1_dev_%d_%d",tag_sys,counter), "", 
 		h1->GetXaxis()->GetNbins(), -4.0, 4.0 );
@@ -1135,9 +1184,12 @@ int get_acc(  int tag_sys, int counter, double &acc, double &accE )
 	}
 	
 	
-	TFile *fSim = new TFile( fname, "READ" );
 	
-	TH1F *hbeam  = (TH1F*)fSim->Get( "beam" )->Clone( Form("h_beam_%d_%d",tag_sys,counter) );
+	
+	TFile *fSim  = new TFile( fname,  "READ" );
+	
+	TH1F *hbeam  = (TH1F*)fSim->Get( "compton_systematics_sim/beam" )->Clone( 
+		Form("h_beam_%d_%d",tag_sys,counter) );
 	double n_gen = 2.5e5 * (double)hbeam->GetMean();
 	
 	TH2F *h2;
@@ -1147,13 +1199,13 @@ int get_acc(  int tag_sys, int counter, double &acc, double &accE )
 		h2 = new TH2F( Form("h2_tagh_%d",counter), "DeltaK", 
 			274, 0.5, 274.5, 2000, -4.0, 4.0 );
 		
-		h2->Add( (TH2F*)fSim->Get(Form("%s",hname_tagh)) );
+		h2->Add( (TH2F*)fSim->Get(Form("%s",hname_tagh_sim)) );
 	} else {
 		
 		h2 = new TH2F( Form("h2_tagm_%d",counter), "DeltaK", 
 			102, 0.5, 102.5, 2000, -4.0, 4.0 );
 		
-		h2->Add( (TH2F*)fSim->Get(Form("%s",hname_tagm)) );
+		h2->Add( (TH2F*)fSim->Get(Form("%s",hname_tagm_sim)) );
 	}
 	
 	h2->SetDirectory(0);
@@ -1162,7 +1214,7 @@ int get_acc(  int tag_sys, int counter, double &acc, double &accE )
 	
 	
 	TH1F *h1 = (TH1F*)h2->ProjectionY( Form("h1_sim_%d_%d",tag_sys,counter) );
-	if( h1->Integral() < 1.e1 ) return 0;
+	if( h1->Integral() < 1.e1 ) { cout << "no sim events" << endl; return 0; }
 	
 	
 	h1->Rebin(rebins);
@@ -1274,7 +1326,8 @@ int fit_yield_ls( int tag_sys, int counter, TH1F *h1, double &yield, double &yie
 	
 	TFile *fSim = new TFile( fname, "READ" );
 	
-	TH1F *hbeam  = (TH1F*)fSim->Get( "beam" )->Clone( Form("h_beam_%d_%d",tag_sys,counter) );
+	TH1F *hbeam  = (TH1F*)fSim->Get( "compton_systematics_sim/beam" )->Clone( 
+		Form("h_beam_%d_%d",tag_sys,counter) );
 	double n_gen = 2.5e5 * (double)hbeam->GetMean();
 	
 	if( n_gen < 1.e3 ) return 0;
@@ -1286,13 +1339,13 @@ int fit_yield_ls( int tag_sys, int counter, TH1F *h1, double &yield, double &yie
 		h2 = new TH2F( Form("h2_tagh_%d",counter), "DeltaK", 
 			274, 0.5, 274.5, 2000, -4.0, 4.0 );
 		
-		h2->Add( (TH2F*)fSim->Get(Form("%s",hname_tagh)) );
+		h2->Add( (TH2F*)fSim->Get(Form("%s",hname_tagh_sim)) );
 	} else {
 		
 		h2 = new TH2F( Form("h2_tagm_%d",counter), "DeltaK", 
 			102, 0.5, 102.5, 2000, -4.0, 4.0 );
 		
-		h2->Add( (TH2F*)fSim->Get(Form("%s",hname_tagm)) );
+		h2->Add( (TH2F*)fSim->Get(Form("%s",hname_tagm_sim)) );
 	}
 	
 	h2->SetDirectory(0);
