@@ -3,6 +3,7 @@ char        root_fname[256],       empty_target_root_fname[256];
 char   tagh_flux_fname[256],  empty_target_tagh_flux_fname[256];
 char   tagm_flux_fname[256],  empty_target_tagm_flux_fname[256];
 char tagh_xscale_fname[256],             tagm_xscale_fname[256];
+char   tagh_fabs_fname[256],               tagm_fabs_fname[256];
 char        hname_tagh[256],                    hname_tagm[256];
 char            mc_dir[256];
 
@@ -12,20 +13,30 @@ bool CS_FROM_FIT;
 bool FIX_BACKGROUND;
 
 double          tagh_en[274],          tagm_en[102];
+
 double        tagh_flux[274],        tagm_flux[102];
 double       tagh_fluxE[274],       tagm_fluxE[102];
+
 double  tagh_flux_empty[274],  tagm_flux_empty[102];
 double tagh_fluxE_empty[274], tagm_fluxE_empty[102];
 
-double tagh_acc[274], tagh_accE[274];
-double tagm_acc[102], tagm_accE[102];
+double       tagh_yield[274],       tagm_yield[102];
+double      tagh_yieldE[274],      tagm_yieldE[102];
+
+double         tagh_acc[274],         tagm_acc[102];
+double        tagh_accE[274],        tagm_accE[102];
+
+double        tagh_fabs[274],        tagm_fabs[102];
+double       tagh_fabsE[274],       tagm_fabsE[102];
+
 
 //----------   Function Declarations   ----------//
 
 void get_flux();
 void get_counter_energies();
+void get_fabs();
 
-void get_acc();
+void calc_cs( int tag_sys, int counter, double &cs, double &csE );
 
 int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE, double &chi2 );
 int get_acc(   int tag_sys, int counter, double &acc, double &accE );
@@ -42,7 +53,7 @@ Double_t line_shape_fit( Double_t *x, Double_t *par );
 double bin_size = 8. / 2000.;
 int rebins, n_mev;
 
-double ne, mb;
+double ne, mb, neE;
 TF1 *f_theory;
 
 vector<double> comp_sim_hist;
@@ -78,10 +89,15 @@ void CrossSection()
 	sprintf( tagh_xscale_fname, "%s/photon_flux/primex_tagh.txt", pathName );
 	sprintf( tagm_xscale_fname, "%s/photon_flux/primex_tagm.txt", pathName );
 	
+	// files containing the absorption factors for the tagh and tagm counters:
+	
+	sprintf( tagh_fabs_fname, "%s/photon_absorption/Be_tagh_fabs.dat", pathName );
+	sprintf( tagm_fabs_fname, "%s/photon_absorption/Be_tagm_fabs.dat", pathName );
+	
+	endpoint_energy_calib = 11.6061;
 	endpoint_energy       = 11.6061; // Be 200 nA data
 	//endpoint_energy       = 11.1671; // He  50 nA data
 	//endpoint_energy       = 11.1664; // He 100 nA data
-	endpoint_energy_calib = 11.6061;
 	
 	// Name of histograms for fitting yield:
 	
@@ -111,8 +127,6 @@ void CrossSection()
 	}
 	
 	
-	double f_abs = 1.0;
-	
 	
 	// Adjustable switches:
 	
@@ -120,13 +134,34 @@ void CrossSection()
 	const bool DRAW_FITS_TAGM = false;
 	
 	CS_FROM_FIT    = true;
-	FIX_BACKGROUND = false;
+	FIX_BACKGROUND = true;
 	
 	
 	// Number of electrons in target:
 	
-	ne = 8.77937e+23; // number of electrons per cm^2
-	mb = 1.e-27;
+	ne  = 8.77937e+23; // number of electrons per cm^2
+	mb  = 1.e-27;
+	
+	neE = 0.015 * ne;
+	
+	
+	for( int i = 0; i < 274; i++ ) {
+		
+		tagh_yield[i]  = 0.;
+		tagh_yieldE[i] = 0.;
+		tagh_acc[i]    = 0.;
+		tagh_accE[i]   = 0.;
+		
+	}
+	for( int i = 0; i < 102; i++ ) {
+		
+		tagm_yield[i]  = 0.;
+		tagm_yieldE[i] = 0.;
+		tagm_acc[i]    = 0.;
+		tagm_accE[i]   = 0.;
+		
+	}
+	
 	
 	
 	//------------------------------------------------//
@@ -135,7 +170,7 @@ void CrossSection()
 	
 	get_flux();
 	get_counter_energies();
-	get_acc();
+	get_fabs();
 	
 	
 	TFile *fFull  = new TFile( root_fname,               "READ" );
@@ -256,10 +291,8 @@ void CrossSection()
 	
 	
 	
-	vector<double>  en1Vec, yield1Vec, yield1EVec,  flux1Vec, flux1EVec, chi21Vec;
-	vector<double>  en2Vec, yield2Vec, yield2EVec,  flux2Vec, flux2EVec, chi22Vec;
-	vector<double> acc1Vec,  acc1EVec,    acc2Vec,  acc2EVec;
-	
+	vector<int>  tagh_counterVec, tagm_counterVec;
+	vector<double>  tagh_chi2Vec,    tagm_chi2Vec;
 	
 	for( int tagh_counter = 1; tagh_counter <= 274; tagh_counter++ ) {
 		
@@ -297,34 +330,25 @@ void CrossSection()
 		
 		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0.;
 		int fit_val = fit_yield( 0, tagh_counter, h1, loc_yield, loc_yieldE, loc_chi2 );
-		//int fit_val = fit_yield_ls( 0, tagh_counter, h1, loc_yield, loc_yieldE, loc_chi2 );
 		if( fit_val <= 0 ) continue;
 		
 		double loc_acc = 0., loc_accE = 0.;;
 		int acc_val  = get_acc( 0, tagh_counter, loc_acc, loc_accE );
 		if( acc_val <= 0 ) continue;
 		
-		//double loc_acc  = tagh_acc[tagh_counter-1];
-		//double loc_accE = tagh_accE[tagh_counter-1];
-		
 		if( loc_acc <= 0. ) {
 			cout << "zero acceptance in TAGH counter " << tagh_counter << endl;
 			continue;
 		}
 		
+		tagh_yield[tagh_counter-1]  = loc_yield;
+		tagh_yieldE[tagh_counter-1] = loc_yieldE;
 		
-		en1Vec.push_back( eb );
+		tagh_acc[tagh_counter-1]    = loc_acc;
+		tagh_accE[tagh_counter-1]   = loc_accE;
 		
-		yield1Vec.push_back( loc_yield );
-		yield1EVec.push_back( loc_yieldE );
-		
-		flux1Vec.push_back( loc_flux );
-		flux1EVec.push_back( loc_fluxE );
-		
-		acc1Vec.push_back( loc_acc );
-		acc1EVec.push_back( loc_accE );
-		
-		chi21Vec.push_back( loc_chi2 );
+		tagh_counterVec.push_back( tagh_counter );
+		tagh_chi2Vec.push_back( loc_chi2 );
 		
 		if( DRAW_FITS_TAGH ) {
 			canvas->Update();
@@ -370,33 +394,25 @@ void CrossSection()
 		
 		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0.;
 		int fit_val = fit_yield( 1, tagm_counter, h1, loc_yield, loc_yieldE, loc_chi2 );
-		//int fit_val = fit_yield_ls( 1, tagm_counter, h1, loc_yield, loc_yieldE, loc_chi2 );
 		if( fit_val <= 0 ) continue;
 		
 		double loc_acc = 0., loc_accE = 0.;
 		int acc_val  = get_acc( 1, tagm_counter, loc_acc, loc_accE );
 		if( acc_val <= 0 ) continue;
 		
-		//double loc_acc  = tagm_acc[tagm_counter-1];
-		//double loc_accE = tagm_accE[tagm_counter-1];
-		
 		if( loc_acc <= 0. ) {
 			cout << "zero acceptance in TAGM counter " << tagm_counter << endl;
 			continue;
 		}
 		
-		en2Vec.push_back( eb );
+		tagm_yield[tagm_counter-1]  = loc_yield;
+		tagm_yieldE[tagm_counter-1] = loc_yieldE;
 		
-		yield2Vec.push_back( loc_yield );
-		yield2EVec.push_back( loc_yieldE );
+		tagm_acc[tagm_counter-1]    = loc_acc;
+		tagm_accE[tagm_counter-1]   = loc_accE;
 		
-		flux2Vec.push_back( loc_flux );
-		flux2EVec.push_back( loc_fluxE );
-		
-		acc2Vec.push_back( loc_acc );
-		acc2EVec.push_back( loc_accE );
-		
-		chi22Vec.push_back( loc_chi2 );
+		tagm_counterVec.push_back( tagm_counter );
+		tagm_chi2Vec.push_back( loc_chi2 );
 		
 		if( DRAW_FITS_TAGM ) {
 			canvas->Update();
@@ -409,75 +425,77 @@ void CrossSection()
 	
 	
 	
-	int n_bins1 = (int)en1Vec.size();
+	int n_bins1 = (int)tagh_counterVec.size();
 	
 	double *energy1  = new double[n_bins1];
 	double *energy1E = new double[n_bins1];
 	double *cs1      = new double[n_bins1];
 	double *cs1E     = new double[n_bins1];
 	
+	double *dev1     = new double[n_bins1];
+	double *dev1e    = new double[n_bins1];
+	
 	double *chi21    = new double[n_bins1];
+	
 	
 	for( int ib = 0; ib < n_bins1; ib++ ) {
 		
-		energy1[ib]    = en1Vec[ib];
-		energy1E[ib]   = 0.0;
+		int counter     = tagh_counterVec[ib];
 		
-		double locAcc  = acc1Vec[ib];
-		double locAccE = acc1EVec[ib];
-		double neE     = ne * 0.0015;
+		energy1[ib]     = tagh_en[tagh_counterVec[ib]-1];
+		energy1E[ib]    = 0.;
 		
-		double locCS   = yield1Vec[ib] / (flux1Vec[ib] * locAcc * ne * mb);
-		double locCSE  = sqrt( 
-			  pow( yield1EVec[ib] / (flux1Vec[ib]*locAcc*ne*mb), 2.0)
-			+ pow( yield1Vec[ib]*flux1EVec[ib]/(flux1Vec[ib]*flux1Vec[ib]*locAcc*ne*mb), 
-				2.0 )
-			+ pow( yield1Vec[ib]*locAccE/(flux1Vec[ib]*locAcc*locAcc*ne*mb), 2.0 )
-			+ pow( yield1Vec[ib]*neE/(flux1Vec[ib]*locAcc*ne*ne*mb), 2.0 ) );
+		double locCS    = 0., locCSE = 0.;
+		calc_cs( 0, counter, locCS, locCSE );
 		
-		locCS         /= f_abs;
+		cs1[ib]         = locCS;
+		cs1E[ib]        = locCSE;
 		
-		cs1[ib]        = locCS;
-		cs1E[ib]       = locCSE;
+		double theoryCS = f_theory->Eval( tagh_en[counter-1] );
 		
-		chi21[ib]      = chi21Vec[ib];
+		dev1[ib]        = 100. * (locCS - theoryCS) / theoryCS;
+		dev1e[ib]       = sqrt( pow(100.*locCSE/theoryCS,2.0) );
+		
+		chi21[ib]       = tagh_chi2Vec[ib];
 	}
 	
 	
-	int n_bins2 = (int)en2Vec.size();
+	int n_bins2 = (int)tagm_counterVec.size();
 	
 	double *energy2  = new double[n_bins2];
 	double *energy2E = new double[n_bins2];
 	double *cs2      = new double[n_bins2];
 	double *cs2E     = new double[n_bins2];
 	
+	double *dev2     = new double[n_bins2];
+	double *dev2e    = new double[n_bins2];
+	
 	double *chi22    = new double[n_bins2];
 	
 	for( int ib = 0; ib < n_bins2; ib++ ) {
 		
-		energy2[ib]    = en2Vec[ib];
-		energy2E[ib]   = 0.0;
+		int counter     = tagm_counterVec[ib];
 		
-		double locAcc  = acc2Vec[ib];
-		double locAccE = acc2EVec[ib];
-		double neE     = ne * 0.0015;
+		energy2[ib]     = tagm_en[tagm_counterVec[ib]-1];
+		energy2E[ib]    = 0.;
 		
-		double locCS   = yield2Vec[ib] / (flux2Vec[ib] * locAcc * ne * mb);
-		double locCSE  = sqrt( 
-			  pow( yield2EVec[ib] / (flux2Vec[ib]*locAcc*ne*mb), 2.0)
-			+ pow( yield2Vec[ib]*flux2EVec[ib]/(flux2Vec[ib]*flux2Vec[ib]*locAcc*ne*mb), 
-				2.0 )
-			+ pow( yield2Vec[ib]*locAccE/(flux2Vec[ib]*locAcc*locAcc*ne*mb), 2.0 )
-			+ pow( yield2Vec[ib]*neE/(flux2Vec[ib]*locAcc*ne*ne*mb), 2.0 ) );
+		double locCS    = 0., locCSE = 0.;
+		calc_cs( 1, counter, locCS, locCSE );
 		
-		locCS         /= f_abs;
+		cs2[ib]         = locCS;
+		cs2E[ib]        = locCSE;
 		
-		cs2[ib]        = locCS;
-		cs2E[ib]       = locCSE; 
+		double theoryCS = f_theory->Eval( tagm_en[counter-1] );
+		
+		dev2[ib]        = 100. * (locCS - theoryCS) / theoryCS;
+		dev2e[ib]       = sqrt( pow(100.*locCSE/theoryCS,2.0) );
 			
-		chi22[ib]      = chi22Vec[ib];
+		chi22[ib]       = tagm_chi2Vec[ib];
 	}
 	
+	
+	
+	//-----   Plot Cross Section   -----//
 	
 	TGraphErrors *gCS1 = new TGraphErrors( n_bins1, energy1, cs1, energy1E, cs1E );
 	gCS1->GetXaxis()->SetTitle( "Photon Beam Energy [GeV]" );
@@ -506,55 +524,7 @@ void CrossSection()
 	g_theory->Draw( "same" );
 	
 	
-	
-	
-	
-	TGraph *gChi21 = new TGraph( n_bins1, energy1, chi21 );
-	gChi21->GetXaxis()->SetTitle( "Photon Beam Energy [GeV]" );
-	gChi21->GetYaxis()->SetTitle( "#chi^{2} / n.d.f" );
-	gChi21->SetTitle( "#chi^{2} From Yield Fit" );
-	gChi21->SetMarkerStyle(8);
-	gChi21->SetMarkerColor( kBlue );
-	
-	TGraph *gChi22 = new TGraph( n_bins2, energy2, chi22 );
-	gChi22->GetXaxis()->SetTitle( "Photon Beam Energy [GeV]" );
-	gChi22->GetYaxis()->SetTitle( "#chi^{2} / n.d.f" );
-	gChi22->SetTitle( "#chi^{2} From Yield Fit" );
-	gChi22->SetMarkerStyle(8);
-	gChi22->SetMarkerColor( kGreen );
-	
-	TCanvas *cChi2 = new TCanvas( "cChi2", "cChi2", 1000, 600 );
-	cChi2->SetTickx(); cChi2->SetTicky();
-	gChi21->Draw( "AP" );
-	gChi22->Draw( "P same" );
-	
-	
-	
-	double *dev1  = new double[n_bins1];
-	double *dev1e = new double[n_bins1];
-	double *dev2  = new double[n_bins2];
-	double *dev2e = new double[n_bins2];
-	
-	for( int ib = 0; ib < n_bins1; ib++ ) {
-		
-		double theoryCS = f_theory->Eval( energy1[ib] );
-		double expCS    = cs1[ib];
-		double expCSe   = cs1E[ib];
-		
-		dev1[ib]  = 100. * (expCS - theoryCS) / theoryCS;
-		dev1e[ib] = sqrt( pow(100.*expCSe/theoryCS,2.0) );
-	}
-	
-	
-	for( int ib = 0; ib < n_bins2; ib++ ) {
-		
-		double theoryCS = f_theory->Eval( energy2[ib] );
-		double expCS    = cs2[ib];
-		double expCSe   = cs2E[ib];
-		
-		dev2[ib]  = 100. * (expCS - theoryCS) / theoryCS;
-		dev2e[ib] = sqrt( pow(100.*expCSe/theoryCS,2.0) );
-	}
+	//-----   Plot Cross Section Residuals  -----//
 	
 	TGraphErrors *gDev1 = new TGraphErrors( n_bins1, energy1, dev1, energy1E, dev1e );
 	gDev1->SetTitle( "Relative Error of Compton Cross Section" );
@@ -590,6 +560,30 @@ void CrossSection()
 	
 	
 	
+	//-----   Plot Yield Fit Chi-2   -----//
+	
+	TGraph *gChi21 = new TGraph( n_bins1, energy1, chi21 );
+	gChi21->GetXaxis()->SetTitle( "Photon Beam Energy [GeV]" );
+	gChi21->GetYaxis()->SetTitle( "#chi^{2} / n.d.f" );
+	gChi21->SetTitle( "#chi^{2} From Yield Fit" );
+	gChi21->SetMarkerStyle(8);
+	gChi21->SetMarkerColor( kBlue );
+	
+	TGraph *gChi22 = new TGraph( n_bins2, energy2, chi22 );
+	gChi22->GetXaxis()->SetTitle( "Photon Beam Energy [GeV]" );
+	gChi22->GetYaxis()->SetTitle( "#chi^{2} / n.d.f" );
+	gChi22->SetTitle( "#chi^{2} From Yield Fit" );
+	gChi22->SetMarkerStyle(8);
+	gChi22->SetMarkerColor( kGreen );
+	
+	TCanvas *cChi2 = new TCanvas( "cChi2", "cChi2", 1000, 600 );
+	cChi2->SetTickx(); cChi2->SetTicky();
+	gChi21->Draw( "AP" );
+	gChi22->Draw( "P same" );
+	
+	
+	
+	
 	
 	
 	TCanvas *canvas3 = new TCanvas( "canvas3", "canvas3", 1200, 900 );
@@ -613,7 +607,6 @@ void CrossSection()
 	canvas3->cd();
 	top_pad3->Draw();
 	bot_pad3->Draw();
-	
 	
 	gCS1->GetYaxis()->SetRangeUser(0.,0.35);
 	gCS1->GetXaxis()->SetRangeUser(6.,11.);
@@ -645,59 +638,39 @@ void CrossSection()
 	
 	
 	
-	
-	
-	top_pad3->cd();
-	TLatex lat3;
-	lat3.DrawLatexNDC(0.15,0.80,"Preliminary");
-	
-	
-	
-	TCanvas *canvas4 = new TCanvas("canvas4","canvas4",1000,600);
-	canvas4->SetTickx(); canvas4->SetTicky();
-	
-	gCS1->GetXaxis()->SetLabelOffset(0);
-	gCS1->Draw("AP");
-	gCS2->Draw("P same");
-	g_theory->Draw("same");
-	lat3.DrawLatexNDC(0.15,0.80,"Preliminary");
-	
-	
-	
-	
 	return;
 }
 
 
 
 
-void get_acc() 
+void get_fabs() 
 {
 	
 	int a; double b, c, d;
 	
 	for( int i=0; i<274; i++ ) {
-		tagh_acc[i]  = 0.;
-		tagh_accE[i] = 0.;
+		tagh_fabs[i]  = 0.;
+		tagh_fabsE[i] = 0.;
 	}
 	for( int i=0; i<102; i++ ) {
-		tagm_acc[i]  = 0.;
-		tagm_accE[i] = 0.;
+		tagm_fabs[i]  = 0.;
+		tagm_fabsE[i] = 0.;
 	}
 	
-	ifstream inf1( "tagh_acc.dat" );
+	ifstream inf1( tagh_fabs_fname );
 	for( int i=0; i<274; i++ ) {
 		inf1 >> a >> b >> c >> d;
-		tagh_acc[i]  = c;
-		tagh_accE[i] = d;
+		tagh_fabs[i]  = b;
+		tagh_fabsE[i] = fabs(0.5*(c-d));
 	}
 	inf1.close();
 	
-	ifstream inf2( "tagm_acc.dat" );
+	ifstream inf2( tagm_fabs_fname );
 	for( int i=0; i<102; i++ ) {
 		inf2 >> a >> b >> c >> d;
-		tagm_acc[i]  = c;
-		tagm_accE[i] = d;
+		tagm_fabs[i]  = b;
+		tagm_fabsE[i] = fabs(0.5*(c-d));
 	}
 	inf2.close();
 	
@@ -776,6 +749,59 @@ void get_counter_energies()
 		tagm_en[i] = 0.5 * (emin + emax);
 	}
 	inf2.close();
+	
+	
+	return;
+}
+
+
+
+void calc_cs( int tag_sys, int counter, double &loc_cs, double &loc_csE )
+{
+	
+	loc_cs = 0., loc_csE = 0.;
+	
+	double loc_yield,  loc_flux,  loc_acc,  loc_fabs;
+	double loc_yieldE, loc_fluxE, loc_accE, loc_fabsE;
+	
+	if( tag_sys==0 ) {
+		
+		loc_yield  = tagh_yield[counter-1];
+		loc_yieldE = tagh_yieldE[counter-1];
+		
+		loc_flux   = tagh_flux[counter-1];
+		loc_fluxE  = tagh_fluxE[counter-1];
+		
+		loc_acc    = tagh_acc[counter-1];
+		loc_accE   = tagh_accE[counter-1];
+		
+		loc_fabs   = 1.0 - tagh_fabs[counter-1];
+		loc_fabsE  = tagh_fabsE[counter-1];
+		
+	} else {
+		
+		loc_yield  = tagm_yield[counter-1];
+		loc_yieldE = tagm_yieldE[counter-1];
+		
+		loc_flux   = tagm_flux[counter-1];
+		loc_fluxE  = tagm_fluxE[counter-1];
+		
+		loc_acc    = tagm_acc[counter-1];
+		loc_accE   = tagm_accE[counter-1];
+		
+		loc_fabs   = 1.0 - tagm_fabs[counter-1];
+		loc_fabsE  = tagm_fabsE[counter-1];
+		
+	}
+	
+	loc_cs   = loc_yield / (loc_flux * loc_acc * ne * mb);
+	loc_csE  = sqrt( 
+			  pow( loc_yieldE / (loc_flux*loc_acc*ne*mb), 2.0)
+			+ pow( loc_yield*loc_fluxE/(loc_flux*loc_flux*loc_acc*ne*mb), 2.0 )
+			+ pow( loc_yield*loc_accE/(loc_flux*loc_acc*loc_acc*ne*mb), 2.0 )
+			+ pow( loc_yield*neE/(loc_flux*loc_acc*ne*ne*mb), 2.0 ) );
+	
+	loc_cs  /= loc_fabs;
 	
 	
 	return;
