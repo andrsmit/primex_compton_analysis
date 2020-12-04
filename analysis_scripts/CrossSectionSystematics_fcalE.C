@@ -3,6 +3,7 @@ char        root_fname[256],       empty_target_root_fname[256];
 char   tagh_flux_fname[256],  empty_target_tagh_flux_fname[256];
 char   tagm_flux_fname[256],  empty_target_tagm_flux_fname[256];
 char tagh_xscale_fname[256],             tagm_xscale_fname[256];
+char   tagh_fabs_fname[256],               tagm_fabs_fname[256];
 char        hname_tagh[256],                    hname_tagm[256];
 char    hname_tagh_sim[256],                hname_tagm_sim[256];
 char            mc_dir[256];
@@ -13,27 +14,36 @@ bool CS_FROM_FIT;
 bool FIX_BACKGROUND;
 
 double          tagh_en[274],          tagm_en[102];
+
 double        tagh_flux[274],        tagm_flux[102];
 double       tagh_fluxE[274],       tagm_fluxE[102];
+
 double  tagh_flux_empty[274],  tagm_flux_empty[102];
 double tagh_fluxE_empty[274], tagm_fluxE_empty[102];
 
-double  tagh_yield[274],  tagm_yield[102];
-double tagh_yieldE[274], tagm_yieldE[102];
-double    tagh_acc[274],    tagm_acc[102];
-double   tagh_accE[274],   tagm_accE[102];
-double     tagh_cs[274],     tagm_cs[102];
-double    tagh_csE[274],    tagm_csE[102];
+double       tagh_yield[274],       tagm_yield[102];
+double      tagh_yieldE[274],      tagm_yieldE[102];
+
+double         tagh_acc[274],         tagm_acc[102];
+double        tagh_accE[274],        tagm_accE[102];
+
+double        tagh_fabs[274],        tagm_fabs[102];
+double       tagh_fabsE[274],       tagm_fabsE[102];
+
+double          tagh_cs[274],          tagm_cs[102];
+double         tagh_csE[274],         tagm_csE[102];
 
 
 //----------   Function Declarations   ----------//
 
 void get_flux();
 void get_counter_energies();
+void get_fabs();
+
+void calc_cs( int tag_sys, int counter, double &cs, double &csE );
 
 int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE, double &chi2 );
 int get_acc(   int tag_sys, int counter, double &acc, double &accE );
-int fit_yield_ls( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE, double &chi2 );
 
 Double_t bkgd_fit( Double_t *x, Double_t *par );
 Double_t crys_ball_fit( Double_t *x, Double_t *par );
@@ -46,7 +56,7 @@ Double_t line_shape_fit( Double_t *x, Double_t *par );
 double bin_size = 8. / 2000.;
 int rebins, n_mev;
 
-double ne, neE, mb;
+double ne, mb, neE;
 TF1 *f_theory;
 
 vector<double> comp_sim_hist;
@@ -62,10 +72,8 @@ TPad *top_pad, *bot_pad;
 void CrossSectionSystematics_fcalE()
 {
 	
-	
 	double fcalE  = 0.95;
 	int fcalE_int = (int)(fcalE*100);
-	
 	
 	const char pathName[256] = "/work/halld/home/andrsmit/primex_compton_analysis";
 	
@@ -86,15 +94,23 @@ void CrossSectionSystematics_fcalE()
 	sprintf( tagh_xscale_fname, "%s/photon_flux/primex_tagh.txt", pathName );
 	sprintf( tagm_xscale_fname, "%s/photon_flux/primex_tagm.txt", pathName );
 	
+	// files containing the absorption factors for the tagh and tagm counters:
+	
+	sprintf( tagh_fabs_fname, "%s/photon_absorption/Be_tagh_fabs.dat", pathName );
+	sprintf( tagm_fabs_fname, "%s/photon_absorption/Be_tagm_fabs.dat", pathName );
+	
+	endpoint_energy_calib = 11.6061;
 	endpoint_energy       = 11.6061; // Be 200 nA data
 	//endpoint_energy       = 11.1671; // He  50 nA data
 	//endpoint_energy       = 11.1664; // He 100 nA data
-	endpoint_energy_calib = 11.6061;
 	
 	// Name of histograms for fitting yield:
 	
 	sprintf( hname_tagh, "compton_systematics/fcalE/deltaK_tagh_%02dfcalE", fcalE_int );
 	sprintf( hname_tagm, "compton_systematics/fcalE/deltaK_tagm_%02dfcalE", fcalE_int );
+	
+	// Name of histograms for fitting yield:
+	
 	sprintf( hname_tagh_sim, "compton_systematics_sim/fcalE/deltaK_tagh_%02dfcalE", fcalE_int );
 	sprintf( hname_tagm_sim, "compton_systematics_sim/fcalE/deltaK_tagm_%02dfcalE", fcalE_int );
 	
@@ -121,8 +137,6 @@ void CrossSectionSystematics_fcalE()
 	}
 	
 	
-	double f_abs = 1.0;
-	
 	
 	// Adjustable switches:
 	
@@ -130,15 +144,38 @@ void CrossSectionSystematics_fcalE()
 	const bool DRAW_FITS_TAGM = false;
 	
 	CS_FROM_FIT    = true;
-	FIX_BACKGROUND = true;
+	FIX_BACKGROUND = false;
 	
 	
 	// Number of electrons in target:
 	
-	ne = 8.77937e+23; // number of electrons per cm^2
-	mb = 1.e-27;
+	ne  = 8.77937e+23; // number of electrons per cm^2
+	mb  = 1.e-27;
 	
-	neE = ne * 0.0015;
+	neE = 0.015 * ne;
+	
+	
+	for( int i = 0; i < 274; i++ ) {
+		
+		tagh_yield[i]  = 0.;
+		tagh_yieldE[i] = 0.;
+		tagh_acc[i]    = 0.;
+		tagh_accE[i]   = 0.;
+		tagh_cs[i]     = 0.;
+		tagh_csE[i]    = 0.;
+		
+	}
+	for( int i = 0; i < 102; i++ ) {
+		
+		tagm_yield[i]  = 0.;
+		tagm_yieldE[i] = 0.;
+		tagm_acc[i]    = 0.;
+		tagm_accE[i]   = 0.;
+		tagm_cs[i]     = 0.;
+		tagm_csE[i]    = 0.;
+		
+	}
+	
 	
 	
 	//------------------------------------------------//
@@ -147,23 +184,7 @@ void CrossSectionSystematics_fcalE()
 	
 	get_flux();
 	get_counter_energies();
-	
-	for( int ic = 0; ic < 274; ic++ ) {
-		tagh_yield[ic]  = 0.;
-		tagh_yieldE[ic] = 0.;
-		tagh_acc[ic]    = 0.;
-		tagh_accE[ic]   = 0.;
-		tagh_cs[ic]     = 0.;
-		tagh_csE[ic]    = 0.;
-	}
-	for( int ic = 0; ic < 102; ic++ ) {
-		tagm_yield[ic]  = 0.;
-		tagm_yieldE[ic] = 0.;
-		tagm_acc[ic]    = 0.;
-		tagm_accE[ic]   = 0.;
-		tagm_cs[ic]     = 0.;
-		tagm_csE[ic]    = 0.;
-	}
+	get_fabs();
 	
 	
 	TFile *fFull  = new TFile( root_fname,               "READ" );
@@ -206,6 +227,7 @@ void CrossSectionSystematics_fcalE()
 	canvas2->cd();
 	top_pad->Draw();
 	bot_pad->Draw();
+	
 	
 	
 	
@@ -272,21 +294,18 @@ void CrossSectionSystematics_fcalE()
 	TH2F *h2e_tagm = new TH2F( "h2e_tagm", "#DeltaK vs. Counter", 
 		102, 0.5, 102.5,  2000, -4.0, 4.0 );
 	
-	h2_tagh->Add( (TH2F*)fFull->Get(hname_tagh) );
-	h2_tagm->Add( (TH2F*)fFull->Get(hname_tagm) );
-	h2e_tagh->Add( (TH2F*)fEmpty->Get(hname_tagh) );
-	h2e_tagm->Add( (TH2F*)fEmpty->Get(hname_tagm) );
-	
+	h2_tagh->Add( (TH2F*)fFull->Get(Form("%s",hname_tagh)) );
+	h2_tagm->Add( (TH2F*)fFull->Get(Form("%s",hname_tagm)) );
+	h2e_tagh->Add( (TH2F*)fEmpty->Get(Form("%s",hname_tagh)) );
+	h2e_tagm->Add( (TH2F*)fEmpty->Get(Form("%s",hname_tagm)) );
 	
 	
 	//----------------------------------------------------//
 	
 	
 	
-	vector<double>  en1Vec, yield1Vec, yield1EVec,  flux1Vec, flux1EVec, chi21Vec;
-	vector<double>  en2Vec, yield2Vec, yield2EVec,  flux2Vec, flux2EVec, chi22Vec;
-	vector<double> acc1Vec,  acc1EVec,    acc2Vec,  acc2EVec;
-	
+	vector<int>  tagh_counterVec, tagm_counterVec;
+	vector<double>  tagh_chi2Vec,    tagm_chi2Vec;
 	
 	for( int tagh_counter = 1; tagh_counter <= 274; tagh_counter++ ) {
 		
@@ -298,7 +317,7 @@ void CrossSectionSystematics_fcalE()
 		// Skip counters that have no flux:
 		
 		if( loc_flux <= 0. || loc_flux_empty <= 0. ) {
-			cout << "Skipping TAGH counter " << tagh_counter << " (no flux)" << endl;
+			cout << "Skipping TAGH counter " << tagh_counter << endl;
 			continue;
 		}
 		
@@ -308,7 +327,7 @@ void CrossSectionSystematics_fcalE()
 			tagh_counter, tagh_counter );
 		
 		if( h1->Integral() < 1.e1 ) {
-			cout << "Skipping TAGH counter " << tagh_counter << " (no events)" << endl;
+			cout << "Skipping TAGH counter " << tagh_counter << endl;
 			continue;
 		}
 		
@@ -324,50 +343,25 @@ void CrossSectionSystematics_fcalE()
 		
 		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0.;
 		int fit_val = fit_yield( 0, tagh_counter, h1, loc_yield, loc_yieldE, loc_chi2 );
-		//int fit_val = fit_yield_ls( 0, tagh_counter, h1, loc_yield, loc_yieldE, loc_chi2 );
 		if( fit_val <= 0 ) continue;
 		
 		double loc_acc = 0., loc_accE = 0.;;
 		int acc_val  = get_acc( 0, tagh_counter, loc_acc, loc_accE );
 		if( acc_val <= 0 ) continue;
 		
-		//double loc_acc  = tagh_acc[tagh_counter-1];
-		//double loc_accE = tagh_accE[tagh_counter-1];
-		
 		if( loc_acc <= 0. ) {
 			cout << "zero acceptance in TAGH counter " << tagh_counter << endl;
 			continue;
 		}
 		
-		
-		en1Vec.push_back( eb );
-		
-		yield1Vec.push_back( loc_yield );
-		yield1EVec.push_back( loc_yieldE );
-		
-		flux1Vec.push_back( loc_flux );
-		flux1EVec.push_back( loc_fluxE );
-		
-		acc1Vec.push_back( loc_acc );
-		acc1EVec.push_back( loc_accE );
-		
-		chi21Vec.push_back( loc_chi2 );
-		
 		tagh_yield[tagh_counter-1]  = loc_yield;
 		tagh_yieldE[tagh_counter-1] = loc_yieldE;
+		
 		tagh_acc[tagh_counter-1]    = loc_acc;
 		tagh_accE[tagh_counter-1]   = loc_accE;
 		
-		double locCS   = loc_yield / (loc_flux * loc_acc * ne * mb);
-		double locCSE  = sqrt( 
-			  pow( loc_yieldE / (loc_flux*loc_acc*ne*mb), 2.0)
-			+ pow( loc_yield*loc_fluxE/(loc_flux*loc_flux*loc_acc*ne*mb), 
-				2.0 )
-			+ pow( loc_yield*loc_accE/(loc_flux*loc_acc*loc_acc*ne*mb), 2.0 )
-			+ pow( loc_yield*neE/(loc_flux*loc_acc*ne*ne*mb), 2.0 ) );
-		
-		tagh_cs[tagh_counter-1]     = locCS;
-		tagh_csE[tagh_counter-1]    = locCSE;
+		tagh_counterVec.push_back( tagh_counter );
+		tagh_chi2Vec.push_back( loc_chi2 );
 		
 		if( DRAW_FITS_TAGH ) {
 			canvas->Update();
@@ -413,49 +407,25 @@ void CrossSectionSystematics_fcalE()
 		
 		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0.;
 		int fit_val = fit_yield( 1, tagm_counter, h1, loc_yield, loc_yieldE, loc_chi2 );
-		//int fit_val = fit_yield_ls( 1, tagm_counter, h1, loc_yield, loc_yieldE, loc_chi2 );
 		if( fit_val <= 0 ) continue;
 		
 		double loc_acc = 0., loc_accE = 0.;
 		int acc_val  = get_acc( 1, tagm_counter, loc_acc, loc_accE );
 		if( acc_val <= 0 ) continue;
 		
-		//double loc_acc  = tagm_acc[tagm_counter-1];
-		//double loc_accE = tagm_accE[tagm_counter-1];
-		
 		if( loc_acc <= 0. ) {
 			cout << "zero acceptance in TAGM counter " << tagm_counter << endl;
 			continue;
 		}
 		
-		en2Vec.push_back( eb );
-		
-		yield2Vec.push_back( loc_yield );
-		yield2EVec.push_back( loc_yieldE );
-		
-		flux2Vec.push_back( loc_flux );
-		flux2EVec.push_back( loc_fluxE );
-		
-		acc2Vec.push_back( loc_acc );
-		acc2EVec.push_back( loc_accE );
-		
-		chi22Vec.push_back( loc_chi2 );
-		
 		tagm_yield[tagm_counter-1]  = loc_yield;
 		tagm_yieldE[tagm_counter-1] = loc_yieldE;
+		
 		tagm_acc[tagm_counter-1]    = loc_acc;
 		tagm_accE[tagm_counter-1]   = loc_accE;
 		
-		double locCS   = loc_yield / (loc_flux * loc_acc * ne * mb);
-		double locCSE  = sqrt( 
-			  pow( loc_yieldE / (loc_flux*loc_acc*ne*mb), 2.0)
-			+ pow( loc_yield*loc_fluxE/(loc_flux*loc_flux*loc_acc*ne*mb), 
-				2.0 )
-			+ pow( loc_yield*loc_accE/(loc_flux*loc_acc*loc_acc*ne*mb), 2.0 )
-			+ pow( loc_yield*neE/(loc_flux*loc_acc*ne*ne*mb), 2.0 ) );
-		
-		tagm_cs[tagm_counter-1]     = locCS;
-		tagm_csE[tagm_counter-1]    = locCSE;
+		tagm_counterVec.push_back( tagm_counter );
+		tagm_chi2Vec.push_back( loc_chi2 );
 		
 		if( DRAW_FITS_TAGM ) {
 			canvas->Update();
@@ -468,75 +438,83 @@ void CrossSectionSystematics_fcalE()
 	
 	
 	
-	int n_bins1 = (int)en1Vec.size();
+	int n_bins1 = (int)tagh_counterVec.size();
 	
 	double *energy1  = new double[n_bins1];
 	double *energy1E = new double[n_bins1];
 	double *cs1      = new double[n_bins1];
 	double *cs1E     = new double[n_bins1];
 	
+	double *dev1     = new double[n_bins1];
+	double *dev1e    = new double[n_bins1];
+	
 	double *chi21    = new double[n_bins1];
+	
 	
 	for( int ib = 0; ib < n_bins1; ib++ ) {
 		
-		energy1[ib]    = en1Vec[ib];
-		energy1E[ib]   = 0.0;
+		int counter     = tagh_counterVec[ib];
 		
-		double locAcc  = acc1Vec[ib];
-		double locAccE = acc1EVec[ib];
-		double neE     = ne * 0.0015;
+		energy1[ib]     = tagh_en[counter-1];
+		energy1E[ib]    = 0.;
 		
-		double locCS   = yield1Vec[ib] / (flux1Vec[ib] * locAcc * ne * mb);
-		double locCSE  = sqrt( 
-			  pow( yield1EVec[ib] / (flux1Vec[ib]*locAcc*ne*mb), 2.0)
-			+ pow( yield1Vec[ib]*flux1EVec[ib]/(flux1Vec[ib]*flux1Vec[ib]*locAcc*ne*mb), 
-				2.0 )
-			+ pow( yield1Vec[ib]*locAccE/(flux1Vec[ib]*locAcc*locAcc*ne*mb), 2.0 )
-			+ pow( yield1Vec[ib]*neE/(flux1Vec[ib]*locAcc*ne*ne*mb), 2.0 ) );
+		double locCS    = 0., locCSE = 0.;
+		calc_cs( 0, counter, locCS, locCSE );
 		
-		locCS         /= f_abs;
+		cs1[ib]         = locCS;
+		cs1E[ib]        = locCSE;
 		
-		cs1[ib]        = locCS;
-		cs1E[ib]       = locCSE;
+		double theoryCS = f_theory->Eval( tagh_en[counter-1] );
 		
-		chi21[ib]      = chi21Vec[ib];
+		dev1[ib]        = 100. * (locCS - theoryCS) / theoryCS;
+		dev1e[ib]       = sqrt( pow(100.*locCSE/theoryCS,2.0) );
+		
+		chi21[ib]       = tagh_chi2Vec[ib];
+		
+		tagh_cs[counter-1]  = locCS;
+		tagh_csE[counter-1] = locCSE;
 	}
 	
 	
-	int n_bins2 = (int)en2Vec.size();
+	int n_bins2 = (int)tagm_counterVec.size();
 	
 	double *energy2  = new double[n_bins2];
 	double *energy2E = new double[n_bins2];
 	double *cs2      = new double[n_bins2];
 	double *cs2E     = new double[n_bins2];
 	
+	double *dev2     = new double[n_bins2];
+	double *dev2e    = new double[n_bins2];
+	
 	double *chi22    = new double[n_bins2];
 	
 	for( int ib = 0; ib < n_bins2; ib++ ) {
 		
-		energy2[ib]    = en2Vec[ib];
-		energy2E[ib]   = 0.0;
+		int counter     = tagm_counterVec[ib];
 		
-		double locAcc  = acc2Vec[ib];
-		double locAccE = acc2EVec[ib];
-		double neE     = ne * 0.0015;
+		energy2[ib]     = tagm_en[counter-1];
+		energy2E[ib]    = 0.;
 		
-		double locCS   = yield2Vec[ib] / (flux2Vec[ib] * locAcc * ne * mb);
-		double locCSE  = sqrt( 
-			  pow( yield2EVec[ib] / (flux2Vec[ib]*locAcc*ne*mb), 2.0)
-			+ pow( yield2Vec[ib]*flux2EVec[ib]/(flux2Vec[ib]*flux2Vec[ib]*locAcc*ne*mb), 
-				2.0 )
-			+ pow( yield2Vec[ib]*locAccE/(flux2Vec[ib]*locAcc*locAcc*ne*mb), 2.0 )
-			+ pow( yield2Vec[ib]*neE/(flux2Vec[ib]*locAcc*ne*ne*mb), 2.0 ) );
+		double locCS    = 0., locCSE = 0.;
+		calc_cs( 1, counter, locCS, locCSE );
 		
-		locCS         /= f_abs;
+		cs2[ib]         = locCS;
+		cs2E[ib]        = locCSE;
 		
-		cs2[ib]        = locCS;
-		cs2E[ib]       = locCSE; 
+		double theoryCS = f_theory->Eval( tagm_en[counter-1] );
+		
+		dev2[ib]        = 100. * (locCS - theoryCS) / theoryCS;
+		dev2e[ib]       = sqrt( pow(100.*locCSE/theoryCS,2.0) );
 			
-		chi22[ib]      = chi22Vec[ib];
+		chi22[ib]       = tagm_chi2Vec[ib];
+		
+		tagm_cs[counter-1]  = locCS;
+		tagm_csE[counter-1] = locCSE;
 	}
 	
+	
+	
+	//-----   Plot Cross Section   -----//
 	
 	TGraphErrors *gCS1 = new TGraphErrors( n_bins1, energy1, cs1, energy1E, cs1E );
 	gCS1->GetXaxis()->SetTitle( "Photon Beam Energy [GeV]" );
@@ -565,55 +543,7 @@ void CrossSectionSystematics_fcalE()
 	g_theory->Draw( "same" );
 	
 	
-	
-	
-	
-	TGraph *gChi21 = new TGraph( n_bins1, energy1, chi21 );
-	gChi21->GetXaxis()->SetTitle( "Photon Beam Energy [GeV]" );
-	gChi21->GetYaxis()->SetTitle( "#chi^{2} / n.d.f" );
-	gChi21->SetTitle( "#chi^{2} From Yield Fit" );
-	gChi21->SetMarkerStyle(8);
-	gChi21->SetMarkerColor( kBlue );
-	
-	TGraph *gChi22 = new TGraph( n_bins2, energy2, chi22 );
-	gChi22->GetXaxis()->SetTitle( "Photon Beam Energy [GeV]" );
-	gChi22->GetYaxis()->SetTitle( "#chi^{2} / n.d.f" );
-	gChi22->SetTitle( "#chi^{2} From Yield Fit" );
-	gChi22->SetMarkerStyle(8);
-	gChi22->SetMarkerColor( kGreen );
-	
-	TCanvas *cChi2 = new TCanvas( "cChi2", "cChi2", 1000, 600 );
-	cChi2->SetTickx(); cChi2->SetTicky();
-	gChi21->Draw( "AP" );
-	gChi22->Draw( "P same" );
-	
-	
-	
-	double *dev1  = new double[n_bins1];
-	double *dev1e = new double[n_bins1];
-	double *dev2  = new double[n_bins2];
-	double *dev2e = new double[n_bins2];
-	
-	for( int ib = 0; ib < n_bins1; ib++ ) {
-		
-		double theoryCS = f_theory->Eval( energy1[ib] );
-		double expCS    = cs1[ib];
-		double expCSe   = cs1E[ib];
-		
-		dev1[ib]  = 100. * (expCS - theoryCS) / theoryCS;
-		dev1e[ib] = sqrt( pow(100.*expCSe/theoryCS,2.0) );
-	}
-	
-	
-	for( int ib = 0; ib < n_bins2; ib++ ) {
-		
-		double theoryCS = f_theory->Eval( energy2[ib] );
-		double expCS    = cs2[ib];
-		double expCSe   = cs2E[ib];
-		
-		dev2[ib]  = 100. * (expCS - theoryCS) / theoryCS;
-		dev2e[ib] = sqrt( pow(100.*expCSe/theoryCS,2.0) );
-	}
+	//-----   Plot Cross Section Residuals  -----//
 	
 	TGraphErrors *gDev1 = new TGraphErrors( n_bins1, energy1, dev1, energy1E, dev1e );
 	gDev1->SetTitle( "Relative Error of Compton Cross Section" );
@@ -649,6 +579,30 @@ void CrossSectionSystematics_fcalE()
 	
 	
 	
+	//-----   Plot Yield Fit Chi-2   -----//
+	
+	TGraph *gChi21 = new TGraph( n_bins1, energy1, chi21 );
+	gChi21->GetXaxis()->SetTitle( "Photon Beam Energy [GeV]" );
+	gChi21->GetYaxis()->SetTitle( "#chi^{2} / n.d.f" );
+	gChi21->SetTitle( "#chi^{2} From Yield Fit" );
+	gChi21->SetMarkerStyle(8);
+	gChi21->SetMarkerColor( kBlue );
+	
+	TGraph *gChi22 = new TGraph( n_bins2, energy2, chi22 );
+	gChi22->GetXaxis()->SetTitle( "Photon Beam Energy [GeV]" );
+	gChi22->GetYaxis()->SetTitle( "#chi^{2} / n.d.f" );
+	gChi22->SetTitle( "#chi^{2} From Yield Fit" );
+	gChi22->SetMarkerStyle(8);
+	gChi22->SetMarkerColor( kGreen );
+	
+	TCanvas *cChi2 = new TCanvas( "cChi2", "cChi2", 1000, 600 );
+	cChi2->SetTickx(); cChi2->SetTicky();
+	gChi21->Draw( "AP" );
+	gChi22->Draw( "P same" );
+	
+	
+	
+	
 	
 	
 	TCanvas *canvas3 = new TCanvas( "canvas3", "canvas3", 1200, 900 );
@@ -672,7 +626,6 @@ void CrossSectionSystematics_fcalE()
 	canvas3->cd();
 	top_pad3->Draw();
 	bot_pad3->Draw();
-	
 	
 	gCS1->GetYaxis()->SetRangeUser(0.,0.35);
 	gCS1->GetXaxis()->SetRangeUser(6.,11.);
@@ -706,21 +659,6 @@ void CrossSectionSystematics_fcalE()
 	
 	
 	
-	top_pad3->cd();
-	TLatex lat3;
-	lat3.DrawLatexNDC(0.15,0.80,"Preliminary");
-	
-	
-	
-	TCanvas *canvas4 = new TCanvas("canvas4","canvas4",1000,600);
-	canvas4->SetTickx(); canvas4->SetTicky();
-	
-	gCS1->GetXaxis()->SetLabelOffset(0);
-	gCS1->Draw("AP");
-	gCS2->Draw("P same");
-	g_theory->Draw("same");
-	lat3.DrawLatexNDC(0.15,0.80,"Preliminary");
-	
 	
 	char buf[256];
 	
@@ -744,6 +682,45 @@ void CrossSectionSystematics_fcalE()
 	}
 	outf_tagm.close();
 	
+	
+	
+	
+	
+	return;
+}
+
+
+
+
+void get_fabs() 
+{
+	
+	int a; double b, c, d;
+	
+	for( int i=0; i<274; i++ ) {
+		tagh_fabs[i]  = 0.;
+		tagh_fabsE[i] = 0.;
+	}
+	for( int i=0; i<102; i++ ) {
+		tagm_fabs[i]  = 0.;
+		tagm_fabsE[i] = 0.;
+	}
+	
+	ifstream inf1( tagh_fabs_fname );
+	for( int i=0; i<274; i++ ) {
+		inf1 >> a >> b >> c >> d;
+		tagh_fabs[i]  = b;
+		tagh_fabsE[i] = fabs(0.5*(c-d));
+	}
+	inf1.close();
+	
+	ifstream inf2( tagm_fabs_fname );
+	for( int i=0; i<102; i++ ) {
+		inf2 >> a >> b >> c >> d;
+		tagm_fabs[i]  = b;
+		tagm_fabsE[i] = fabs(0.5*(c-d));
+	}
+	inf2.close();
 	
 	
 	return;
@@ -820,6 +797,59 @@ void get_counter_energies()
 		tagm_en[i] = 0.5 * (emin + emax);
 	}
 	inf2.close();
+	
+	
+	return;
+}
+
+
+
+void calc_cs( int tag_sys, int counter, double &loc_cs, double &loc_csE )
+{
+	
+	loc_cs = 0., loc_csE = 0.;
+	
+	double loc_yield,  loc_flux,  loc_acc,  loc_fabs;
+	double loc_yieldE, loc_fluxE, loc_accE, loc_fabsE;
+	
+	if( tag_sys==0 ) {
+		
+		loc_yield  = tagh_yield[counter-1];
+		loc_yieldE = tagh_yieldE[counter-1];
+		
+		loc_flux   = tagh_flux[counter-1];
+		loc_fluxE  = tagh_fluxE[counter-1];
+		
+		loc_acc    = tagh_acc[counter-1];
+		loc_accE   = tagh_accE[counter-1];
+		
+		loc_fabs   = 1.0 - tagh_fabs[counter-1];
+		loc_fabsE  = tagh_fabsE[counter-1];
+		
+	} else {
+		
+		loc_yield  = tagm_yield[counter-1];
+		loc_yieldE = tagm_yieldE[counter-1];
+		
+		loc_flux   = tagm_flux[counter-1];
+		loc_fluxE  = tagm_fluxE[counter-1];
+		
+		loc_acc    = tagm_acc[counter-1];
+		loc_accE   = tagm_accE[counter-1];
+		
+		loc_fabs   = 1.0 - tagm_fabs[counter-1];
+		loc_fabsE  = tagm_fabsE[counter-1];
+		
+	}
+	
+	loc_cs   = loc_yield / (loc_flux * loc_acc * ne * mb);
+	loc_csE  = sqrt( 
+			  pow( loc_yieldE / (loc_flux*loc_acc*ne*mb), 2.0)
+			+ pow( loc_yield*loc_fluxE/(loc_flux*loc_flux*loc_acc*ne*mb), 2.0 )
+			+ pow( loc_yield*loc_accE/(loc_flux*loc_acc*loc_acc*ne*mb), 2.0 )
+			+ pow( loc_yield*neE/(loc_flux*loc_acc*ne*ne*mb), 2.0 ) );
+	
+	loc_cs  /= loc_fabs;
 	
 	
 	return;
@@ -997,71 +1027,77 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 	
 	h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
 	
-	if( !FIX_BACKGROUND ) {
-		f_fit->ReleaseParameter(6);
-		f_fit->ReleaseParameter(7);
-		f_fit->ReleaseParameter(8);
-		f_fit->ReleaseParameter(9);
-		
-		//f_fit->SetRange(-2., 2.);
-		h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
-	}
-	
-	f_fit->SetRange( -2., 1.5 );
-	/*
-	f_fit->FixParameter(6, f_fit->GetParameter(6));
-	f_fit->FixParameter(7, f_fit->GetParameter(7));
-	f_fit->FixParameter(8, f_fit->GetParameter(8));
-	f_fit->FixParameter(9, f_fit->GetParameter(9));
-	*/
-	
-	TFitResultPtr result = h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "SR0QL" );
-	if( !((Int_t)result == 0) ) return 0;
-	
-	/*
-	f_fit->SetParameter(6, f_bkgd->GetParameter(0) );
-	f_fit->SetParameter(7, f_bkgd->GetParameter(1) );
-	f_fit->SetParameter(8, f_bkgd->GetParameter(2) );
-	f_fit->SetParameter(9, f_bkgd->GetParameter(3) );
-	
-	f_fit->SetRange( bkgd_min, 2.0 );
-	
-	h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
-	
-	f_fit->FixParameter(6, f_fit->GetParameter(6));
-	f_fit->FixParameter(7, f_fit->GetParameter(7));
-	f_fit->FixParameter(8, f_fit->GetParameter(8));
-	f_fit->FixParameter(9, f_fit->GetParameter(9));
 	
 	
-	if( !FIX_BACKGROUND ) {
-		f_fit->ReleaseParameter(6);
-		f_fit->ReleaseParameter(7);
-		f_fit->ReleaseParameter(8);
-		f_fit->ReleaseParameter(9);
-		
-		h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
-	}
 	
-	f_fit->SetRange( -2., 1.5 );
+	TF1 *f_fit_new  = new TF1( Form("f_fit_new_%s_%d",tag_sys_char,counter), 
+		double_gaus_fit, -2., 2., 10 );
 	
-	TFitResultPtr result = h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "SR0QL" );
-	if( !((Int_t)result == 0) ) fit_val = 0;
-	*/
+	f_fit_new->SetParName( 0, "A" );
+	f_fit_new->SetParName( 1, "z" );
+	f_fit_new->SetParName( 2, "#mu_{1}" );
+	f_fit_new->SetParName( 3, "#mu_{1}-#mu_{2}" );
+	f_fit_new->SetParName( 4, "#sigma_{1}" );
+	f_fit_new->SetParName( 5, "#sigma_{2}" );
+	
+	f_fit_new->SetParLimits( 1, 0.0, 0.5 );
+	f_fit_new->SetParLimits( 4, 0.0, 1.0 );
+	f_fit_new->SetParLimits( 5, 0.0, 2.0 );
+	
+	f_fit_new->SetParameters( f_fit->GetParameters() );
+	
+	f_fit_new->FixParameter(0, f_fit->GetParameter(0) );
+	f_fit_new->FixParameter(1, f_fit->GetParameter(1) );
+	f_fit_new->FixParameter(2, f_fit->GetParameter(2) );
+	f_fit_new->FixParameter(3, f_fit->GetParameter(3) );
+	f_fit_new->FixParameter(4, f_fit->GetParameter(4) );
+	f_fit_new->FixParameter(5, f_fit->GetParameter(5) );
+	f_fit_new->FixParameter(6, f_fit->GetParameter(6) );
+	f_fit_new->FixParameter(7, f_fit->GetParameter(7) );
+	f_fit_new->FixParameter(8, f_fit->GetParameter(8) );
+	f_fit_new->FixParameter(9, f_fit->GetParameter(9) );
+	
+	f_fit_new->ReleaseParameter(6);
+	f_fit_new->ReleaseParameter(7);
+	
+	f_fit_new->SetRange( -2.0, 2.0 );
+	h1->Fit( Form("f_fit_new_%s_%d",tag_sys_char,counter), "R0QL" );
+	
+	f_fit_new->ReleaseParameter(8);
+	
+	f_fit_new->SetRange( -2.0, 2.0 );
+	h1->Fit( Form("f_fit_new_%s_%d",tag_sys_char,counter), "R0QL" );
+	
+	f_fit_new->ReleaseParameter(9);
+	
+	f_fit_new->SetRange( -2.0, 2.0 );
+	h1->Fit( Form("f_fit_new_%s_%d",tag_sys_char,counter), "R0QL" );
+	
+	f_fit_new->FixParameter(6, f_fit->GetParameter(6) );
+	f_fit_new->FixParameter(7, f_fit->GetParameter(7) );
+	f_fit_new->FixParameter(8, f_fit->GetParameter(8) );
+	f_fit_new->FixParameter(9, f_fit->GetParameter(9) );
+	
+	f_fit_new->ReleaseParameter(0);
+	f_fit_new->ReleaseParameter(1);
+	f_fit_new->ReleaseParameter(2);
+	f_fit_new->ReleaseParameter(3);
+	f_fit_new->ReleaseParameter(4);
+	f_fit_new->ReleaseParameter(5);
+	
+	f_fit_new->SetRange( -2., 1.5 );
+	
+	TFitResultPtr result = h1->Fit( Form("f_fit_new_%s_%d",tag_sys_char,counter), "SR0QL" );
+	//if( !((Int_t)result == 0) ) return 0;
 	
 	chi2 = result->Chi2() / result->Ndf();
-	
-	
-	h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
 	h1->GetXaxis()->SetRangeUser( -2.0, 1.5 );
-	
-	
 	
 	if( CS_FROM_FIT ) {
 	
-	yield  = f_fit->GetParameter(0) * sqrt(2.*TMath::Pi()) 
-		* ( (1.-f_fit->GetParameter(1))*f_fit->GetParameter(4)
-		+ f_fit->GetParameter(1)*f_fit->GetParameter(5) );
+	yield  = f_fit_new->GetParameter(0) * sqrt(2.*TMath::Pi()) 
+		* ( (1.-f_fit_new->GetParameter(1))*f_fit_new->GetParameter(4)
+		+ f_fit_new->GetParameter(1)*f_fit_new->GetParameter(5) );
 	yield /= bin_size;
 	
 	yieldE = sqrt(yield);
@@ -1069,8 +1105,8 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 	} else {
 			
 	TF1 *fInt     = new TF1( Form("fInt_tagh_%d",counter), "pol4", -3., 3. );
-	fInt->SetParameters( 0., f_fit->GetParameter(6), 0.5*f_fit->GetParameter(7), 
-		(1./3.)*f_fit->GetParameter(8), 0.25*f_fit->GetParameter(9) );
+	fInt->SetParameters( 0., f_fit_new->GetParameter(6), 0.5*f_fit_new->GetParameter(7), 
+		(1./3.)*f_fit_new->GetParameter(8), 0.25*f_fit_new->GetParameter(9) );
 	
 	double intsub = fInt->Eval(1.5) - fInt->Eval(-2.);
 	intsub       /= bin_size;
@@ -1082,30 +1118,23 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 	
 	
 	TF1 *f_draw = new TF1( Form("f_draw_%d_%d",tag_sys,counter), "pol3", -3., 3. );
-	f_draw->SetParameter(0, f_fit->GetParameter(6));
-	f_draw->SetParameter(1, f_fit->GetParameter(7));
-	f_draw->SetParameter(2, f_fit->GetParameter(8));
-	f_draw->SetParameter(3, f_fit->GetParameter(9));
+	f_draw->SetParameter(0, f_fit_new->GetParameter(6));
+	f_draw->SetParameter(1, f_fit_new->GetParameter(7));
+	f_draw->SetParameter(2, f_fit_new->GetParameter(8));
+	f_draw->SetParameter(3, f_fit_new->GetParameter(9));
 	f_draw->SetLineColor(kGreen);
 	f_draw->SetLineStyle(2);
 	
-	
-	
 	pad_lin->cd();
 	h1->Draw();
-	f_fit->Draw("same");
+	f_fit_new->Draw("same");
 	f_draw->Draw("same");
-	
-	
-	TH1F *h1_log = (TH1F*)h1->Clone( Form("h1_log_%d_%d",tag_sys,counter) );
-	h1_log->SetMinimum(1.);
 	
 	pad_log->cd();
-	h1_log->Draw();
-	f_fit->Draw("same");
+	h1->Draw();
+	f_fit_new->Draw("same");
 	f_draw->Draw("same");
 	
-	//canvas->Update();
 	
 	TH1F *h1_dev = new TH1F( Form("h1_dev_%d_%d",tag_sys,counter), "", 
 		h1->GetXaxis()->GetNbins(), -4.0, 4.0 );
@@ -1117,7 +1146,7 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 		if( loc_c > 0. ) loc_err = sqrt(loc_c);
 		else loc_err = 1.0;
 		
-		double loc_dev = (loc_c - f_fit->Eval(loc_x))/loc_err;
+		double loc_dev = (loc_c - f_fit_new->Eval(loc_x))/loc_err;
 		h1_dev->SetBinContent(ib,loc_dev);
 	}
 	
@@ -1152,7 +1181,7 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 	
 	top_pad->cd();
 	h1->Draw();
-	f_fit->Draw("same");
+	f_fit_new->Draw("same");
 	
 	bot_pad->cd();
 	h1_dev->Draw("PE");
@@ -1184,9 +1213,7 @@ int get_acc(  int tag_sys, int counter, double &acc, double &accE )
 	}
 	
 	
-	
-	
-	TFile *fSim  = new TFile( fname,  "READ" );
+	TFile *fSim = new TFile( fname, "READ" );
 	
 	TH1F *hbeam  = (TH1F*)fSim->Get( "compton_systematics_sim/beam" )->Clone( 
 		Form("h_beam_%d_%d",tag_sys,counter) );
@@ -1214,21 +1241,19 @@ int get_acc(  int tag_sys, int counter, double &acc, double &accE )
 	
 	
 	TH1F *h1 = (TH1F*)h2->ProjectionY( Form("h1_sim_%d_%d",tag_sys,counter) );
-	if( h1->Integral() < 1.e1 ) { cout << "no sim events" << endl; return 0; }
+	if( h1->Integral() < 1.e1 ) return 0;
 	
 	
 	h1->Rebin(rebins);
 	h1->GetXaxis()->SetTitle( "E_{Comp} - E_{#gamma} [GeV]" );
 	h1->GetXaxis()->SetTitleOffset( 1.1 );
-	h1->GetXaxis()->SetRangeUser( -1.5, 1.5 );
 	h1->GetYaxis()->SetTitle( Form("counts / %d MeV", n_mev) );
 	h1->GetYaxis()->SetTitleOffset( 1.3 );
 	h1->SetLineColor( kBlack );
 	h1->SetLineWidth( 2 );
-	h1->GetXaxis()->SetRangeUser( -3., 2. );
 	
 	
-	
+	/*
 	TF1 *f_gaus = new TF1( Form("f_gaus_%d_%d",tag_sys,counter), "gaus", -2., 2. );
 	
 	f_gaus->SetParameters( h1->GetMaximum(), 
@@ -1274,16 +1299,13 @@ int get_acc(  int tag_sys, int counter, double &acc, double &accE )
 	
 	h1->Fit( Form("f_fit_%d_%d",tag_sys,counter), "R0QL" );
 	
-	
-	
-	
-	
 	double yield = f_fit->GetParameter(0) * sqrt(2.*TMath::Pi()) 
 		* ( (1.-f_fit->GetParameter(1))*f_fit->GetParameter(4)
 		+ f_fit->GetParameter(1)*f_fit->GetParameter(5) );
 	yield /= bin_size;
+	*/
 	
-	yield = h1->Integral();
+	double yield = h1->Integral();
 	
 	acc  = yield / n_gen;
 	accE = sqrt( n_gen*acc*(1.-acc) ) / n_gen;
@@ -1291,274 +1313,5 @@ int get_acc(  int tag_sys, int counter, double &acc, double &accE )
 	
 	
 	return acc_val;
-}
-
-
-
-
-int fit_yield_ls( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE, double &chi2 )
-{
-	
-	int fit_val = 1;
-	
-	
-	char tag_sys_char[256];
-	if( tag_sys==0 ) sprintf( tag_sys_char, "tagh" );
-	else             sprintf( tag_sys_char, "tagm" );
-	
-	
-	
-	
-	//-----   Get lineshape from simulation   -----//
-	
-	
-	char fname[256];
-	if( tag_sys==0 ) 
-		sprintf( fname, "%s/tagh_%03d.root", mc_dir, counter );
-	else 
-		sprintf( fname, "%s/tagm_%03d.root", mc_dir, counter );
-	
-	
-	if( gSystem->AccessPathName(fname) ) {
-		return 0;
-	}
-	
-	
-	TFile *fSim = new TFile( fname, "READ" );
-	
-	TH1F *hbeam  = (TH1F*)fSim->Get( "compton_systematics_sim/beam" )->Clone( 
-		Form("h_beam_%d_%d",tag_sys,counter) );
-	double n_gen = 2.5e5 * (double)hbeam->GetMean();
-	
-	if( n_gen < 1.e3 ) return 0;
-	
-	TH2F *h2;
-	
-	if( tag_sys == 0 ) {
-		
-		h2 = new TH2F( Form("h2_tagh_%d",counter), "DeltaK", 
-			274, 0.5, 274.5, 2000, -4.0, 4.0 );
-		
-		h2->Add( (TH2F*)fSim->Get(Form("%s",hname_tagh_sim)) );
-	} else {
-		
-		h2 = new TH2F( Form("h2_tagm_%d",counter), "DeltaK", 
-			102, 0.5, 102.5, 2000, -4.0, 4.0 );
-		
-		h2->Add( (TH2F*)fSim->Get(Form("%s",hname_tagm_sim)) );
-	}
-	
-	h2->SetDirectory(0);
-	
-	fSim->Close();
-	
-	TH1F *h1_sim = (TH1F*)h2->ProjectionY( Form("h1_sim_%d_%d",tag_sys,counter) );
-	if( h1_sim->Integral() < 1.e1 ) return 0;
-	
-	double sim_int = (double)h1_sim->Integral();
-	
-	h1_sim->Rebin(rebins);
-	h1_sim->GetXaxis()->SetTitle( "E_{Comp} - E_{#gamma} [GeV]" );
-	h1_sim->GetXaxis()->SetTitleOffset( 1.1 );
-	h1_sim->GetYaxis()->SetTitle( Form("counts / %d MeV", n_mev) );
-	h1_sim->GetYaxis()->SetTitleOffset( 1.3 );
-	h1_sim->SetLineColor( kBlack );
-	h1_sim->SetLineWidth( 2 );
-	
-	
-	
-	//---------------------------------------------//
-	
-	
-	
-	
-	double bkgd_min = h1->GetBinCenter( h1->FindFirstBinAbove() );
-	double bkgd_max = h1->GetBinCenter( h1->FindLastBinAbove() );
-	
-	TF1 *f_bkgd = new TF1( Form("f_bkgd_%s_%d",tag_sys_char,counter), bkgd_fit, 
-		bkgd_min, bkgd_max, 4 );
-	h1->Fit( Form("f_bkgd_%s_%d",tag_sys_char,counter), "R0QL" );
-	
-	
-	for( unsigned int ib = 0; ib < comp_sim_hist.size(); ib++ ) {
-		comp_sim_hist[ib] = (1./sim_int) * (double)h1_sim->GetBinContent(ib+1);
-	}
-	
-	
-	double h1_max      = h1->GetBinCenter( h1->GetMaximumBin() );
-	double h1_sim_max  = h1_sim->GetBinCenter( h1_sim->GetMaximumBin() );
-	
-	
-	double eb, loc_flux;
-	if( tag_sys==0 ) { 
-		eb       = tagh_en[counter-1];
-		loc_flux = tagh_flux[counter-1];
-	} else {
-		eb       = tagm_en[counter-1];
-		loc_flux = tagm_flux[counter-1];
-	}
-	
-	double loc_acc = sim_int / n_gen;
-	
-	double scale_guess = f_theory->Eval(eb) * loc_flux * loc_acc * ne * mb;
-	
-	
-	TF1 *f_fit  = new TF1( Form("f_fit_%s_%d",tag_sys_char,counter), 
-		line_shape_fit, bkgd_min, 2., 6 );
-	
-	f_fit->SetLineColor( kRed );
-	f_fit->SetNpx( 500. );
-	
-	f_fit->SetParameters( scale_guess, h1_max - h1_sim_max );
-	f_fit->FixParameter(1, 0.0);
-	f_fit->FixParameter(2, f_bkgd->GetParameter(0));
-	f_fit->FixParameter(3, f_bkgd->GetParameter(1));
-	f_fit->FixParameter(4, f_bkgd->GetParameter(2));
-	f_fit->FixParameter(5, f_bkgd->GetParameter(3));
-	
-	h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0Q" );
-	
-	if( !FIX_BACKGROUND ) {
-		f_fit->ReleaseParameter(2);
-		f_fit->ReleaseParameter(3);
-		f_fit->ReleaseParameter(4);
-		f_fit->ReleaseParameter(5);
-		
-		h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
-	}
-	
-	f_fit->FixParameter(2, f_fit->GetParameter(2));
-	f_fit->FixParameter(3, f_fit->GetParameter(3));
-	f_fit->FixParameter(4, f_fit->GetParameter(4));
-	f_fit->FixParameter(5, f_fit->GetParameter(5));
-	
-	
-	TFitResultPtr result = h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "SR0QL" );
-	//if( !((Int_t)result == 0) ) fit_val = 0;
-	
-	chi2 = result->Chi2() / result->Ndf();
-	
-	
-	
-	if( CS_FROM_FIT ) {
-	
-	h1_sim->Scale( f_fit->GetParameter(0) );
-	
-	yield  = f_fit->GetParameter(0);
-	yieldE = f_fit->GetParError(0);
-	
-	} else {
-	
-	TF1 *fInt     = new TF1( Form("fInt_tagh_%d",counter), "pol4", -3., 3. );
-	fInt->SetParameters( 0., f_fit->GetParameter(2), 0.5*f_fit->GetParameter(3), 
-		(1./3.)*f_fit->GetParameter(4), 0.25*f_fit->GetParameter(5) );
-	
-	double intsub = fInt->Eval(1.5) - fInt->Eval(-2.);
-	intsub       /= bin_size;
-	
-	yield  = h1->Integral() - intsub;
-	yieldE = sqrt(yield);
-	
-	}
-	
-	
-	
-	// Draw fits:
-	
-	
-	TF1 *f_comp_ls = new TF1( Form("f_comp_ls_%d_%d",tag_sys,counter), line_shape_fit, 
-		-4.0, 4.0, 6 );
-	f_comp_ls->SetParameters( f_fit->GetParameter(0), f_fit->GetParameter(1), 
-		0.0, 0.0, 0.0, 0.0 );
-	f_comp_ls->SetLineColor(kBlue);
-	
-	
-	TF1 *f_bkgd_ls = new TF1( Form("f_bkgd_ls_%d_%d",tag_sys,counter), line_shape_fit,
-		-4.0, 4.0, 6 );
-	f_bkgd_ls->SetParameters( 0.0, 0.0, f_fit->GetParameter(2), f_fit->GetParameter(3), 
-		f_fit->GetParameter(4), f_fit->GetParameter(5) );
-	f_bkgd_ls->SetLineColor(kGreen);
-	f_bkgd_ls->SetLineStyle(2);
-	
-	
-	TH1F *h1_lin = (TH1F*)h1->Clone( Form("h1_lin_%d_%d",tag_sys,counter) );
-	h1_lin->SetMinimum(0.);
-	
-	pad_lin->cd();
-	h1_lin->Draw();
-	f_fit->Draw("same");
-	f_comp_ls->Draw("same");
-	f_bkgd_ls->Draw("same");
-	
-	
-	pad_log->cd();
-	h1->Draw();
-	f_fit->Draw("same");
-	f_comp_ls->Draw("same");
-	f_bkgd_ls->Draw("same");
-	
-	//canvas->Update();
-	
-	
-	
-	
-	
-	
-	
-	TH1F *h1_dev = new TH1F( Form("h1_dev_%d_%d",tag_sys,counter), "", 
-		h1->GetXaxis()->GetNbins(), -4.0, 4.0 );
-	
-	for( int ib=1; ib<=h1_dev->GetXaxis()->GetNbins(); ib++ ) {
-		double loc_x   = h1->GetBinCenter(ib);
-		double loc_c   = h1->GetBinContent(ib);
-		double loc_err;
-		if( loc_c > 0. ) loc_err = sqrt(loc_c);
-		else loc_err = 1.0;
-		
-		double loc_dev = (loc_c - f_fit->Eval(loc_x))/loc_err;
-		h1_dev->SetBinContent(ib,loc_dev);
-	}
-	
-	h1->SetTitleFont(22);
-	h1->GetXaxis()->SetRangeUser( -2.0, bkgd_max );
-	h1->GetXaxis()->SetTitle( "" );
-	h1->GetXaxis()->SetLabelOffset(1.0);
-	h1->GetYaxis()->SetTitle( Form("counts / %d MeV",n_mev) );
-	h1->GetYaxis()->SetTitleSize( 0.045 );
-	h1->GetYaxis()->SetTitleOffset( 1.0 );
-	h1->GetYaxis()->SetTitleFont( 22 );
-	h1->SetMinimum(0.);
-	
-	h1_dev->GetYaxis()->SetTitle( "(data - fit)/err" );
-	h1_dev->GetYaxis()->SetTitleSize( 0.125 );
-	h1_dev->GetYaxis()->SetTitleOffset( 0.275 );
-	h1_dev->GetYaxis()->SetLabelSize( 0.10 );
-	h1_dev->GetYaxis()->SetTitleFont( 22 );
-	
-	h1_dev->GetXaxis()->SetTitle( "E_{Comp} - E_{#gamma} [GeV]" );
-	h1_dev->GetXaxis()->SetTitleSize( 0.175 );
-	h1_dev->GetXaxis()->SetTitleOffset( 0.90 );
-	h1_dev->GetXaxis()->SetLabelSize( 0.13 );
-	h1_dev->GetXaxis()->SetTitleFont( 22 );
-	
-	h1_dev->SetLineWidth(2);
-	h1_dev->SetLineColor(kBlack);
-	h1_dev->SetMarkerColor(kBlack);
-	h1_dev->GetXaxis()->SetRangeUser( -2.0, bkgd_max );
-	h1_dev->SetTitle( " " );
-	h1_dev->GetYaxis()->SetRangeUser( -12., 12. );
-	
-	top_pad->cd();
-	h1->Draw();
-	f_fit->Draw("same");
-	
-	bot_pad->cd();
-	h1_dev->Draw("PE");
-	
-	//canvas2->Update();
-	
-	
-	
-	return fit_val;
 }
 

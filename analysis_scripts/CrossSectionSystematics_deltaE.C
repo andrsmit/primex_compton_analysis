@@ -41,7 +41,6 @@ void calc_cs( int tag_sys, int counter, double &cs, double &csE );
 
 int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE, double &chi2 );
 int get_acc(   int tag_sys, int counter, double &acc, double &accE );
-int fit_yield_ls( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE, double &chi2 );
 
 Double_t bkgd_fit( Double_t *x, Double_t *par );
 Double_t crys_ball_fit( Double_t *x, Double_t *par );
@@ -70,6 +69,8 @@ TPad *top_pad, *bot_pad;
 void CrossSectionSystematics_deltaE()
 {
 	
+	double sig_cut = 1.0;
+	int sig_int = (int)(sig_cut*10);
 	
 	const char pathName[256] = "/work/halld/home/andrsmit/primex_compton_analysis";
 	
@@ -102,13 +103,13 @@ void CrossSectionSystematics_deltaE()
 	
 	// Name of histograms for fitting yield:
 	
-	sprintf( hname_tagh, "compton_systematics/DeltaE/deltaK_tagh_10sigE" );
-	sprintf( hname_tagm, "compton_systematics/DeltaE/deltaK_tagm_10sigE" );
+	sprintf( hname_tagh, "compton_systematics/DeltaE/deltaK_tagh_%02dsigE", sig_int );
+	sprintf( hname_tagm, "compton_systematics/DeltaE/deltaK_tagm_%02dsigE", sig_int );
 	
 	// Name of histograms for fitting yield:
 	
-	sprintf( hname_tagh_sim, "compton_systematics_sim/DeltaE/deltaK_tagh_10sigE" );
-	sprintf( hname_tagm_sim, "compton_systematics_sim/DeltaE/deltaK_tagm_10sigE" );
+	sprintf( hname_tagh_sim, "compton_systematics_sim/DeltaE/deltaK_tagh_%02dsigE", sig_int );
+	sprintf( hname_tagm_sim, "compton_systematics_sim/DeltaE/deltaK_tagm_%02dsigE", sig_int );
 	
 	// Directory where mc rootFiles are stored:
 	
@@ -988,71 +989,77 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 	
 	h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
 	
-	if( !FIX_BACKGROUND ) {
-		f_fit->ReleaseParameter(6);
-		f_fit->ReleaseParameter(7);
-		f_fit->ReleaseParameter(8);
-		f_fit->ReleaseParameter(9);
-		
-		//f_fit->SetRange(-2., 2.);
-		h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
-	}
-	
-	f_fit->SetRange( -2., 1.5 );
-	/*
-	f_fit->FixParameter(6, f_fit->GetParameter(6));
-	f_fit->FixParameter(7, f_fit->GetParameter(7));
-	f_fit->FixParameter(8, f_fit->GetParameter(8));
-	f_fit->FixParameter(9, f_fit->GetParameter(9));
-	*/
-	
-	TFitResultPtr result = h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "SR0QL" );
-	if( !((Int_t)result == 0) ) return 0;
-	
-	/*
-	f_fit->SetParameter(6, f_bkgd->GetParameter(0) );
-	f_fit->SetParameter(7, f_bkgd->GetParameter(1) );
-	f_fit->SetParameter(8, f_bkgd->GetParameter(2) );
-	f_fit->SetParameter(9, f_bkgd->GetParameter(3) );
-	
-	f_fit->SetRange( bkgd_min, 2.0 );
-	
-	h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
-	
-	f_fit->FixParameter(6, f_fit->GetParameter(6));
-	f_fit->FixParameter(7, f_fit->GetParameter(7));
-	f_fit->FixParameter(8, f_fit->GetParameter(8));
-	f_fit->FixParameter(9, f_fit->GetParameter(9));
 	
 	
-	if( !FIX_BACKGROUND ) {
-		f_fit->ReleaseParameter(6);
-		f_fit->ReleaseParameter(7);
-		f_fit->ReleaseParameter(8);
-		f_fit->ReleaseParameter(9);
-		
-		h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
-	}
 	
-	f_fit->SetRange( -2., 1.5 );
+	TF1 *f_fit_new  = new TF1( Form("f_fit_new_%s_%d",tag_sys_char,counter), 
+		double_gaus_fit, -2., 2., 10 );
 	
-	TFitResultPtr result = h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "SR0QL" );
-	if( !((Int_t)result == 0) ) fit_val = 0;
-	*/
+	f_fit_new->SetParName( 0, "A" );
+	f_fit_new->SetParName( 1, "z" );
+	f_fit_new->SetParName( 2, "#mu_{1}" );
+	f_fit_new->SetParName( 3, "#mu_{1}-#mu_{2}" );
+	f_fit_new->SetParName( 4, "#sigma_{1}" );
+	f_fit_new->SetParName( 5, "#sigma_{2}" );
+	
+	f_fit_new->SetParLimits( 1, 0.0, 0.5 );
+	f_fit_new->SetParLimits( 4, 0.0, 1.0 );
+	f_fit_new->SetParLimits( 5, 0.0, 2.0 );
+	
+	f_fit_new->SetParameters( f_fit->GetParameters() );
+	
+	f_fit_new->FixParameter(0, f_fit->GetParameter(0) );
+	f_fit_new->FixParameter(1, f_fit->GetParameter(1) );
+	f_fit_new->FixParameter(2, f_fit->GetParameter(2) );
+	f_fit_new->FixParameter(3, f_fit->GetParameter(3) );
+	f_fit_new->FixParameter(4, f_fit->GetParameter(4) );
+	f_fit_new->FixParameter(5, f_fit->GetParameter(5) );
+	f_fit_new->FixParameter(6, f_fit->GetParameter(6) );
+	f_fit_new->FixParameter(7, f_fit->GetParameter(7) );
+	f_fit_new->FixParameter(8, f_fit->GetParameter(8) );
+	f_fit_new->FixParameter(9, f_fit->GetParameter(9) );
+	
+	f_fit_new->ReleaseParameter(6);
+	f_fit_new->ReleaseParameter(7);
+	
+	f_fit_new->SetRange( -2.0, 2.0 );
+	h1->Fit( Form("f_fit_new_%s_%d",tag_sys_char,counter), "R0QL" );
+	
+	f_fit_new->ReleaseParameter(8);
+	
+	f_fit_new->SetRange( -2.0, 2.0 );
+	h1->Fit( Form("f_fit_new_%s_%d",tag_sys_char,counter), "R0QL" );
+	
+	f_fit_new->ReleaseParameter(9);
+	
+	f_fit_new->SetRange( -2.0, 2.0 );
+	h1->Fit( Form("f_fit_new_%s_%d",tag_sys_char,counter), "R0QL" );
+	
+	f_fit_new->FixParameter(6, f_fit->GetParameter(6) );
+	f_fit_new->FixParameter(7, f_fit->GetParameter(7) );
+	f_fit_new->FixParameter(8, f_fit->GetParameter(8) );
+	f_fit_new->FixParameter(9, f_fit->GetParameter(9) );
+	
+	f_fit_new->ReleaseParameter(0);
+	f_fit_new->ReleaseParameter(1);
+	f_fit_new->ReleaseParameter(2);
+	f_fit_new->ReleaseParameter(3);
+	f_fit_new->ReleaseParameter(4);
+	f_fit_new->ReleaseParameter(5);
+	
+	f_fit_new->SetRange( -2., 1.5 );
+	
+	TFitResultPtr result = h1->Fit( Form("f_fit_new_%s_%d",tag_sys_char,counter), "SR0QL" );
+	//if( !((Int_t)result == 0) ) return 0;
 	
 	chi2 = result->Chi2() / result->Ndf();
-	
-	
-	h1->Fit( Form("f_fit_%s_%d",tag_sys_char,counter), "R0QL" );
 	h1->GetXaxis()->SetRangeUser( -2.0, 1.5 );
-	
-	
 	
 	if( CS_FROM_FIT ) {
 	
-	yield  = f_fit->GetParameter(0) * sqrt(2.*TMath::Pi()) 
-		* ( (1.-f_fit->GetParameter(1))*f_fit->GetParameter(4)
-		+ f_fit->GetParameter(1)*f_fit->GetParameter(5) );
+	yield  = f_fit_new->GetParameter(0) * sqrt(2.*TMath::Pi()) 
+		* ( (1.-f_fit_new->GetParameter(1))*f_fit_new->GetParameter(4)
+		+ f_fit_new->GetParameter(1)*f_fit_new->GetParameter(5) );
 	yield /= bin_size;
 	
 	yieldE = sqrt(yield);
@@ -1060,8 +1067,8 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 	} else {
 			
 	TF1 *fInt     = new TF1( Form("fInt_tagh_%d",counter), "pol4", -3., 3. );
-	fInt->SetParameters( 0., f_fit->GetParameter(6), 0.5*f_fit->GetParameter(7), 
-		(1./3.)*f_fit->GetParameter(8), 0.25*f_fit->GetParameter(9) );
+	fInt->SetParameters( 0., f_fit_new->GetParameter(6), 0.5*f_fit_new->GetParameter(7), 
+		(1./3.)*f_fit_new->GetParameter(8), 0.25*f_fit_new->GetParameter(9) );
 	
 	double intsub = fInt->Eval(1.5) - fInt->Eval(-2.);
 	intsub       /= bin_size;
@@ -1073,23 +1080,21 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 	
 	
 	TF1 *f_draw = new TF1( Form("f_draw_%d_%d",tag_sys,counter), "pol3", -3., 3. );
-	f_draw->SetParameter(0, f_fit->GetParameter(6));
-	f_draw->SetParameter(1, f_fit->GetParameter(7));
-	f_draw->SetParameter(2, f_fit->GetParameter(8));
-	f_draw->SetParameter(3, f_fit->GetParameter(9));
+	f_draw->SetParameter(0, f_fit_new->GetParameter(6));
+	f_draw->SetParameter(1, f_fit_new->GetParameter(7));
+	f_draw->SetParameter(2, f_fit_new->GetParameter(8));
+	f_draw->SetParameter(3, f_fit_new->GetParameter(9));
 	f_draw->SetLineColor(kGreen);
 	f_draw->SetLineStyle(2);
 	
-	
-	
 	pad_lin->cd();
 	h1->Draw();
-	f_fit->Draw("same");
+	f_fit_new->Draw("same");
 	f_draw->Draw("same");
 	
 	pad_log->cd();
 	h1->Draw();
-	f_fit->Draw("same");
+	f_fit_new->Draw("same");
 	f_draw->Draw("same");
 	
 	
@@ -1103,7 +1108,7 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 		if( loc_c > 0. ) loc_err = sqrt(loc_c);
 		else loc_err = 1.0;
 		
-		double loc_dev = (loc_c - f_fit->Eval(loc_x))/loc_err;
+		double loc_dev = (loc_c - f_fit_new->Eval(loc_x))/loc_err;
 		h1_dev->SetBinContent(ib,loc_dev);
 	}
 	
@@ -1138,7 +1143,7 @@ int fit_yield( int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE
 	
 	top_pad->cd();
 	h1->Draw();
-	f_fit->Draw("same");
+	f_fit_new->Draw("same");
 	
 	bot_pad->cd();
 	h1_dev->Draw("PE");
@@ -1206,15 +1211,13 @@ int get_acc(  int tag_sys, int counter, double &acc, double &accE )
 	h1->Rebin(rebins);
 	h1->GetXaxis()->SetTitle( "E_{Comp} - E_{#gamma} [GeV]" );
 	h1->GetXaxis()->SetTitleOffset( 1.1 );
-	h1->GetXaxis()->SetRangeUser( -1.5, 1.5 );
 	h1->GetYaxis()->SetTitle( Form("counts / %d MeV", n_mev) );
 	h1->GetYaxis()->SetTitleOffset( 1.3 );
 	h1->SetLineColor( kBlack );
 	h1->SetLineWidth( 2 );
-	h1->GetXaxis()->SetRangeUser( -3., 2. );
 	
 	
-	
+	/*
 	TF1 *f_gaus = new TF1( Form("f_gaus_%d_%d",tag_sys,counter), "gaus", -2., 2. );
 	
 	f_gaus->SetParameters( h1->GetMaximum(), 
@@ -1226,7 +1229,6 @@ int get_acc(  int tag_sys, int counter, double &acc, double &accE )
 	f_gaus->SetRange( f_gaus->GetParameter(1)-0.2, f_gaus->GetParameter(1)+0.2 );
 	
 	h1->Fit( Form("f_gaus_%d_%d",tag_sys,counter), "R0QL" );
-	
 	
 	TF1 *f_fit = new TF1( Form("f_fit_%d_%d",tag_sys,counter), double_gaus_fit, -2., 2., 10 );
 	
@@ -1260,16 +1262,13 @@ int get_acc(  int tag_sys, int counter, double &acc, double &accE )
 	
 	h1->Fit( Form("f_fit_%d_%d",tag_sys,counter), "R0QL" );
 	
-	
-	
-	
-	
 	double yield = f_fit->GetParameter(0) * sqrt(2.*TMath::Pi()) 
 		* ( (1.-f_fit->GetParameter(1))*f_fit->GetParameter(4)
 		+ f_fit->GetParameter(1)*f_fit->GetParameter(5) );
 	yield /= bin_size;
+	*/
 	
-	yield = h1->Integral();
+	double yield = h1->Integral();
 	
 	acc  = yield / n_gen;
 	accE = sqrt( n_gen*acc*(1.-acc) ) / n_gen;
