@@ -4,6 +4,8 @@ void plot_YieldRatio()
 	
 	int tag_sys = 0;
 	
+	const bool SAVE_PLOTS = true;
+	
 	int MAX_COUNTERS;
 	if( tag_sys==0 ) MAX_COUNTERS=274;
 	else             MAX_COUNTERS=102;
@@ -79,6 +81,14 @@ void plot_YieldRatio()
 		
 		
 		if( tag_sys==0 ) {
+			if( tagh_yield[6][ic-1] <= 0. ) continue;
+			if(   tagh_cs[6][ic-1]  <= 0. ) continue;
+		} else {
+			if( tagm_yield[6][ic-1] <= 0. ) continue;
+			if(   tagm_cs[6][ic-1]  <= 0. ) continue;
+		}
+		
+		if( tag_sys==0 ) {
 			if( tagh_yield[0][ic-1] <= 0. ) continue;
 		} else {
 			if( tagm_yield[0][ic-1] <= 0. ) continue;
@@ -101,7 +111,7 @@ void plot_YieldRatio()
 		
 		for( int ie = 0; ie < n_ens; ie++ ) {
 			
-			sigmas[ie]      = 0.01 * (double)sigma_vec[ie];
+			sigmas[ie]      = 0.1 * (double)sigma_vec[ie];
 			zeros[ie]       = 0.;
 			
 			double loc_yield_ratio, loc_yield_ratioE;
@@ -119,8 +129,8 @@ void plot_YieldRatio()
 					pow( tagh_accE[ie][ic-1]/tagh_acc[0][ic-1], 2.0) + 
 					pow( tagh_acc[ie][ic-1]*tagh_accE[0][ic-1]
 					/(tagh_acc[0][ic-1]*tagh_acc[0][ic-1]), 2.0) );
-				loc_cs  = tagh_cs[ie][ic-1];
-				loc_csE = tagh_csE[ie][ic-1];
+				loc_cs  = tagh_cs[ie][ic-1] / tagh_cs[6][ic-1];
+				loc_csE = tagh_csE[ie][ic-1] / tagh_cs[6][ic-1];
 			} else {
 				loc_yield_ratio  = tagm_yield[ie][ic-1] / tagm_yield[0][ic-1];
 				loc_yield_ratioE = sqrt( 
@@ -132,8 +142,8 @@ void plot_YieldRatio()
 					pow( tagm_accE[ie][ic-1]/tagm_acc[0][ic-1], 2.0) + 
 					pow( tagm_acc[ie][ic-1]*tagm_accE[0][ic-1]
 					/(tagm_acc[0][ic-1]*tagm_acc[0][ic-1]), 2.0) );
-				loc_cs  = tagm_cs[ie][ic-1];
-				loc_csE = tagm_csE[ie][ic-1];
+				loc_cs  = tagm_cs[ie][ic-1] / tagm_cs[6][ic-1];
+				loc_csE = tagm_csE[ie][ic-1] / tagm_cs[6][ic-1];
 			}
 			
 			yield_ratio[ie]  = loc_yield_ratio;
@@ -163,6 +173,7 @@ void plot_YieldRatio()
 		gYieldRatio->SetMarkerStyle(23);
 		gYieldRatio->SetMarkerColor(kBlue);
 		
+		
 		TGraphErrors *gAccRatio = new TGraphErrors( n_ens, sigmas, acc_ratio, 
 			zeros, acc_ratioE );
 		gAccRatio->GetXaxis()->SetTitle( "#DeltaE Cut Width [#sigma]" );
@@ -177,15 +188,28 @@ void plot_YieldRatio()
 		gAccRatio->SetMarkerStyle(23);
 		gAccRatio->SetMarkerColor(kRed);
 		
+		double loc_max = 0.;
+		for( int ie=0; ie < n_ens; ie++ ) {
+			if( yield_ratio[ie] > 2.0 ) continue;
+			if( yield_ratio[ie] > loc_max ) loc_max = yield_ratio[ie];
+		}
+		
+		double loc_min = loc_max;
+		for( int ie=0; ie < n_ens; ie++ ) {
+			if( yield_ratio[ie] <= 0.2 ) continue;
+			if( yield_ratio[ie] < loc_min ) loc_min = yield_ratio[ie];
+		}
+		
+		gYieldRatio->GetYaxis()->SetRangeUser( 0.95*loc_min, 1.05*loc_max );
+		
 		canvas1->cd();
 		gYieldRatio->Draw("AP");
 		gAccRatio->Draw("P same");
 		
 		
-		
 		TGraphErrors *gCS = new TGraphErrors( n_ens, sigmas, cs, zeros, csE );
 		gCS->GetXaxis()->SetTitle( "#DeltaE Cut Width [#sigma]" );
-		gCS->GetYaxis()->SetTitle( "Cross Section [mb / electron]" );
+		gCS->GetYaxis()->SetTitle( "Cross Section Difference" );
 		if( !tag_sys ) {
 			gCS->SetTitle( Form("TAGH Counter %d (E_{#gamma} = %.4f GeV)", 
 				ic, tagh_en[ic-1]) );
@@ -196,11 +220,13 @@ void plot_YieldRatio()
 		gCS->SetMarkerStyle(23);
 		gCS->SetMarkerColor(kBlue);
 		
+		gCS->GetYaxis()->SetRangeUser( 0.85, 1.15 );
+		
 		canvas2->cd();
 		gCS->Draw("AP");
 		
 		
-		
+		if( SAVE_PLOTS ) {
 		if( loc_counter==0 ) {
 			if( tag_sys==0 ) {
 				canvas1->Print( "tagh_deltaE_yieldRatio.pdf(",   "pdf" );
@@ -218,17 +244,20 @@ void plot_YieldRatio()
 				canvas2->Print( "tagm_deltaE_crossSection.pdf",  "pdf" );
 			}
 		}
+		}
 		
 		loc_counter++;
 		
 	}
 	
+	if( SAVE_PLOTS ) {
 	if( tag_sys==0 ) {
 		canvas1->Print( "tagh_deltaE_yieldRatio.pdf)",   "pdf" );
 		canvas2->Print( "tagh_deltaE_crossSection.pdf)", "pdf" );
 	} else {
 		canvas1->Print( "tagm_deltaE_yieldRatio.pdf)",   "pdf" );
 		canvas2->Print( "tagm_deltaE_crossSection.pdf)", "pdf" );
+	}
 	}
 	
 	return;
