@@ -73,7 +73,7 @@ void CrossSection()
 {
 	
 	
-	double sigma_cut = 7.0;
+	double sigma_cut = 6.5;
 	int sig_int = (int)(sigma_cut*10);
 	
 	
@@ -140,7 +140,7 @@ void CrossSection()
 	
 	// Adjustable switches:
 	
-	const bool DRAW_FITS_TAGH = true;
+	const bool DRAW_FITS_TAGH = false;
 	const bool DRAW_FITS_TAGM = false;
 	
 	CS_FROM_FIT    = true;
