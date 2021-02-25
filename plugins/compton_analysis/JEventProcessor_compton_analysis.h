@@ -52,7 +52,7 @@ using namespace std;
 class JEventProcessor_compton_analysis:public jana::JEventProcessor{
 	
 	public:
-		JEventProcessor_compton_analysis();
+		JEventProcessor_compton_analysis() {};
 		~JEventProcessor_compton_analysis() {};
 		const char* className(void){return "JEventProcessor_compton_analysis";}
 
@@ -67,7 +67,7 @@ class JEventProcessor_compton_analysis:public jana::JEventProcessor{
 		int fcalLayer(int row, int col);
 		
 		void fill_histograms( vector< ComptonCandidate_t > Comp_Candidates );
-		void read_cuts();
+		void set_cuts( int32_t runnumber );
 		
 		int  RUN_GROUP;
 		char cut_pathName[256];
@@ -111,14 +111,30 @@ class JEventProcessor_compton_analysis:public jana::JEventProcessor{
 		
 		//----------      Cuts      ---------//
 		
-		double   deltaE_mu_tagh[274],   deltaE_sig_tagh[274];
-		double   deltaE_mu_tagm[102],   deltaE_sig_tagm[102];
+		// DeltaE mu function is 3rd order polynomial
+		// DeltaE sig/E function is [0] + [1]/sqrt(x) + [2]/x
 		
-		double deltaPhi_mu_tagh[274], deltaPhi_sig_tagh[274];
-		double deltaPhi_mu_tagm[102], deltaPhi_sig_tagm[274];
+		TF1 *f_deltaE_mu,   *f_deltaE_sig;
 		
-		double   deltaK_mu_tagh[274],   deltaK_sig_tagh[274];
-		double   deltaK_mu_tagm[102],   deltaK_sig_tagm[102];
+		double deltaE_mu_p0,  deltaE_mu_p1,  deltaE_mu_p2,  deltaE_mu_p3;
+		double deltaE_sig_p0, deltaE_sig_p1, deltaE_sig_p2;
+		
+		// DeltaPhi mu function is 3rd order polynomial
+		// DeltaPhi sig function is 3rd order polynomial
+		
+		TF1 *f_deltaPhi_mu, *f_deltaPhi_sig;
+		
+		double deltaPhi_mu_p0,  deltaPhi_mu_p1,  deltaPhi_mu_p2,  deltaPhi_mu_p3;
+		double deltaPhi_sig_p0, deltaPhi_sig_p1, deltaPhi_sig_p2, deltaPhi_sig_p3;
+		
+		// DeltaK mu function is 3rd order polynomial
+		// DeltaK sig function is 3rd order polynomial
+		
+		TF1 *f_deltaK_mu,   *f_deltaK_sig;
+		
+		double deltaK_mu_p0,  deltaK_mu_p1,  deltaK_mu_p2,  deltaK_mu_p3;
+		double deltaK_sig_p0, deltaK_sig_p1, deltaK_sig_p2, deltaK_sig_p3;
+		
 		
 		//-----------------------------------//
 		

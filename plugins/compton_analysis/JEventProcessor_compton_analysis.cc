@@ -18,45 +18,6 @@ void InitPlugin(JApplication *app){
 
 
 //------------------
-// Constructor
-//------------------
-JEventProcessor_compton_analysis::JEventProcessor_compton_analysis()
-{
-	// Set defaults:
-	
-    	RUN_GROUP = 0;
-	gPARMS->SetDefaultParameter( "COMPTON_ANALYSIS:RUN_GROUP", RUN_GROUP );
-	
-	sprintf( cut_pathName, "/work/halld/home/andrsmit/primex_compton_analysis/cuts" );
-	
-	
-	
-	// read in cut values:
-	
-	read_cuts();
-	
-	/*
-	cout << "TAGH Counter     deltaPhi_mu     deltaPhi_sig" << endl;
-	for( int i=0; i<274; i++ ) {
-		
-		cout << i+1 << "     " << deltaPhi_mu_tagh[i] << "     " 
-			<< deltaPhi_sig_tagh[i] << endl;
-		
-	}
-	
-	cout << "TAGM Counter     deltaPhi_mu     deltaPhi_sig" << endl;
-	for( int i=0; i<102; i++ ) {
-		
-		cout << i+1 << "     " << deltaPhi_mu_tagm[i] << "     " 
-			<< deltaPhi_sig_tagm[i] << endl;
-		
-	}
-	*/
-}
-
-
-
-//------------------
 // init
 //------------------
 jerror_t JEventProcessor_compton_analysis::init(void)
@@ -76,15 +37,31 @@ jerror_t JEventProcessor_compton_analysis::init(void)
 	TDirectory *dir_deltaPhi = new TDirectoryFile( "DeltaPhi", "DeltaPhi" );
 	dir_deltaPhi->cd();
 	
-	h_deltaPhi[0]     = new TH2F( "deltaPhi_tagh",     "#Delta#phi; TAGH Counter; [deg]",                                      274, 0.5, 274.5, 3600, 0., 360. );
-	h_deltaPhi_e[0]   = new TH2F( "deltaPhi_tagh_e",   "#Delta#phi (#DeltaE Cut); TAGH Counter; [deg]",                        274, 0.5, 274.5, 3600, 0., 360. );
-	h_deltaPhi_ek[0]  = new TH2F( "deltaPhi_tagh_ek",  "#Delta#phi (#DeltaE + #DeltaK Cut); TAGH Counter; [deg]",              274, 0.5, 274.5, 3600, 0., 360. );
-	h_deltaPhi_ekp[0] = new TH2F( "deltaPhi_tagh_ekp", "#Delta#phi (#DeltaE + #DeltaK + #Delta#phi Cut); TAGH Counter; [deg]", 274, 0.5, 274.5, 3600, 0., 360. );
+	h_deltaPhi[0]     = new TH2F( "deltaPhi_tagh",     
+		"#Delta#phi; TAGH Counter; [deg]", 
+		274, 0.5, 274.5, 3600, 0., 360. );
+	h_deltaPhi_e[0]   = new TH2F( "deltaPhi_tagh_e", 
+		"#Delta#phi (#DeltaE Cut); TAGH Counter; [deg]", 
+		274, 0.5, 274.5, 3600, 0., 360. );
+	h_deltaPhi_ek[0]  = new TH2F( "deltaPhi_tagh_ek", 
+		"#Delta#phi (#DeltaE + #DeltaK Cut); TAGH Counter; [deg]", 
+		274, 0.5, 274.5, 3600, 0., 360. );
+	h_deltaPhi_ekp[0] = new TH2F( "deltaPhi_tagh_ekp", 
+		"#Delta#phi (#DeltaE + #DeltaK + #Delta#phi Cut); TAGH Counter; [deg]", 
+		274, 0.5, 274.5, 3600, 0., 360. );
 	
-	h_deltaPhi[1]     = new TH2F( "deltaPhi_tagm",     "#Delta#phi; TAGM Counter; [deg]",                                      102, 0.5, 102.5, 3600, 0., 360. );
-	h_deltaPhi_e[1]   = new TH2F( "deltaPhi_tagm_e",   "#Delta#phi (#DeltaE Cut); TAGM Counter; [deg]",                        102, 0.5, 102.5, 3600, 0., 360. );
-	h_deltaPhi_ek[1]  = new TH2F( "deltaPhi_tagm_ek",  "#Delta#phi (#DeltaE + #DeltaK Cut); TAGM Counter; [deg]",              102, 0.5, 102.5, 3600, 0., 360. );
-	h_deltaPhi_ekp[1] = new TH2F( "deltaPhi_tagm_ekp", "#Delta#phi (#DeltaE + #DeltaK + #Delta#phi Cut); TAGM Counter; [deg]", 102, 0.5, 102.5, 3600, 0., 360. );
+	h_deltaPhi[1]     = new TH2F( "deltaPhi_tagm", 
+		"#Delta#phi; TAGM Counter; [deg]", 
+		102, 0.5, 102.5, 3600, 0., 360. );
+	h_deltaPhi_e[1]   = new TH2F( "deltaPhi_tagm_e", 
+		"#Delta#phi (#DeltaE Cut); TAGM Counter; [deg]", 
+		102, 0.5, 102.5, 3600, 0., 360. );
+	h_deltaPhi_ek[1]  = new TH2F( "deltaPhi_tagm_ek", 
+		"#Delta#phi (#DeltaE + #DeltaK Cut); TAGM Counter; [deg]", 
+		102, 0.5, 102.5, 3600, 0., 360. );
+	h_deltaPhi_ekp[1] = new TH2F( "deltaPhi_tagm_ekp", 
+		"#Delta#phi (#DeltaE + #DeltaK + #Delta#phi Cut); TAGM Counter; [deg]", 
+		102, 0.5, 102.5, 3600, 0., 360. );
 	
 	dir_deltaPhi->cd("../");
 	
@@ -92,15 +69,31 @@ jerror_t JEventProcessor_compton_analysis::init(void)
 	TDirectory *dir_deltaT = new TDirectoryFile( "DeltaT", "DeltaT" );
 	dir_deltaT->cd();
 	
-	h_deltaT[0]     = new TH2F( "deltaT_tagh",     "#DeltaT; TAGH Counter; [ns]",                                      274, 0.5, 274.5, 2000, -100., 100. );
-	h_deltaT_e[0]   = new TH2F( "deltaT_tagh_e",   "#DeltaT (#DeltaE Cut); TAGH Counter; [ns]",                        274, 0.5, 274.5, 2000, -100., 100. );
-	h_deltaT_ep[0]  = new TH2F( "deltaT_tagh_ep",  "#DeltaT (#DeltaE + #Delta#phi Cut); TAGH Counter; [ns]",           274, 0.5, 274.5, 2000, -100., 100. );
-	h_deltaT_epk[0] = new TH2F( "deltaT_tagh_epk", "#DeltaT (#DeltaE + #Delta#phi + #DeltaK Cut); TAGH Counter; [ns]", 274, 0.5, 274.5, 2000, -100., 100. );
+	h_deltaT[0]     = new TH2F( "deltaT_tagh", 
+		"#DeltaT; TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -100., 100. );
+	h_deltaT_e[0]   = new TH2F( "deltaT_tagh_e", 
+		"#DeltaT (#DeltaE Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -100., 100. );
+	h_deltaT_ep[0]  = new TH2F( "deltaT_tagh_ep", 
+		"#DeltaT (#DeltaE + #Delta#phi Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -100., 100. );
+	h_deltaT_epk[0] = new TH2F( "deltaT_tagh_epk", 
+		"#DeltaT (#DeltaE + #Delta#phi + #DeltaK Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -100., 100. );
 	
-	h_deltaT[1]     = new TH2F( "deltaT_tagm",     "#DeltaT; TAGM Counter; [ns]",                                      102, 0.5, 102.5, 2000, -100., 100. );
-	h_deltaT_e[1]   = new TH2F( "deltaT_tagm_e",   "#DeltaT (#DeltaE Cut); TAGM Counter; [ns]",                        102, 0.5, 102.5, 2000, -100., 100. );
-	h_deltaT_ep[1]  = new TH2F( "deltaT_tagm_ep",  "#DeltaT (#DeltaE + #Delta#phi Cut); TAGM Counter; [ns]",           102, 0.5, 102.5, 2000, -100., 100. );
-	h_deltaT_epk[1] = new TH2F( "deltaT_tagm_epk", "#DeltaT (#DeltaE + #Delta#phi + #DeltaK Cut); TAGM Counter; [ns]", 102, 0.5, 102.5, 2000, -100., 100. );
+	h_deltaT[1]     = new TH2F( "deltaT_tagm", 
+		"#DeltaT; TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -100., 100. );
+	h_deltaT_e[1]   = new TH2F( "deltaT_tagm_e", 
+		"#DeltaT (#DeltaE Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -100., 100. );
+	h_deltaT_ep[1]  = new TH2F( "deltaT_tagm_ep", 
+		"#DeltaT (#DeltaE + #Delta#phi Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -100., 100. );
+	h_deltaT_epk[1] = new TH2F( "deltaT_tagm_epk", 
+		"#DeltaT (#DeltaE + #Delta#phi + #DeltaK Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -100., 100. );
 	
 	dir_deltaT->cd("../");
 	
@@ -108,15 +101,31 @@ jerror_t JEventProcessor_compton_analysis::init(void)
 	TDirectory *dir_deltaR = new TDirectoryFile( "DeltaR", "DeltaR" );
 	dir_deltaR->cd();
 	
-	h_deltaR[0]     = new TH2F( "deltaR_tagh",     "#DeltaR; TAGH Counter; [ns]",                                      274, 0.5, 274.5, 1000, 0., 100. );
-	h_deltaR_e[0]   = new TH2F( "deltaR_tagh_e",   "#DeltaR (#DeltaE Cut); TAGH Counter; [ns]",                        274, 0.5, 274.5, 1000, 0., 100. );
-	h_deltaR_ep[0]  = new TH2F( "deltaR_tagh_ep",  "#DeltaR (#DeltaE + #Delta#phi Cut); TAGH Counter; [ns]",           274, 0.5, 274.5, 1000, 0., 100. );
-	h_deltaR_epk[0] = new TH2F( "deltaR_tagh_epk", "#DeltaR (#DeltaE + #Delta#phi + #DeltaK Cut); TAGH Counter; [ns]", 274, 0.5, 274.5, 1000, 0., 100. );
+	h_deltaR[0]     = new TH2F( "deltaR_tagh", 
+		"#DeltaR; TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 1000, 0., 100. );
+	h_deltaR_e[0]   = new TH2F( "deltaR_tagh_e", 
+		"#DeltaR (#DeltaE Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 1000, 0., 100. );
+	h_deltaR_ep[0]  = new TH2F( "deltaR_tagh_ep", 
+		"#DeltaR (#DeltaE + #Delta#phi Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 1000, 0., 100. );
+	h_deltaR_epk[0] = new TH2F( "deltaR_tagh_epk", 
+		"#DeltaR (#DeltaE + #Delta#phi + #DeltaK Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 1000, 0., 100. );
 	
-	h_deltaR[1]     = new TH2F( "deltaR_tagm",     "#DeltaR; TAGM Counter; [ns]",                                      102, 0.5, 102.5, 1000, 0., 100. );
-	h_deltaR_e[1]   = new TH2F( "deltaR_tagm_e",   "#DeltaR (#DeltaE Cut); TAGM Counter; [ns]",                        102, 0.5, 102.5, 1000, 0., 100. );
-	h_deltaR_ep[1]  = new TH2F( "deltaR_tagm_ep",  "#DeltaR (#DeltaE + #Delta#phi Cut); TAGM Counter; [ns]",           102, 0.5, 102.5, 1000, 0., 100. );
-	h_deltaR_epk[1] = new TH2F( "deltaR_tagm_epk", "#DeltaR (#DeltaE + #Delta#phi + #DeltaK Cut); TAGM Counter; [ns]", 102, 0.5, 102.5, 1000, 0., 100. );
+	h_deltaR[1]     = new TH2F( "deltaR_tagm", 
+		"#DeltaR; TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 1000, 0., 100. );
+	h_deltaR_e[1]   = new TH2F( "deltaR_tagm_e", 
+		"#DeltaR (#DeltaE Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 1000, 0., 100. );
+	h_deltaR_ep[1]  = new TH2F( "deltaR_tagm_ep", 
+		"#DeltaR (#DeltaE + #Delta#phi Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 1000, 0., 100. );
+	h_deltaR_epk[1] = new TH2F( "deltaR_tagm_epk", 
+		"#DeltaR (#DeltaE + #Delta#phi + #DeltaK Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 1000, 0., 100. );
 	
 	dir_deltaR->cd("../");
 	
@@ -124,15 +133,31 @@ jerror_t JEventProcessor_compton_analysis::init(void)
 	TDirectory *dir_deltaE = new TDirectoryFile( "DeltaE", "DeltaE" );
 	dir_deltaE->cd();
 	
-	h_deltaE[0]     = new TH2F( "deltaE_tagh",     "#DeltaE; TAGH Counter; [ns]",                                      274, 0.5, 274.5, 2000, -4.0, 4.0 );
-	h_deltaE_p[0]   = new TH2F( "deltaE_tagh_p",   "#DeltaE (#Delta#phi Cut); TAGH Counter; [ns]",                     274, 0.5, 274.5, 2000, -4.0, 4.0 );
-	h_deltaE_pk[0]  = new TH2F( "deltaE_tagh_pk",  "#DeltaE (#Delta#phi + #DeltaK Cut); TAGH Counter; [ns]",           274, 0.5, 274.5, 2000, -4.0, 4.0 );
-	h_deltaE_pke[0] = new TH2F( "deltaE_tagh_pke", "#DeltaE (#Delta#phi + #DeltaK + #DeltaE Cut); TAGH Counter; [ns]", 274, 0.5, 274.5, 2000, -4.0, 4.0 );
+	h_deltaE[0]     = new TH2F( "deltaE_tagh", 
+		"#DeltaE; TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -4.0, 4.0 );
+	h_deltaE_p[0]   = new TH2F( "deltaE_tagh_p", 
+		"#DeltaE (#Delta#phi Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -4.0, 4.0 );
+	h_deltaE_pk[0]  = new TH2F( "deltaE_tagh_pk", 
+		"#DeltaE (#Delta#phi + #DeltaK Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -4.0, 4.0 );
+	h_deltaE_pke[0] = new TH2F( "deltaE_tagh_pke", 
+		"#DeltaE (#Delta#phi + #DeltaK + #DeltaE Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -4.0, 4.0 );
 	
-	h_deltaE[1]     = new TH2F( "deltaE_tagm",     "#DeltaE; TAGM Counter; [ns]",                                      102, 0.5, 102.5, 2000, -4.0, 4.0 );
-	h_deltaE_p[1]   = new TH2F( "deltaE_tagm_p",   "#DeltaE (#Delta#phi Cut); TAGM Counter; [ns]",                     102, 0.5, 102.5, 2000, -4.0, 4.0 );
-	h_deltaE_pk[1]  = new TH2F( "deltaE_tagm_pk",  "#DeltaE (#Delta#phi + #DeltaK Cut); TAGM Counter; [ns]",           102, 0.5, 102.5, 2000, -4.0, 4.0 );
-	h_deltaE_pke[1] = new TH2F( "deltaE_tagm_pke", "#DeltaE (#Delta#phi + #DeltaK + #DeltaE Cut); TAGM Counter; [ns]", 102, 0.5, 102.5, 2000, -4.0, 4.0 );
+	h_deltaE[1]     = new TH2F( "deltaE_tagm", 
+		"#DeltaE; TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -4.0, 4.0 );
+	h_deltaE_p[1]   = new TH2F( "deltaE_tagm_p", 
+		"#DeltaE (#Delta#phi Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -4.0, 4.0 );
+	h_deltaE_pk[1]  = new TH2F( "deltaE_tagm_pk", 
+		"#DeltaE (#Delta#phi + #DeltaK Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -4.0, 4.0 );
+	h_deltaE_pke[1] = new TH2F( "deltaE_tagm_pke", 
+		"#DeltaE (#Delta#phi + #DeltaK + #DeltaE Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -4.0, 4.0 );
 	
 	dir_deltaE->cd("../");
 	
@@ -140,15 +165,31 @@ jerror_t JEventProcessor_compton_analysis::init(void)
 	TDirectory *dir_deltaK = new TDirectoryFile( "DeltaK", "DeltaK" );
 	dir_deltaK->cd();
 	
-	h_deltaK[0]     = new TH2F( "deltaK_tagh",     "#DeltaK; TAGH Counter; [ns]",                                      274, 0.5, 274.5, 2000, -4.0, 4.0 );
-	h_deltaK_e[0]   = new TH2F( "deltaK_tagh_e",   "#DeltaK (#DeltaE Cut); TAGH Counter; [ns]",                        274, 0.5, 274.5, 2000, -4.0, 4.0 );
-	h_deltaK_ep[0]  = new TH2F( "deltaK_tagh_ep",  "#DeltaK (#DeltaE + #Delta#phi Cut); TAGH Counter; [ns]",           274, 0.5, 274.5, 2000, -4.0, 4.0 );
-	h_deltaK_epk[0] = new TH2F( "deltaK_tagh_epk", "#DeltaK (#DeltaE + #Delta#phi + #DeltaK Cut); TAGH Counter; [ns]", 274, 0.5, 274.5, 2000, -4.0, 4.0 );
+	h_deltaK[0]     = new TH2F( "deltaK_tagh", 
+		"#DeltaK; TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -4.0, 4.0 );
+	h_deltaK_e[0]   = new TH2F( "deltaK_tagh_e", 
+		"#DeltaK (#DeltaE Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -4.0, 4.0 );
+	h_deltaK_ep[0]  = new TH2F( "deltaK_tagh_ep", 
+		"#DeltaK (#DeltaE + #Delta#phi Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -4.0, 4.0 );
+	h_deltaK_epk[0] = new TH2F( "deltaK_tagh_epk", 
+		"#DeltaK (#DeltaE + #Delta#phi + #DeltaK Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -4.0, 4.0 );
 	
-	h_deltaK[1]     = new TH2F( "deltaK_tagm",     "#DeltaK; TAGM Counter; [ns]",                                      102, 0.5, 102.5, 2000, -4.0, 4.0 );
-	h_deltaK_e[1]   = new TH2F( "deltaK_tagm_e",   "#DeltaK (#DeltaE Cut); TAGM Counter; [ns]",                        102, 0.5, 102.5, 2000, -4.0, 4.0 );
-	h_deltaK_ep[1]  = new TH2F( "deltaK_tagm_ep",  "#DeltaK (#DeltaE + #Delta#phi Cut); TAGM Counter; [ns]",           102, 0.5, 102.5, 2000, -4.0, 4.0 );
-	h_deltaK_epk[1] = new TH2F( "deltaK_tagm_epk", "#DeltaK (#DeltaE + #Delta#phi + #DeltaK Cut); TAGM Counter; [ns]", 102, 0.5, 102.5, 2000, -4.0, 4.0 );
+	h_deltaK[1]     = new TH2F( "deltaK_tagm", 
+		"#DeltaK; TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -4.0, 4.0 );
+	h_deltaK_e[1]   = new TH2F( "deltaK_tagm_e", 
+		"#DeltaK (#DeltaE Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -4.0, 4.0 );
+	h_deltaK_ep[1]  = new TH2F( "deltaK_tagm_ep", 
+		"#DeltaK (#DeltaE + #Delta#phi Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -4.0, 4.0 );
+	h_deltaK_epk[1] = new TH2F( "deltaK_tagm_epk", 
+		"#DeltaK (#DeltaE + #Delta#phi + #DeltaK Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -4.0, 4.0 );
 	
 	dir_deltaK->cd("../");
 	
@@ -156,22 +197,42 @@ jerror_t JEventProcessor_compton_analysis::init(void)
 	TDirectory *dir_deltaK2 = new TDirectoryFile( "DeltaK2", "DeltaK2" );
 	dir_deltaK2->cd();
 	
-	h_deltaK2[0]     = new TH2F( "deltaK2_tagh",     "#DeltaK2; TAGH Counter; [ns]",                                      274, 0.5, 274.5, 2000, -8.0, 8.0 );
-	h_deltaK2_e[0]   = new TH2F( "deltaK2_tagh_e",   "#DeltaK2 (#DeltaE Cut); TAGH Counter; [ns]",                        274, 0.5, 274.5, 2000, -8.0, 8.0 );
-	h_deltaK2_ep[0]  = new TH2F( "deltaK2_tagh_ep",  "#DeltaK2 (#DeltaE + #Delta#phi Cut); TAGH Counter; [ns]",           274, 0.5, 274.5, 2000, -8.0, 8.0 );
-	h_deltaK2_epk[0] = new TH2F( "deltaK2_tagh_epk", "#DeltaK2 (#DeltaE + #Delta#phi + #DeltaK Cut); TAGH Counter; [ns]", 274, 0.5, 274.5, 2000, -8.0, 8.0 );
+	h_deltaK2[0]     = new TH2F( "deltaK2_tagh", 
+		"#DeltaK2; TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -8.0, 8.0 );
+	h_deltaK2_e[0]   = new TH2F( "deltaK2_tagh_e", 
+		"#DeltaK2 (#DeltaE Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -8.0, 8.0 );
+	h_deltaK2_ep[0]  = new TH2F( "deltaK2_tagh_ep", 
+		"#DeltaK2 (#DeltaE + #Delta#phi Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -8.0, 8.0 );
+	h_deltaK2_epk[0] = new TH2F( "deltaK2_tagh_epk", 
+		"#DeltaK2 (#DeltaE + #Delta#phi + #DeltaK Cut); TAGH Counter; [ns]", 
+		274, 0.5, 274.5, 2000, -8.0, 8.0 );
 	
-	h_deltaK2[1]     = new TH2F( "deltaK2_tagm",     "#DeltaK2; TAGM Counter; [ns]",                                      102, 0.5, 102.5, 2000, -8.0, 8.0 );
-	h_deltaK2_e[1]   = new TH2F( "deltaK2_tagm_e",   "#DeltaK2 (#DeltaE Cut); TAGM Counter; [ns]",                        102, 0.5, 102.5, 2000, -8.0, 8.0 );
-	h_deltaK2_ep[1]  = new TH2F( "deltaK2_tagm_ep",  "#DeltaK2 (#DeltaE + #Delta#phi Cut); TAGM Counter; [ns]",           102, 0.5, 102.5, 2000, -8.0, 8.0 );
-	h_deltaK2_epk[1] = new TH2F( "deltaK2_tagm_epk", "#DeltaK2 (#DeltaE + #Delta#phi + #DeltaK Cut); TAGM Counter; [ns]", 102, 0.5, 102.5, 2000, -8.0, 8.0 );
+	h_deltaK2[1]     = new TH2F( "deltaK2_tagm", 
+		"#DeltaK2; TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -8.0, 8.0 );
+	h_deltaK2_e[1]   = new TH2F( "deltaK2_tagm_e", 
+		"#DeltaK2 (#DeltaE Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -8.0, 8.0 );
+	h_deltaK2_ep[1]  = new TH2F( "deltaK2_tagm_ep", 
+		"#DeltaK2 (#DeltaE + #Delta#phi Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -8.0, 8.0 );
+	h_deltaK2_epk[1] = new TH2F( "deltaK2_tagm_epk", 
+		"#DeltaK2 (#DeltaE + #Delta#phi + #DeltaK Cut); TAGM Counter; [ns]", 
+		102, 0.5, 102.5, 2000, -8.0, 8.0 );
 	
 	dir_deltaK2->cd("../");
 	
 	
 	
-	h_fcal_xy = new TH2F( "fcal_xy", "FCAL Shower Position; x_{FCAL} [cm]; y_{FCAL} [cm]", 1000, -60., 60., 1000, -60., 60. );
-	h_ccal_xy = new TH2F( "ccal_xy", "CCAL Shower Position; x_{CCAL} [cm]; y_{CCAL} [cm]", 1000, -13., 13., 1000, -13., 13. );
+	h_fcal_xy = new TH2F( "fcal_xy", 
+		"FCAL Shower Position; x_{FCAL} [cm]; y_{FCAL} [cm]", 
+		1000, -60., 60., 1000, -60., 60. );
+	h_ccal_xy = new TH2F( "ccal_xy", 
+		"CCAL Shower Position; x_{CCAL} [cm]; y_{CCAL} [cm]", 
+		1000, -13., 13., 1000, -13., 13. );
 	
 	
 	
@@ -213,6 +274,9 @@ jerror_t JEventProcessor_compton_analysis::brun(JEventLoop *eventLoop, int32_t r
 	
 	m_beamX_new =  0.0784;
 	m_beamY_new = -0.0532;
+	
+	
+	set_cuts( runnumber );
 	
 	
 	return NOERROR;
@@ -258,7 +322,7 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 	
 	
 	//-----   Geometry Objects   -----//
-	
+	/*
 	vector< const DFCALGeometry* > fcalGeomVec;
   	vector< const DCCALGeometry* > ccalGeomVec;
   	eventLoop->Get( fcalGeomVec );
@@ -276,7 +340,7 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 	
 	const DFCALGeometry *fcalGeom = fcalGeomVec[0];
 	const DCCALGeometry *ccalGeom = ccalGeomVec[0];
-	
+	*/
 	
 	
 	DVector3 vertex;
@@ -318,16 +382,22 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 		double face_x     =  vertex.X()  +  (loc_pos.X() * (m_fcalZ - vertex.Z())/loc_pos.Z());
 		double face_y     =  vertex.Y()  +  (loc_pos.Y() * (m_fcalZ - vertex.Z())/loc_pos.Z());
 		
-		int row   = fcalGeom->row(    static_cast<float>(face_y) );
-		int col   = fcalGeom->column( static_cast<float>(face_x) );
-		int layer = fcalLayer( row, col );
+		face_x -= m_fcalX;
+		face_y -= m_fcalY;
+		
+		double inner_layer_cut = 2.5*4.0157;
+		
+		int fid_cut = 0;
+		if( (-1.*inner_layer_cut < face_x && face_x < inner_layer_cut) 
+			&& (-1.*inner_layer_cut < face_y && face_y < inner_layer_cut) ) fid_cut = 1;
 		
 		if( (fabs(loc_t) < FCAL_RF_time_cut) && ((*show)->getEnergy() > FCAL_min_energy_cut) 
-			&& (layer > 1) && (loc_theta < 4.0) ) {
+			&& !fid_cut && (loc_theta < 4.0) ) {
 		  	n_fcal_showers++;
 		  	fcal_candidates.push_back( (*show) );
 		}
 		
+		h_fcal_rf_dt->Fill( loc_t );
 	}
 	
 	
@@ -335,29 +405,77 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 	for( vector< const DCCALShower* >::const_iterator show = ccal_showers.begin();
 		show != ccal_showers.end(); show++ ) {
 		
-		double loc_x = (*show)->x1  -  vertex.X() - (m_ccalX + m_ccalX_new);
-		double loc_y = (*show)->y1  -  vertex.Y() - (m_ccalY + m_ccalY_new);
+		/* 
+		In the simulation, the CCAL position was shifted to (x,y) = (m_ccalX_new,m_ccalY_new)
+		because this was the position found using the offline alignment procedure.
+		
+		In the reconstruction software (DCCALShower_factory), however, the showers are 
+		applied the (now incorrect) offset of x1 -> x1 + m_ccalX && y1 -> y1 + m_ccalY.
+		
+		Our goal with this bit of code is to apply a fiducial cut on the CCAL using the 
+		x,y position that the electrons/photons entered the CCAL.
+		
+		In my own build of halld_recon, I changed the DCCALShower_factory to give x,y,z 
+		inside the calorimeter instead of projecting it to the surface. 
+		So what we need to do hear is apply the correct offset, then project to 
+		the face of the CCAL.
+		*/
+		
+		double loc_x = (*show)->x1  -  vertex.X() -  m_ccalX  +  m_ccalX_new;
+		double loc_y = (*show)->y1  -  vertex.Y() -  m_ccalY  +  m_ccalY_new;
 		double loc_z = (*show)->z   -  vertex.Z();
 		
-		double loc_r = sqrt( loc_x*loc_x  +  loc_y*loc_y  +  loc_z*loc_z );
-		double loc_t = (*show)->time - (loc_r/c) - rfTime;
+		/* 
+		Now, loc_x, loc_y, and loc_z give x,y,z correctly in a coordinate system
+		where the target center (assumed interaction vertex) is the origin.
+		Now, we project the coordinates to the face of the CCAL.
+		*/
 		
 		double xface = vertex.X()  +  (loc_x * (m_ccalZ - vertex.Z())/loc_z);
 		double yface = vertex.Y()  +  (loc_y * (m_ccalZ - vertex.Z())/loc_z);
 		
-		int row   = ccalGeom->row(    static_cast<float>(yface-m_ccalY_new) );
-		int col   = ccalGeom->column( static_cast<float>(xface-m_ccalX_new) );
-		int layer = ccalLayer( row, col );
+		/*
+		Right now, xface and yface are the x,y coordinates of the CCAL shower
+		projected to the z-position of the CCAL face. However, they are still
+		in the coordinate system where the origin is the target center.
+		For more straightforward application of the fiducial cut, let's convert
+		them to the coordinate system where the center of CCAL is (0,0):
+		*/
+		
+		xface -= m_ccalX_new;
+		yface -= m_ccalY_new;
+		
+		/*
+		The fiducial cut removes the first inner layer of the CCAL, the most outer
+		layer of the CCAL, and one additional column in the negative x direction
+		that is shadowed by the FCAL:
+		*/
+		
+		int fid_cut = 0;
+		if( (-4.18 < xface && xface < 4.18) && (-4.18 < yface && yface < 4.18) ) fid_cut = 1;
+		if(  xface < -8.36 || xface > 10.45 || yface < -10.45 || yface > 10.45 ) fid_cut = 1;
+		
+		
+		
+		double loc_r = sqrt( loc_x*loc_x  +  loc_y*loc_y  +  loc_z*loc_z );
+		double loc_t = (*show)->time - (loc_r/c) - rfTime;
 		
 		if( (fabs(loc_t) < CCAL_RF_time_cut) && ((*show)->E > CCAL_min_energy_cut) 
-			&& (layer > 1) && (layer < 5) && (col != 1) ) {
+			&& !fid_cut ) {
 			n_ccal_showers++;
 			ccal_candidates.push_back( (*show) );
 		}
 		
+		h_ccal_rf_dt->Fill( loc_t );
 	}
 	
 	
+	for( vector< const DBeamPhoton* >::const_iterator gam = beam_photons.begin();
+		gam != beam_photons.end(); gam++ ) {
+		
+		double loc_t = (*gam)->time() - rfTime;
+		h_beam_rf_dt->Fill( loc_t );
+	}
 	
 	
 	//----------     Check FCAL-CCAL Pairs     ----------//
@@ -370,6 +488,9 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 		
 		double e1         =  (*show1)->getEnergy();
 		DVector3 pos1     =  (*show1)->getPosition_log()  -  vertex;
+		
+		if( (-32. < pos1.Y() && pos1.Y() < -20.) && (-8. < pos1.X() && pos1.X() < 4.) )
+			continue;
 		
 		double r1         =  pos1.Mag();
 		double t1         =  (*show1)->getTime()  -  (r1/c);
@@ -393,6 +514,7 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 			double phi2   =  pos2.Phi() * (180. / TMath::Pi());
 			double theta2 =  pos2.Theta();
 			
+			/*
 			int loc_phi_slice;
 			if(      -180. < phi2  &&  phi2 <= -135. ) loc_phi_slice = 0;
 			else if( -135. < phi2  &&  phi2 <=  -90. ) loc_phi_slice = 1;
@@ -403,6 +525,7 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 			else if(   90. < phi2  &&  phi2 <=  135. ) loc_phi_slice = 6;
 			else if(  135. < phi2  &&  phi2 <=  180. ) loc_phi_slice = 7;
 			else loc_phi_slice = 8;
+			*/
 			
 			// calculate deltaPhi and deltaT:
 			
@@ -423,10 +546,8 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 			for( vector< const DBeamPhoton* >::const_iterator gam = beam_photons.begin();
 				gam != beam_photons.end(); gam++ ) {
 				
-				
 				double eb    = (*gam)->lorentzMomentum().E();
 				double tb    = (*gam)->time();
-				
 				double brfdt = tb - rfTime;
 				
 				int bunch_val;
@@ -463,7 +584,7 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 				loc_Cand.y2        = pos2.Y();
 				loc_Cand.z2        = pos2.Z();
 				
-				loc_Cand.phi_slice = loc_phi_slice;
+				//loc_Cand.phi_slice = loc_phi_slice;
 				
 				loc_Cand.deltaPhi  = deltaPhi;
 				loc_Cand.deltaT    = deltaT;
@@ -520,116 +641,168 @@ jerror_t JEventProcessor_compton_analysis::fini(void)
 //------------------
 // read in cut values
 //------------------
-void JEventProcessor_compton_analysis::read_cuts()
+void JEventProcessor_compton_analysis::set_cuts( int32_t runnumber )
 {
 	
-	for( int i=0; i<274; i++ ) {
-		  deltaE_mu_tagh[i] = 0.;   deltaE_sig_tagh[i] = 0.;
-		deltaPhi_mu_tagh[i] = 0.; deltaPhi_sig_tagh[i] = 0.;
-		  deltaK_mu_tagh[i] = 0.;   deltaK_sig_tagh[i] = 0.;
+	if( runnumber < 61355 ) { // Be Target (200 nA)
+		
+		deltaE_mu_p0    =  6.35736e-02;
+		deltaE_mu_p1    = -1.51078e-02;
+		deltaE_mu_p2    =  3.15066e-04;
+		deltaE_mu_p3    =  8.28735e-06;
+		
+		deltaE_sig_p0   =  9.48484e-03;
+		deltaE_sig_p1   =  2.49121e-02;
+		deltaE_sig_p2   =  3.84999e-03;
+		
+		
+		deltaPhi_mu_p0  =  1.78907e+02;
+		deltaPhi_mu_p1  =  3.59216e-01;
+		deltaPhi_mu_p2  = -4.88098e-02;
+		deltaPhi_mu_p3  =  2.03322e-03;
+		
+		deltaPhi_sig_p0 =  1.20540e+01;
+		deltaPhi_sig_p1 = -1.41635e+00;
+		deltaPhi_sig_p2 =  1.15506e-01;
+		deltaPhi_sig_p3 = -3.23715e-03;
+		
+				
+		deltaK_mu_p0    =  5.14497e-02;
+		deltaK_mu_p1    =  8.53598e-03;
+		deltaK_mu_p2    = -4.43561e-03;
+		deltaK_mu_p3    =  2.15182e-04;
+		
+		deltaK_sig_p0   =  9.33422e-02;
+		deltaK_sig_p1   = -5.89212e-04;
+		deltaK_sig_p2   =  3.18354e-03;
+		deltaK_sig_p3   = -1.60047e-04;
+		
+		
+	} else if( runnumber < 61911 ) { // He Target (200 nA)
+		
+		deltaE_mu_p0    =  1.25368e-01;
+		deltaE_mu_p1    = -4.08206e-02;
+		deltaE_mu_p2    =  3.62775e-03;
+		deltaE_mu_p3    = -1.36018e-04;
+		
+		deltaE_sig_p0   =  1.59421e-02;
+		deltaE_sig_p1   =  4.19103e-12;
+		deltaE_sig_p2   =  3.32391e-02;
+		
+		
+		deltaPhi_mu_p0  =  1.80422e+02;
+		deltaPhi_mu_p1  = -2.70566e-01;
+		deltaPhi_mu_p2  =  2.96910e-02;
+		deltaPhi_mu_p3  = -1.14780e-03;
+		
+		deltaPhi_sig_p0 =  1.05340e+01;
+		deltaPhi_sig_p1 = -1.13232e+00;
+		deltaPhi_sig_p2 =  9.35420e-02;
+		deltaPhi_sig_p3 = -2.69885e-03;
+		
+		
+		deltaK_mu_p0    =  6.88062e-02;
+		deltaK_mu_p1    =  6.88754e-04;
+		deltaK_mu_p2    = -3.16666e-03;
+		deltaK_mu_p3    =  1.50777e-04;
+		
+		deltaK_sig_p0   =  9.95112e-02;
+		deltaK_sig_p1   = -3.22801e-05;
+		deltaK_sig_p2   =  2.82362e-03;
+		deltaK_sig_p3   = -1.35114e-04;
+		
+	} else if( runnumber < 61940 ) { // He Target (50 nA)
+		
+		deltaE_mu_p0    =  6.61443e-02;
+		deltaE_mu_p1    = -2.01740e-02;
+		deltaE_mu_p2    =  3.06065e-04;
+		deltaE_mu_p3    =  1.92091e-05;
+		
+		deltaE_sig_p0   =  8.20626e-03;
+		deltaE_sig_p1   =  3.30092e-02;
+		deltaE_sig_p2   =  7.09972e-10;
+		
+		
+		deltaPhi_mu_p0  =  1.79917e+02;
+		deltaPhi_mu_p1  = -4.91278e-02;
+		deltaPhi_mu_p2  = -1.95718e-04;
+		deltaPhi_mu_p3  =  1.75895e-04;
+		
+		deltaPhi_sig_p0 =  1.12987e+01;
+		deltaPhi_sig_p1 = -1.41973e+00;
+		deltaPhi_sig_p2 =  1.27952e-01;
+		deltaPhi_sig_p3 = -4.04766e-03;
+		
+		
+		deltaK_mu_p0    =  5.52678e-02;
+		deltaK_mu_p1    =  6.75644e-03;
+		deltaK_mu_p2    = -4.00935e-03;
+		deltaK_mu_p3    =  1.88147e-04;
+		
+		deltaK_sig_p0   =  2.29331e-01;
+		deltaK_sig_p1   = -4.96555e-02;
+		deltaK_sig_p2   =  9.01915e-03;
+		deltaK_sig_p3   = -3.91743e-04;
+		
+	} else { // He Target (100 nA)
+		
+		deltaE_mu_p0    =  1.96300e-01;
+		deltaE_mu_p1    = -6.91539e-02;
+		deltaE_mu_p2    =  7.11088e-03;
+		deltaE_mu_p3    = -2.69863e-04;
+		
+		deltaE_sig_p0   =  1.61072e-02;
+		deltaE_sig_p1   =  3.19930e-12;
+		deltaE_sig_p2   =  3.20052e-02;
+		
+		
+		deltaPhi_mu_p0  =  1.80227e+02;
+		deltaPhi_mu_p1  = -2.00610e-01;
+		deltaPhi_mu_p2  =  2.07285e-02;
+		deltaPhi_mu_p3  = -7.50372e-04;
+		
+		deltaPhi_sig_p0 =  1.38342e+01;
+		deltaPhi_sig_p1 = -2.34462e+00;
+		deltaPhi_sig_p2 =  2.38851e-01;
+		deltaPhi_sig_p3 = -8.45802e-03;
+		
+		
+		deltaK_mu_p0    =  2.35848e-02;
+		deltaK_mu_p1    =  1.66183e-02;
+		deltaK_mu_p2    = -5.16862e-03;
+		deltaK_mu_p3    =  2.37393e-04;
+		
+		deltaK_sig_p0   =  2.60072e-01;
+		deltaK_sig_p1   = -5.69117e-02;
+		deltaK_sig_p2   =  9.42118e-03;
+		deltaK_sig_p3   = -3.89880e-04;
+		
 	}
-	for( int i=0; i<102; i++ ) {
-		  deltaE_mu_tagm[i] = 0.;   deltaE_sig_tagm[i] = 0.;
-		deltaPhi_mu_tagm[i] = 0.; deltaPhi_sig_tagm[i] = 0.;
-		  deltaK_mu_tagm[i] = 0.;   deltaK_sig_tagm[i] = 0.;
-	}
-	
-	char run_group_name[256];
-	
-	if( RUN_GROUP==0 ) {
-		sprintf( run_group_name, "%s/Be",     cut_pathName );
-	} else if( RUN_GROUP==1 ) {
-		sprintf( run_group_name, "%s/He_50",  cut_pathName );
-	} else if( RUN_GROUP==2 ) {
-		sprintf( run_group_name, "%s/He_100", cut_pathName );
-	} else {
-		sprintf( run_group_name, "%s/Be",     cut_pathName );
-	}
-	
-	char fname[256];
 	
 	
-	//-----   DeltaE   -----//
+	f_deltaE_mu = new TF1(   "f_deltaE_mu", "pol3", 3.0, 12.0 );
+	f_deltaE_mu->SetParameters( deltaE_mu_p0, deltaE_mu_p1, deltaE_mu_p2, deltaE_mu_p3 );
 	
-	sprintf( fname, "%s_deltaE_tagh.dat", run_group_name );
-	ifstream infile_deltaE_tagh(fname);
-	if( infile_deltaE_tagh.good() ) {
-		int a; double b, c;
-		for( int i=0; i<274; i++ ) {
-			infile_deltaE_tagh >> a >> b >> c;
-			deltaE_mu_tagh[i]  = b;
-			deltaE_sig_tagh[i] = c;
-		}
-	}
-	infile_deltaE_tagh.close();
-	
-	sprintf( fname, "%s_deltaE_tagm.dat", run_group_name );
-	ifstream infile_deltaE_tagm(fname);
-	if( infile_deltaE_tagm.good() ) {
-		int a; double b, c;
-		for( int i=0; i<102; i++ ) {
-			infile_deltaE_tagm >> a >> b >> c;
-			deltaE_mu_tagm[i]  = b;
-			deltaE_sig_tagm[i] = c;
-		}
-	}
-	infile_deltaE_tagm.close();
+	f_deltaE_sig = new TF1( "f_deltaE_sig", "[0] + [1]/sqrt(x) + [2]/x", 3.0, 12.0 );
+	f_deltaE_sig->SetParameters( deltaE_sig_p0, deltaE_sig_p1, deltaE_sig_p2 );
 	
 	
 	
-	//-----   DeltaPhi   -----//
+	f_deltaPhi_mu = new TF1(   "f_deltaPhi_mu", "pol3", 3.0, 12.0 );
+	f_deltaPhi_mu->SetParameters(   deltaPhi_mu_p0,  deltaPhi_mu_p1,  deltaPhi_mu_p2, 
+		deltaPhi_mu_p3 );
 	
-	sprintf( fname, "%s_deltaPhi_tagh.dat", run_group_name );
-	ifstream infile_deltaPhi_tagh(fname);
-	if( infile_deltaPhi_tagh.good() ) {
-		int a; double b, c;
-		for( int i=0; i<274; i++ ) {
-			infile_deltaPhi_tagh >> a >> b >> c;
-			deltaPhi_mu_tagh[i]  = b;
-			deltaPhi_sig_tagh[i] = c;
-		}
-	}
-	infile_deltaPhi_tagh.close();
-	
-	sprintf( fname, "%s_deltaPhi_tagm.dat", run_group_name );
-	ifstream infile_deltaPhi_tagm(fname);
-	if( infile_deltaPhi_tagm.good() ) {
-		int a; double b, c;
-		for( int i=0; i<102; i++ ) {
-			infile_deltaPhi_tagm >> a >> b >> c;
-			deltaPhi_mu_tagm[i]  = b;
-			deltaPhi_sig_tagm[i] = c;
-		}
-	}
-	infile_deltaPhi_tagm.close();
+	f_deltaPhi_sig = new TF1( "f_deltaPhi_sig", "pol3", 3.0, 12.0 );
+	f_deltaPhi_sig->SetParameters( deltaPhi_sig_p0, deltaPhi_sig_p1, deltaPhi_sig_p2, 
+		deltaPhi_sig_p3 );
 	
 	
 	
-	//-----   DeltaK   -----//
+	f_deltaK_mu = new TF1(   "f_deltaK_mu", "pol3", 3.0, 12.0 );
+	f_deltaK_mu->SetParameters(   deltaK_mu_p0,  deltaK_mu_p1,  deltaK_mu_p2,  deltaK_mu_p3 );
 	
-	sprintf( fname, "%s_deltaK_tagh.dat", run_group_name );
-	ifstream infile_deltaK_tagh(fname);
-	if( infile_deltaK_tagh.good() ) {
-		int a; double b, c;
-		for( int i=0; i<274; i++ ) {
-			infile_deltaK_tagh >> a >> b >> c;
-			deltaK_mu_tagh[i]  = b;
-			deltaK_sig_tagh[i] = c;
-		}
-	}
-	infile_deltaK_tagh.close();
-	
-	sprintf( fname, "%s_deltaK_tagm.dat", run_group_name );
-	ifstream infile_deltaK_tagm(fname);
-	if( infile_deltaK_tagm.good() ) {
-		int a; double b, c;
-		for( int i=0; i<102; i++ ) {
-			infile_deltaK_tagm >> a >> b >> c;
-			deltaK_mu_tagm[i]  = b;
-			deltaK_sig_tagm[i] = c;
-		}
-	}
-	infile_deltaK_tagm.close();
+	f_deltaK_sig = new TF1( "f_deltaK_sig", "pol3", 3.0, 12.0 );
+	f_deltaK_sig->SetParameters( deltaK_sig_p0, deltaK_sig_p1, deltaK_sig_p2, deltaK_sig_p3 );
 	
 	
 	return;
@@ -697,6 +870,7 @@ void JEventProcessor_compton_analysis::fill_histograms( vector< ComptonCandidate
 		
 		int bunch_val        =  loc_Cand.bunch_val;
 		
+		double eb            =  loc_Cand.eb;
 		int tag_sys          =  loc_Cand.tag_sys;
 		int tag_counter      =  loc_Cand.tag_counter;
 		
@@ -718,6 +892,16 @@ void JEventProcessor_compton_analysis::fill_histograms( vector< ComptonCandidate
 		double deltaPhi_mu, deltaPhi_sig;
 		double   deltaK_mu,   deltaK_sig;
 		
+		deltaE_mu  = f_deltaE_mu->Eval(eb);
+		deltaE_sig = eb * f_deltaE_sig->Eval(eb);
+		
+		deltaPhi_mu   = f_deltaPhi_mu->Eval(eb);
+		deltaPhi_sig  = f_deltaPhi_sig->Eval(eb);
+		
+		deltaK_mu     = f_deltaK_mu->Eval(eb);
+		deltaK_sig    = f_deltaK_sig->Eval(eb);
+		
+		/*
 		if( tag_sys==0 ) {
 			
 			deltaE_mu    = deltaE_mu_tagh[tag_counter-1];
@@ -741,6 +925,7 @@ void JEventProcessor_compton_analysis::fill_histograms( vector< ComptonCandidate
 			deltaK_sig   = deltaK_sig_tagm[tag_counter-1];
 			
 		}
+		*/
 		
 		int e5_cut = 0;
 		if( fabs(deltaE  -  deltaE_mu) < 5.0*  deltaE_sig ) e5_cut = 1;
