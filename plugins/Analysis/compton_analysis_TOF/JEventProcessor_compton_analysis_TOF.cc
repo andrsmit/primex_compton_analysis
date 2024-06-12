@@ -628,7 +628,7 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 				
 				// For pair production MC, we need to apply the proper weighting:
 				
-				if(is_mc && m_USE_REACTION_WEIGHT) {
+				if(loc_is_mc && m_USE_REACTION_WEIGHT) {
 					fill_weight *= loc_reaction_weight;
 				}
 				
