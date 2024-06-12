@@ -55,26 +55,26 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::init(void)
 	
 	h_n_showers          = new TH1F("n_showers", 
 		"Number of showers in FCAL and CCAL", 20, -0.5, 19.5);
-	h_n_showers_ccal     = new TH1F("n_showers_fcal", 
+	h_n_showers_ccal     = new TH1F("n_showers_ccal", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
 	h_n_showers_fcal     = new TH1F("n_showers_fcal", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
-	h_n_showers_cut      = new TH1F("n_showers", 
+	h_n_showers_cut      = new TH1F("n_showers_cut", 
 		"Number of showers in FCAL and CCAL", 20, -0.5, 19.5);
-	h_n_showers_ccal_cut = new TH1F("n_showers_fcal_cut", 
+	h_n_showers_ccal_cut = new TH1F("n_showers_ccal_cut", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
 	h_n_showers_fcal_cut = new TH1F("n_showers_fcal_cut", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
 	
 	h_n_good_showers          = new TH1F("n_good_showers", 
 		"Number of showers in FCAL and CCAL", 20, -0.5, 19.5);
-	h_n_good_showers_ccal     = new TH1F("n_good_showers_fcal", 
+	h_n_good_showers_ccal     = new TH1F("n_good_showers_ccal", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
 	h_n_good_showers_fcal     = new TH1F("n_good_showers_fcal", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
-	h_n_good_showers_cut      = new TH1F("n_good_showers", 
+	h_n_good_showers_cut      = new TH1F("n_good_showers_cut", 
 		"Number of showers in FCAL and CCAL", 20, -0.5, 19.5);
-	h_n_good_showers_ccal_cut = new TH1F("n_good_showers_fcal_cut", 
+	h_n_good_showers_ccal_cut = new TH1F("n_good_showers_ccal_cut", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
 	h_n_good_showers_fcal_cut = new TH1F("n_good_showers_fcal_cut", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
@@ -158,7 +158,7 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::init(void)
 	h_extra_fcal_shower_energy          = new TH1F("shower_energy", 
 		"Energy of extra FCAL shower; E_{extra} [GeV]", 1000, 0., 10.);
 	h_extra_fcal_shower_distance        = new TH1F("shower_distance",
-		"Distrance from main FCAL shower; #Deltad [cm]", 100, 0., 10.);
+		"Distrance from main FCAL shower; #Deltad [cm]", 100, 0., 100.);
 	h_extra_fcal_shower_deltaPhi        = new TH1F("shower_deltaPhi",
 		"#phi_{extra} - #phi_{FCAL}; [deg.]", 3600, 0., 360.);
 	h_extra_fcal_shower_deltaPhi_ccal   = new TH1F("shower_deltaPhi_ccal",
@@ -170,12 +170,12 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::init(void)
 	h_extra_fcal_shower_elasticity_corr = new TH1F("shower_elasticity_corr",
 		"Corrected #DeltaE; E_{FCAL} + E_{CCAL} + E_{extra} - E_{#gamma} [GeV]", 4000, -8.0, 8.0);
 	h_extra_fcal_shower_xy              = new TH2F("shower_xy",
-		"Position of extra FCAL shower", 500, -12., 12., 500, -12., 12.);
+		"Position of extra FCAL shower", 500, -100., 100., 500, -100., 100.);
 	
 	h_extra_fcal_shower_energy_cut          = new TH1F("shower_energy_cut", 
 		"Energy of extra FCAL shower; E_{extra} [GeV]", 1000, 0., 10.);
 	h_extra_fcal_shower_distance_cut        = new TH1F("shower_distance_cut",
-		"Distrance from main FCAL shower; #Deltad [cm]", 100, 0., 10.);
+		"Distrance from main FCAL shower; #Deltad [cm]", 100, 0., 100.);
 	h_extra_fcal_shower_deltaPhi_cut        = new TH1F("shower_deltaPhi_cut",
 		"#phi_{extra} - #phi_{FCAL}; [deg.]", 3600, 0., 360.);
 	h_extra_fcal_shower_deltaPhi_ccal_cut   = new TH1F("shower_deltaPhi_ccal_cut",
@@ -187,7 +187,7 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::init(void)
 	h_extra_fcal_shower_elasticity_corr_cut = new TH1F("shower_elasticity_corr_cut",
 		"Corrected #DeltaE; E_{FCAL} + E_{CCAL} + E_{extra} - E_{#gamma} [GeV]", 4000, -8.0, 8.0);
 	h_extra_fcal_shower_xy_cut              = new TH2F("shower_xy_cut",
-		"Position of extra FCAL shower", 500, -12., 12., 500, -12., 12.);
+		"Position of extra FCAL shower", 500, -100., 100., 500, -100., 100.);
 	
 	dir_extra_fcal->cd("../");
 	
@@ -198,7 +198,7 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::init(void)
 	h_extra_ccal_shower_energy          = new TH1F("shower_energy", 
 		"Energy of extra CCAL shower; E_{extra} [GeV]", 1000, 0., 10.);
 	h_extra_ccal_shower_distance        = new TH1F("shower_distance",
-		"Distrance from main CCAL shower; #Deltad [cm]", 100, 0., 10.);
+		"Distrance from main CCAL shower; #Deltad [cm]", 100, 0., 50.);
 	h_extra_ccal_shower_deltaPhi        = new TH1F("shower_deltaPhi",
 		"#phi_{extra} - #phi_{CCAL}; [deg.]", 3600, 0., 360.);
 	h_extra_ccal_shower_deltaPhi_fcal   = new TH1F("shower_deltaPhi_fcal",
@@ -215,7 +215,7 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::init(void)
 	h_extra_ccal_shower_energy_cut          = new TH1F("shower_energy_cut", 
 		"Energy of extra CCAL shower; E_{extra} [GeV]", 1000, 0., 10.);
 	h_extra_ccal_shower_distance_cut        = new TH1F("shower_distance_cut",
-		"Distrance from main CCAL shower; #Deltad [cm]", 100, 0., 10.);
+		"Distrance from main CCAL shower; #Deltad [cm]", 100, 0., 50.);
 	h_extra_ccal_shower_deltaPhi_cut        = new TH1F("shower_deltaPhi_cut",
 		"#phi_{extra} - #phi_{CCAL}; [deg.]", 3600, 0., 360.);
 	h_extra_ccal_shower_deltaPhi_fcal_cut   = new TH1F("shower_deltaPhi_fcal_cut",
@@ -230,8 +230,6 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::init(void)
 		"Position of extra CCAL shower", 500, -12., 12., 500, -12., 12.);
 	
 	dir_extra_ccal->cd("../");
-	
-	
 	
 	dir_compton->cd("../");
 	
@@ -755,8 +753,10 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::evnt(JEventLoop *eventLoop, u
 						}
 					}
 					
-					h_elas_vs_deltaE[icut]->Fill(deltaE, (deltaE-deltaK), fill_weight);
-					h_mgg_vs_deltaE[icut]->Fill(deltaE, invmass, fill_weight);
+					if(cut_vals[icut]) {
+						h_elas_vs_deltaE[icut]->Fill(deltaE, (deltaE-deltaK), fill_weight);
+						h_mgg_vs_deltaE[icut]->Fill(deltaE, invmass, fill_weight);
+					}
 				}
 				
 				//if(!e_cut || !k_cut || !phi_cut) continue;
