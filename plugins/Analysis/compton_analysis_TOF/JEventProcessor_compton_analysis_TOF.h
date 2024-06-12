@@ -97,7 +97,7 @@ class JEventProcessor_compton_analysis_TOF:public jana::JEventProcessor{
 		const double CCAL_RF_time_cut = 3.0;
 		const double BEAM_RF_time_cut = 2.004;
 		
-		const double FCAL_min_energy_cut = 0.35;
+		const double FCAL_min_energy_cut = 0.5;
 		const double CCAL_min_energy_cut = 3.0;
 		const double BEAM_min_energy_cut = 6.0;
 		
