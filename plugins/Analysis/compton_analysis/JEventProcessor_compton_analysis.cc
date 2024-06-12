@@ -24,6 +24,9 @@ jerror_t JEventProcessor_compton_analysis::init(void)
 		"compton_analysis");
 	dir_compton->cd();
 	
+	h_trig   = new TH1F("trig",    "GTP Trigger Bits", 34, -0.5, 33.5);
+	h_fptrig = new TH1F("fp_trig", "FP Trigger Bits",  34, -0.5, 33.5);
+	
 	h_fcal_rf_dt  = new TH1F("fcal_rf_dt", "t_{FCAL} - t_{RF}; [ns]", 2000, -100., 100.);
 	h_ccal_rf_dt  = new TH1F("ccal_rf_dt", "t_{CCAL} - t_{RF}; [ns]", 2000, -100., 100.);
 	h_beam_rf_dt  = new TH1F("beam_rf_dt", "t_{Beam} - t_{RF}; [ns]", 2000, -100., 100.);
@@ -156,6 +159,29 @@ jerror_t JEventProcessor_compton_analysis::brun(JEventLoop *eventLoop, int32_t r
 			m_atten          = 0.00821;
 		}
 		
+		// (2/4/2024): Correction to alignment after Simon updated beam spot with new CDC alignment:
+		
+		m_fcalX_new =  0.455;
+		m_fcalY_new = -0.032;
+		
+		m_ccalX_new = -0.082;
+		if(runnumber<61483) 
+			m_ccalY_new =  0.061;
+		else
+			m_ccalY_new =  0.051;
+		
+		if(runnumber<61483) {
+			m_beamX =  0.027;
+			m_beamY = -0.128;
+		} else if(runnumber<61774) {
+			m_beamX =  0.001;
+			m_beamY = -0.077;
+		} else {
+			m_beamX =  0.038;
+			m_beamY = -0.095;
+		}
+		
+		/*
 		m_fcalX_new =  0.617;
 		m_fcalY_new = -0.002;
 		
@@ -177,6 +203,7 @@ jerror_t JEventProcessor_compton_analysis::brun(JEventLoop *eventLoop, int32_t r
 			m_beamX =  0.202;
 			m_beamY = -0.042;
 		}
+		*/
 	} else if(runnumber>80000 && runnumber<89999) {
 		
 		phase_val = 2;
@@ -218,14 +245,20 @@ jerror_t JEventProcessor_compton_analysis::brun(JEventLoop *eventLoop, int32_t r
 			m_target_density = 0.1217;
 			m_atten          = 0.00821;
 		}
-		
+		/*
 		m_fcalX_new = 0.408;
 		m_fcalY_new = 0.027;
 		m_ccalX_new = 0.135;
 		m_ccalY_new = 0.135;
-		
 		m_beamX     = 0.146;
 		m_beamY     = 0.017;
+		*/
+		m_fcalX_new = 0.408;
+		m_fcalY_new = 0.027;
+		m_ccalX_new = 0.184;
+		m_ccalY_new = 0.110;
+		m_beamX     = 0.151;
+		m_beamY     = 0.012;
 	}
 	
 	fcal_correction.SetXYZ(m_fcalX_new-m_fcalX, m_fcalY_new-m_fcalY, 0.);
@@ -258,6 +291,15 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 	vector<const DFCALShower*> good_fcal_showers;
 	vector<const DCCALShower*> good_ccal_showers;
 	
+	const DL1Trigger *trig = NULL;
+	try {
+		eventLoop->GetSingle(trig);
+	} catch (...) {}
+	if (trig == NULL) { return NOERROR; }
+	
+	uint32_t trigmask    = trig->trig_mask;
+	uint32_t fp_trigmask = trig->fp_trig_mask;
+	
 	//-----   RF Bunch   -----//
 	
 	const DEventRFBunch *locRFBunch = NULL;
@@ -269,6 +311,11 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 	double rfTime = locRFBunch->dTime;
 	
 	japp->RootFillLock(this);  // Acquire root lock
+	
+	for(int ibit = 0; ibit < 34; ibit++) {
+		if(trigmask & (1 << ibit))    h_trig->Fill(ibit);
+		if(fp_trigmask & (1 << ibit)) h_fptrig->Fill(ibit);
+	}
 	
 	for(vector< const DBeamPhoton* >::const_iterator gam = beam_photons.begin();
 		gam != beam_photons.end(); gam++) {
@@ -383,8 +430,8 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 				
 				if(fabs(brfdt) < 2.004)
 					bunch_val = 1;
-				else if((-(2.004 + 5.*4.008)<=brfdt && brfdt<=-(2.004 + 3.*4.008))
-					||((2.004 + 3.*4.008)<=brfdt && brfdt<=(2.004 + 5.*4.008)))
+				else if((-(2.004 + 10.*4.008)<=brfdt && brfdt<=-(2.004 + 5.*4.008))
+					||((2.004 + 5.*4.008)<=brfdt && brfdt<=(2.004 + 10.*4.008)))
 					bunch_val = 0;
 				else 
 					continue;
@@ -573,7 +620,7 @@ void JEventProcessor_compton_analysis::fill_histograms(
 		
 		double fill_weight;
 		if(bunch_val) fill_weight =  1.0;
-		else          fill_weight = -0.25;
+		else          fill_weight = -0.1;
 		
 		h_fcalE->Fill(eb, e1);
 		h_ccalE->Fill(eb, e2);
@@ -665,36 +712,36 @@ void JEventProcessor_compton_analysis::set_cuts(int32_t runnumber)
 		
 	} else if(runnumber>60000 && runnumber<69999) {
 		
-		// Phase I, He Target (stand-in values, adjust later)
+		// Phase I, He Target
 		
-		deltaE_mu_p0_data    =  8.33517e-03;
-		deltaE_mu_p1_data    =  2.09025e-03;
-		deltaE_mu_p2_data    = -1.09342e-04;
-		deltaE_mu_p3_data    =  0.;
+		deltaE_mu_p0_data    =  4.07223e-02;
+		deltaE_mu_p1_data    = -1.78574e-02;
+		deltaE_mu_p2_data    =  1.71081e-03;
+		deltaE_mu_p3_data    = -5.38583e-05;
 		
-		deltaE_sig_p0_data   =  8.37004e-03;
-		deltaE_sig_p1_data   =  4.56259e-02;
-		deltaE_sig_p2_data   =  0.;
+		deltaE_sig_p0_data   =  1.08608e-02;
+		deltaE_sig_p1_data   =  4.32721e-02;
+		deltaE_sig_p2_data   =  4.73705e-08;
 		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.79943e+02;
-		deltaPhi_mu_p1_data  = -2.11766e-02;
+		deltaPhi_mu_p0_data  =  1.79797e+02;
+		deltaPhi_mu_p1_data  = -9.76515e-03;
 		deltaPhi_mu_p2_data  =  0.;
 		deltaPhi_mu_p3_data  =  0.;
 		
-		deltaPhi_sig_p0_data =  1.20139e+01;
-		deltaPhi_sig_p1_data = -1.75486e+00;
-		deltaPhi_sig_p2_data =  1.67515e-01;
-		deltaPhi_sig_p3_data = -5.48316e-03;
+		deltaPhi_sig_p0_data =  1.21151e+01;
+		deltaPhi_sig_p1_data = -1.84430e+00;
+		deltaPhi_sig_p2_data =  1.75617e-01;
+		deltaPhi_sig_p3_data = -5.68551e-03;
 		//--------------------------------//
-		deltaK_mu_p0_data    = -9.36095e-02;
-		deltaK_mu_p1_data    =  5.48923e-02;
-		deltaK_mu_p2_data    = -1.19844e-02;
-		deltaK_mu_p3_data    =  4.38188e-04;
+		deltaK_mu_p0_data    = -5.93615e-01;
+		deltaK_mu_p1_data    =  2.57995e-01;
+		deltaK_mu_p2_data    = -3.70844e-02;
+		deltaK_mu_p3_data    =  1.44465e-03;
 		
-		deltaK_sig_p0_data   =  6.68283e-01;
-		deltaK_sig_p1_data   = -8.45642e-02;
-		deltaK_sig_p2_data   =  1.61255e-02;
-		deltaK_sig_p3_data   = -5.93363e-04;
+		deltaK_sig_p0_data   =  3.80560e-01;
+		deltaK_sig_p1_data   =  2.15649e-02;
+		deltaK_sig_p2_data   =  3.03526e-03;
+		deltaK_sig_p3_data   = -4.06248e-05;
 		
 	} else if(runnumber>80000 && runnumber<81400) {
 		

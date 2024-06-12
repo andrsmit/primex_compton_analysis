@@ -1,8 +1,8 @@
 // $Id$
 //
 //    File: JEventProcessor_FCAL_Alignment.h
-// Created: Fri Jan 21 20:10:28 EST 2022
-// Creator: andrsmit (on Linux ifarm1802.jlab.org 3.10.0-1160.11.1.el7.x86_64 x86_64)
+// Created: Fri Jun  7 10:39:06 AM EDT 2024
+// Creator: andrsmit (on Linux ifarm180302.jlab.org 5.14.0-362.24.2.el9_3.x86_64 x86_64)
 //
 
 #ifndef _JEventProcessor_FCAL_Alignment_
@@ -20,6 +20,7 @@ using namespace std;
 
 #include <CCAL/DCCALShower.h>
 #include <FCAL/DFCALShower.h>
+#include <BCAL/DBCALShower.h>
 #include <PID/DBeamPhoton.h>
 #include <PID/DEventRFBunch.h>
 #include <TOF/DTOFPoint.h>
@@ -50,44 +51,31 @@ class JEventProcessor_FCAL_Alignment:public jana::JEventProcessor{
 		jerror_t init(void);
 		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
 		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-		jerror_t erun(void);
+		jerror_t erun(void){return NOERROR;};
 		jerror_t fini(void);
 		
-		int fcal_fiducial_cut(DVector3 pos, DVector3 vertex);
-		int fcal_fiducial_cut2(DVector3 pos, DVector3 vertex);
-		int ccal_fiducial_cut(DVector3 pos, DVector3 vertex);
+		int fcal_fiducial_cut(DVector3 pos, DVector3 vertex, double cut_layer);
 		
-		int check_TOF_match(DVector3 pos1, double rfTime, 
-			DVector3 vertex, vector<const DTOFPoint*> tof_points);
+		void check_TOF_match(DVector3 pos, double rfTime, DVector3 vertex, 
+			vector<const DTOFPoint*> tof_points, double &dx_min, double &dy_min, 
+			double &dt_min, double rf_time_cut);
 		
 		double m_fcalX, m_fcalY, m_fcalZ;
-		double m_ccalX, m_ccalY, m_ccalZ;
 		double m_beamX, m_beamY, m_beamZ;
 		
 		const double c   = 29.9792458;
 		const double m_e = 0.510998928e-3;
 		
-		const double FCAL_min_energy_cut = 0.3;
-		
+		static const int n_cuts = 5;
 		TH1F *h_beam_rf_dt, *h_fcal_rf_dt, *h_ccal_rf_dt;
-		
-		TH1F *h_deltaE,      *h_deltaK,      *h_deltaPhi;
-		TH1F *h_deltaE_cut,  *h_deltaK_cut,  *h_deltaPhi_cut;
-		TH1F *h_deltaE_cut2, *h_deltaK_cut2, *h_deltaPhi_cut2;
-		TH1F *h_deltaE_cut3, *h_deltaK_cut3, *h_deltaPhi_cut3;
-		TH1F *h_deltaE_cut4, *h_deltaK_cut4, *h_deltaPhi_cut4;
-		
-		TH1F *h_e1,      *h_e2,      *h_eb;
-		TH1F *h_e1_cut,  *h_e2_cut,  *h_eb_cut;
-		TH1F *h_e1_cut2, *h_e2_cut2, *h_eb_cut2;
-		TH1F *h_e1_cut3, *h_e2_cut3, *h_eb_cut3;
-		TH1F *h_e1_cut4, *h_e2_cut4, *h_eb_cut4;
-		
-		TH2F *h_xy1,      *h_xy2;
-		TH2F *h_xy1_cut,  *h_xy2_cut;
-		TH2F *h_xy1_cut2, *h_xy2_cut2;
-		TH2F *h_xy1_cut3, *h_xy2_cut3;
-		TH2F *h_xy1_cut4, *h_xy2_cut4;
+		TH1F *h_deltaE[n_cuts];
+		TH1F *h_deltaK[n_cuts];
+		TH1F *h_deltaPhi[n_cuts];
+		TH1F *h_e1[n_cuts];
+		TH1F *h_e2[n_cuts];
+		TH1F *h_eb[n_cuts];
+		TH2F *h_xy1[n_cuts];
+		TH2F *h_xy2[n_cuts];
 		
 		DTreeInterface *dTreeInterface;
 		static thread_local DTreeFillData dTreeFillData;

@@ -100,6 +100,8 @@ class JEventProcessor_compton_analysis:public jana::JEventProcessor{
 		
 		//----------   Histograms   ----------//
 		
+		TH1F *h_trig, *h_fptrig;
+		
 		TH1F *h_fcal_rf_dt, *h_ccal_rf_dt, *h_beam_rf_dt;
 		TH1F *h_beam_rf_dt_cut;
 		TH2F *h_beam_rf_dt_tagh, *h_beam_rf_dt_tagm;
