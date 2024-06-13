@@ -770,11 +770,12 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 					if(tag_sys==SYS_TAGH) {
 						
 						if(cut_vals[icut]) {
-							h_deltaE_tagh[icut]->Fill(tag_counter, deltaE, fill_weight);
+							h_deltaE_tagh[icut]->Fill(tag_counter, deltaE_smeared, fill_weight);
 							if(e_cut && phi_cut) {
-								h_deltaK_tagh[icut]->Fill(tag_counter, deltaK, fill_weight);
+								h_deltaK_tagh[icut]->Fill(tag_counter, deltaK_smeared, 
+									fill_weight);
 								if(k_cut) {
-									h_deltaK_tagh_cut[icut]->Fill(tag_counter, deltaK, 
+									h_deltaK_tagh_cut[icut]->Fill(tag_counter, deltaK_smeared, 
 										fill_weight);
 								}
 							}
@@ -782,11 +783,12 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 					} else if(tag_sys==SYS_TAGM) {
 						
 						if(cut_vals[icut]) {
-							h_deltaE_tagm[icut]->Fill(tag_counter, deltaE, fill_weight);
+							h_deltaE_tagm[icut]->Fill(tag_counter, deltaE_smeared, fill_weight);
 							if(e_cut && phi_cut) {
-								h_deltaK_tagm[icut]->Fill(tag_counter, deltaK, fill_weight);
+								h_deltaK_tagm[icut]->Fill(tag_counter, deltaK_smeared,
+									fill_weight);
 								if(k_cut) {
-									h_deltaK_tagm_cut[icut]->Fill(tag_counter, deltaK, 
+									h_deltaK_tagm_cut[icut]->Fill(tag_counter, deltaK_smeared, 
 										fill_weight);
 								}
 							}
@@ -794,8 +796,9 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 					}
 					
 					if(cut_vals[icut]) {
-						h_elas_vs_deltaE[icut]->Fill(deltaE, (deltaE-deltaK), fill_weight);
-						h_mgg_vs_deltaE[icut]->Fill(deltaE, invmass, fill_weight);
+						h_elas_vs_deltaE[icut]->Fill(deltaE_smeared, 
+							(deltaE_smeared-deltaK_smeared), fill_weight);
+						h_mgg_vs_deltaE[icut]->Fill(deltaE_smeared, invmass, fill_weight);
 					}
 				}
 				
@@ -870,9 +873,11 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 						h_extra_fcal_shower_distance->Fill(loc_dr, fill_weight);
 						h_extra_fcal_shower_deltaPhi->Fill(loc_deltaPhi, fill_weight);
 						h_extra_fcal_shower_deltaPhi_ccal->Fill(loc_deltaPhi_ccal, fill_weight);
-						h_extra_fcal_shower_elasticity->Fill(deltaE, fill_weight);
-						h_extra_fcal_shower_elasticity_new->Fill(deltaE+loc_e-e1, fill_weight);
-						h_extra_fcal_shower_elasticity_corr->Fill(deltaE+loc_e, fill_weight);
+						h_extra_fcal_shower_elasticity->Fill(deltaE_smeared, fill_weight);
+						h_extra_fcal_shower_elasticity_new->Fill(deltaE_smeared+loc_e-e1, 
+							fill_weight);
+						h_extra_fcal_shower_elasticity_corr->Fill(deltaE_smeared+loc_e, 
+							fill_weight);
 						h_extra_fcal_shower_xy->Fill(loc_pos.X(), loc_pos.Y(), fill_weight);
 						
 						if(e_cut && k_cut && phi_cut) {
@@ -881,10 +886,10 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 							h_extra_fcal_shower_deltaPhi_cut->Fill(loc_deltaPhi, fill_weight);
 							h_extra_fcal_shower_deltaPhi_ccal_cut->Fill(loc_deltaPhi_ccal, 
 								fill_weight);
-							h_extra_fcal_shower_elasticity_cut->Fill(deltaE, fill_weight);
-							h_extra_fcal_shower_elasticity_new_cut->Fill(deltaE+loc_e-e1, 
+							h_extra_fcal_shower_elasticity_cut->Fill(deltaE_smeared, fill_weight);
+							h_extra_fcal_shower_elasticity_new_cut->Fill(deltaE_smeared+loc_e-e1, 
 								fill_weight);
-							h_extra_fcal_shower_elasticity_corr_cut->Fill(deltaE+loc_e, 
+							h_extra_fcal_shower_elasticity_corr_cut->Fill(deltaE_smeared+loc_e, 
 								fill_weight);
 							h_extra_fcal_shower_xy_cut->Fill(loc_pos.X(), loc_pos.Y(), 
 								fill_weight);
@@ -921,9 +926,11 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 						h_extra_ccal_shower_distance->Fill(loc_dr, fill_weight);
 						h_extra_ccal_shower_deltaPhi->Fill(loc_deltaPhi, fill_weight);
 						h_extra_ccal_shower_deltaPhi_fcal->Fill(loc_deltaPhi_fcal, fill_weight);
-						h_extra_ccal_shower_elasticity->Fill(deltaE, fill_weight);
-						h_extra_ccal_shower_elasticity_new->Fill(deltaE+loc_e-e2, fill_weight);
-						h_extra_ccal_shower_elasticity_corr->Fill(deltaE+loc_e, fill_weight);
+						h_extra_ccal_shower_elasticity->Fill(deltaE_smeared, fill_weight);
+						h_extra_ccal_shower_elasticity_new->Fill(deltaE_smeared+loc_e-e2, 
+							fill_weight);
+						h_extra_ccal_shower_elasticity_corr->Fill(deltaE_smeared+loc_e, 
+							fill_weight);
 						h_extra_ccal_shower_xy->Fill(loc_pos.X(), loc_pos.Y(), fill_weight);
 						
 						if(e_cut && k_cut && phi_cut) {
@@ -932,10 +939,10 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 							h_extra_ccal_shower_deltaPhi_cut->Fill(loc_deltaPhi, fill_weight);
 							h_extra_ccal_shower_deltaPhi_fcal_cut->Fill(loc_deltaPhi_fcal, 
 								fill_weight);
-							h_extra_ccal_shower_elasticity_cut->Fill(deltaE, fill_weight);
-							h_extra_ccal_shower_elasticity_new_cut->Fill(deltaE+loc_e-e2, 
+							h_extra_ccal_shower_elasticity_cut->Fill(deltaE_smeared, fill_weight);
+							h_extra_ccal_shower_elasticity_new_cut->Fill(deltaE_smeared+loc_e-e2, 
 								fill_weight);
-							h_extra_ccal_shower_elasticity_corr_cut->Fill(deltaE+loc_e, 
+							h_extra_ccal_shower_elasticity_corr_cut->Fill(deltaE_smeared+loc_e, 
 								fill_weight);
 							h_extra_ccal_shower_xy_cut->Fill(loc_pos.X(), loc_pos.Y(), 
 								fill_weight);
@@ -947,10 +954,10 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 							h_extra_ccal_shower_deltaPhi_e->Fill(loc_deltaPhi, fill_weight);
 							h_extra_ccal_shower_deltaPhi_fcal_e->Fill(loc_deltaPhi_fcal, 
 								fill_weight);
-							h_extra_ccal_shower_elasticity_e->Fill(deltaE, fill_weight);
-							h_extra_ccal_shower_elasticity_new_e->Fill(deltaE+loc_e-e2, 
+							h_extra_ccal_shower_elasticity_e->Fill(deltaE_smeared, fill_weight);
+							h_extra_ccal_shower_elasticity_new_e->Fill(deltaE_smeared+loc_e-e2, 
 								fill_weight);
-							h_extra_ccal_shower_elasticity_corr_e->Fill(deltaE+loc_e, 
+							h_extra_ccal_shower_elasticity_corr_e->Fill(deltaE_smeared+loc_e, 
 								fill_weight);
 							h_extra_ccal_shower_xy_e->Fill(loc_pos.X(), loc_pos.Y(), 
 								fill_weight);
@@ -963,11 +970,12 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 									fill_weight);
 								h_extra_ccal_shower_deltaPhi_fcal_e_cut->Fill(loc_deltaPhi_fcal, 
 									fill_weight);
-								h_extra_ccal_shower_elasticity_e_cut->Fill(deltaE, fill_weight);
-								h_extra_ccal_shower_elasticity_new_e_cut->Fill(deltaE+loc_e-e2, 
+								h_extra_ccal_shower_elasticity_e_cut->Fill(deltaE_smeared, 
 									fill_weight);
-								h_extra_ccal_shower_elasticity_corr_e_cut->Fill(deltaE+loc_e, 
-									fill_weight);
+								h_extra_ccal_shower_elasticity_new_e_cut->Fill(
+									deltaE_smeared+loc_e-e2,fill_weight);
+								h_extra_ccal_shower_elasticity_corr_e_cut->Fill(
+									deltaE_smeared+loc_e, fill_weight);
 								h_extra_ccal_shower_xy_e_cut->Fill(loc_pos.X(), loc_pos.Y(), 
 									fill_weight);
 							}
