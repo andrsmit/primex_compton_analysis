@@ -21,6 +21,7 @@ using namespace std;
 
 #include <CCAL/DCCALShower.h>
 #include <FCAL/DFCALShower.h>
+#include <TOF/DTOFPoint.h>
 #include <PID/DBeamPhoton.h>
 #include <PID/DEventRFBunch.h>
 
@@ -48,20 +49,24 @@ using namespace std;
 #include <thread>
 #include <mutex>
 
-#include "CompCand.h"
-
 class JEventProcessor_compton_tree:public jana::JEventProcessor{
 	public:
-		JEventProcessor_compton_tree() {};
-		~JEventProcessor_compton_tree() {};
+		JEventProcessor_compton_tree();
+		~JEventProcessor_compton_tree(){};
 		const char* className(void){return "JEventProcessor_compton_tree";}
 
 	private:
 		jerror_t init(void);
 		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
 		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-		jerror_t erun(void);
+		jerror_t erun(void){return NOERROR;};
 		jerror_t fini(void);
+		
+		void write_events(uint64_t eventnumber, double rfTime,
+			vector<const DBeamPhoton*> beam_photons, 
+			vector<const DFCALShower*> fcal_showers,
+			vector<const DCCALShower*> ccal_showers,
+			vector<const DTOFPoint*> tof_points);
 		
 		//----------   Constants   ----------//
 		
@@ -69,19 +74,11 @@ class JEventProcessor_compton_tree:public jana::JEventProcessor{
 		double m_fcalX, m_fcalY, m_fcalZ;
 		double m_ccalX, m_ccalY, m_ccalZ;
 		
-		double m_fcalX_new, m_fcalY_new;
-		double m_ccalX_new, m_ccalY_new;
+		DVector3 m_fcal_correction, m_ccal_correction;
 		
-		const double c    =  29.9792458;
-		const double m_e  =  0.510998928e-3;
+		const double c = 29.9792458; // cm/ns
 		
-		const double FCAL_RF_time_cut = 3.0;
-		const double CCAL_RF_time_cut = 3.0;
-		const double BEAM_RF_time_cut = 2.004;
-		
-		const double FCAL_min_energy_cut = 0.0;
-		const double CCAL_min_energy_cut = 0.0;
-		const double BEAM_min_energy_cut = 5.0;
+		double m_RFTimeCut, m_BeamEnergyCut, m_DeltaECut;
 		
 		//----------   TTree   ----------//
 		
