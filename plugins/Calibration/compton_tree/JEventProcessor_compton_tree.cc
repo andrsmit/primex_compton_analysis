@@ -46,8 +46,8 @@ jerror_t JEventProcessor_compton_tree::init(void)
 	locTreeBranchRegister.Register_Single<Int_t>("nbeam");
 	locTreeBranchRegister.Register_FundamentalArray<Int_t>("tag_counter","nbeam");
 	locTreeBranchRegister.Register_FundamentalArray<Int_t>("tag_sys","nbeam");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("e_beam","nbeam");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("t_beam","nbeam");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("beam_e","nbeam");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("beam_t","nbeam");
 	
 	// FCAL Showers:
 	locTreeBranchRegister.Register_Single<Int_t>("nfcal");
@@ -226,14 +226,16 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 	} catch (...) {}
 	if(locTrig == NULL && locIsMC==0) { return NOERROR; }
 	
-	uint32_t locTrigMask   = locTrig->trig_mask;
-	uint32_t locTrigFPMask = locTrig->fp_trig_mask;
-	
-	// skip FP trigger events:
-	if(locTrigFPMask) return NOERROR;
-	
-	// check if main physics trigger is set:
-	if(!(locTrigMask & 1)  && locIsMC==0) return NOERROR;
+	if(locTrig != NULL) {
+		uint32_t locTrigMask   = locTrig->trig_mask;
+		uint32_t locTrigFPMask = locTrig->fp_trig_mask;
+		
+		// skip FP trigger events:
+		if(locTrigFPMask) return NOERROR;
+		
+		// check if main physics trigger is set:
+		if(!(locTrigMask & 1)) return NOERROR;
+	}
 	
 	//--------------------------------------------------------------------------------------//
 	// Get all necessary data objects:
