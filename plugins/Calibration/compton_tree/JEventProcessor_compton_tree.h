@@ -24,6 +24,8 @@ using namespace std;
 #include <TOF/DTOFPoint.h>
 #include <PID/DBeamPhoton.h>
 #include <PID/DEventRFBunch.h>
+#include <PID/DMCReaction.h>
+#include <TRACKING/DMCThrown.h>
 
 #include <CCAL/DCCALGeometry.h>
 #include <FCAL/DFCALGeometry.h>
@@ -66,7 +68,9 @@ class JEventProcessor_compton_tree:public jana::JEventProcessor{
 			vector<const DBeamPhoton*> beam_photons, 
 			vector<const DFCALShower*> fcal_showers,
 			vector<const DCCALShower*> ccal_showers,
-			vector<const DTOFPoint*> tof_points);
+			vector<const DTOFPoint*> tof_points,
+			vector<const DMCThrown*> mc_thrown,
+			vector<const DMCReaction*> mc_reaction);
 		
 		//----------   Constants   ----------//
 		

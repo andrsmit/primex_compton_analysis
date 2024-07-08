@@ -27,7 +27,7 @@ JEventProcessor_compton_tree::JEventProcessor_compton_tree() {
 	gPARMS->SetDefaultParameter("compton_tree:BeamEnergyCut", m_BeamEnergyCut);
 	
 	m_DeltaECut = 3.0;
-	gPARMS->SetDefaultParameter("compton_tree:BeamEnergyCut", m_DeltaECut);
+	gPARMS->SetDefaultParameter("compton_tree:m_DeltaECut", m_DeltaECut);
 }
 
 //------------------
@@ -52,37 +52,53 @@ jerror_t JEventProcessor_compton_tree::init(void)
 	// FCAL Showers:
 	locTreeBranchRegister.Register_Single<Int_t>("nfcal");
 	// reconstructed quantities:
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("e_fcal","nfcal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("x_fcal","nfcal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("y_fcal","nfcal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("z_fcal","nfcal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("t_fcal","nfcal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("fcal_e","nfcal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("fcal_x","nfcal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("fcal_y","nfcal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("fcal_z","nfcal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("fcal_t","nfcal");
 	// info about shower:
-	locTreeBranchRegister.Register_FundamentalArray<Int_t>( "nblocks_fcal","nfcal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>( "e1e9_fcal","nfcal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("e9e25_fcal","nfcal");
+	locTreeBranchRegister.Register_FundamentalArray<Int_t>(   "fcal_nblocks","nfcal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("fcal_e1e9",   "nfcal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("fcal_e9e25",  "nfcal");
 	
 	// CCAL Showers:
 	locTreeBranchRegister.Register_Single<Int_t>("nccal");
 	// reconstructed quantities:
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>( "e_ccal","nccal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>( "x_ccal","nccal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>( "y_ccal","nccal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("x1_ccal","nccal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("y1_ccal","nccal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>( "z_ccal","nccal");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>( "t_ccal","nccal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("ccal_e", "nccal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("ccal_x", "nccal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("ccal_y", "nccal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("ccal_x1","nccal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("ccal_y1","nccal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("ccal_z", "nccal");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("ccal_t", "nccal");
 	// info about shower:
-	locTreeBranchRegister.Register_FundamentalArray<Int_t>("nblocks_ccal","nccal");
-	locTreeBranchRegister.Register_FundamentalArray<Int_t>(  "idmax_ccal","nccal");
-	locTreeBranchRegister.Register_FundamentalArray<Int_t>(     "id_ccal","nccal");
+	locTreeBranchRegister.Register_FundamentalArray<Int_t>("ccal_nblocks","nccal");
+	locTreeBranchRegister.Register_FundamentalArray<Int_t>("ccal_idmax",  "nccal");
+	locTreeBranchRegister.Register_FundamentalArray<Int_t>("ccal_id",     "nccal");
 	
 	// TOF Points:
 	locTreeBranchRegister.Register_Single<Int_t>("ntof");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("xtof","ntof");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("ytof","ntof");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("ztof","ntof");
-	locTreeBranchRegister.Register_FundamentalArray<Double_t>("ttof","ntof");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("tof_x","ntof");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("tof_y","ntof");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("tof_z","ntof");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("tof_t","ntof");
+	
+	// MC Thrown:
+	locTreeBranchRegister.Register_Single<Int_t>("nmc");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("mc_pdgtype","nmc");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("mc_x","nmc");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("mc_y","nmc");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("mc_z","nmc");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("mc_t","nmc");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("mc_e","nmc");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("mc_p","nmc");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("mc_theta","nmc");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("mc_phi","nmc");
+	
+	locTreeBranchRegister.Register_Single<Int_t>("mc_reaction_type");
+	locTreeBranchRegister.Register_Single<Double_t>("mc_reaction_weight");
+	locTreeBranchRegister.Register_Single<Double_t>("mc_reaction_energy");
 	
 	dTreeInterface->Create_Branches(locTreeBranchRegister);
 	
@@ -190,13 +206,25 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 {
 	//--------------------------------------------------------------------------------------//
+	// Check for thrown MC information:
+	
+	vector<const DMCThrown*> locMCThrown;
+	eventLoop->Get(locMCThrown);
+	
+	vector<const DMCReaction*> locMCReaction;
+	eventLoop->Get(locMCReaction);
+	
+	int locIsMC = 0;
+	if(locMCThrown.size()) locIsMC = 1;
+	
+	//--------------------------------------------------------------------------------------//
 	// Check Trigger:
 	
 	const DL1Trigger *locTrig = NULL;
 	try {
 		eventLoop->GetSingle(locTrig);
 	} catch (...) {}
-	if(locTrig == NULL) { return NOERROR; }
+	if(locTrig == NULL && locIsMC==0) { return NOERROR; }
 	
 	uint32_t locTrigMask   = locTrig->trig_mask;
 	uint32_t locTrigFPMask = locTrig->fp_trig_mask;
@@ -205,7 +233,7 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 	if(locTrigFPMask) return NOERROR;
 	
 	// check if main physics trigger is set:
-	if(!(locTrigMask & 1)) return NOERROR;
+	if(!(locTrigMask & 1)  && locIsMC==0) return NOERROR;
 	
 	//--------------------------------------------------------------------------------------//
 	// Get all necessary data objects:
@@ -284,7 +312,8 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 	} // end DFCALShower loop
 	
 	if(locEventSelector) {
-		write_events(eventnumber, locRFTime, locBeamPhotons, locFCALShowers, locCCALShowers, locTOFPoints);
+		write_events(eventnumber, locRFTime, locBeamPhotons, locFCALShowers, locCCALShowers, locTOFPoints, 
+			locMCThrown, locMCReaction);
 	}
 	
 	dTreeInterface->Fill(dTreeFillData);
@@ -305,7 +334,9 @@ void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfT
 	vector<const DBeamPhoton*> beam_photons, 
 	vector<const DFCALShower*> fcal_showers,
 	vector<const DCCALShower*> ccal_showers,
-	vector<const DTOFPoint*> tof_points) {
+	vector<const DTOFPoint*> tof_points,
+	vector<const DMCThrown*> mc_thrown,
+	vector<const DMCReaction*> mc_reaction) {
 	
 	dTreeFillData.Fill_Single<Int_t>("eventNum", eventnumber);
 	dTreeFillData.Fill_Single<Double_t>("rfTime", rfTime);
@@ -322,8 +353,8 @@ void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfT
 		
 		dTreeFillData.Fill_Array<Int_t>("tag_counter", loc_counter, n_beam_photon);
 		dTreeFillData.Fill_Array<Int_t>("tag_sys",     loc_sys,     n_beam_photon);
-		dTreeFillData.Fill_Array<Double_t>("e_beam", (*gam)->lorentzMomentum().E(), n_beam_photon);
-		dTreeFillData.Fill_Array<Double_t>("t_beam", (*gam)->time(),                n_beam_photon);
+		dTreeFillData.Fill_Array<Double_t>("beam_e", (*gam)->lorentzMomentum().E(), n_beam_photon);
+		dTreeFillData.Fill_Array<Double_t>("beam_t", (*gam)->time(),                n_beam_photon);
 		
 		n_beam_photon++;
 	}
@@ -334,15 +365,15 @@ void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfT
 	for(vector<const DFCALShower*>::const_iterator show = fcal_showers.begin(); 
 		show != fcal_showers.end(); show++) {
 		
-		dTreeFillData.Fill_Array<Double_t>("e_fcal", (*show)->getEnergy(),           n_fcal_shower);
-		dTreeFillData.Fill_Array<Double_t>("x_fcal", (*show)->getPosition_log().X(), n_fcal_shower);
-		dTreeFillData.Fill_Array<Double_t>("y_fcal", (*show)->getPosition_log().Y(), n_fcal_shower);
-		dTreeFillData.Fill_Array<Double_t>("z_fcal", (*show)->getPosition_log().Z(), n_fcal_shower);
-		dTreeFillData.Fill_Array<Double_t>("t_fcal", (*show)->getTime(),             n_fcal_shower);
+		dTreeFillData.Fill_Array<Double_t>("fcal_e", (*show)->getEnergy(),           n_fcal_shower);
+		dTreeFillData.Fill_Array<Double_t>("fcal_x", (*show)->getPosition_log().X(), n_fcal_shower);
+		dTreeFillData.Fill_Array<Double_t>("fcal_y", (*show)->getPosition_log().Y(), n_fcal_shower);
+		dTreeFillData.Fill_Array<Double_t>("fcal_z", (*show)->getPosition_log().Z(), n_fcal_shower);
+		dTreeFillData.Fill_Array<Double_t>("fcal_t", (*show)->getTime(),             n_fcal_shower);
 		
-		dTreeFillData.Fill_Array<Int_t>( "nblocks_fcal", (*show)->getNumBlocks(), n_fcal_shower);
-		dTreeFillData.Fill_Array<Double_t>( "e1e9_fcal", (*show)->getE1E9(),      n_fcal_shower);
-		dTreeFillData.Fill_Array<Double_t>("e9e25_fcal", (*show)->getE9E25(),     n_fcal_shower);
+		dTreeFillData.Fill_Array<Int_t>(   "fcal_nblocks", (*show)->getNumBlocks(), n_fcal_shower);
+		dTreeFillData.Fill_Array<Double_t>("fcal_e1e9",    (*show)->getE1E9(),      n_fcal_shower);
+		dTreeFillData.Fill_Array<Double_t>("fcal_e9e25",   (*show)->getE9E25(),     n_fcal_shower);
 		
 		n_fcal_shower++;
 	}
@@ -354,17 +385,17 @@ void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfT
 	for(vector<const DCCALShower*>::const_iterator show = ccal_showers.begin(); 
 		show != ccal_showers.end(); show++) {
 		
-		dTreeFillData.Fill_Array<Double_t>( "e_ccal", (*show)->E,    n_ccal_shower);
-		dTreeFillData.Fill_Array<Double_t>( "x_ccal", (*show)->x,    n_ccal_shower);
-		dTreeFillData.Fill_Array<Double_t>( "y_ccal", (*show)->y,    n_ccal_shower);
-		dTreeFillData.Fill_Array<Double_t>("x1_ccal", (*show)->x1,   n_ccal_shower);
-		dTreeFillData.Fill_Array<Double_t>("y1_ccal", (*show)->y1,   n_ccal_shower);
-		dTreeFillData.Fill_Array<Double_t>( "z_ccal", (*show)->z,    n_ccal_shower);
-		dTreeFillData.Fill_Array<Double_t>( "t_ccal", (*show)->time, n_ccal_shower);
+		dTreeFillData.Fill_Array<Double_t>("ccal_e",  (*show)->E,    n_ccal_shower);
+		dTreeFillData.Fill_Array<Double_t>("ccal_x",  (*show)->x,    n_ccal_shower);
+		dTreeFillData.Fill_Array<Double_t>("ccal_y",  (*show)->y,    n_ccal_shower);
+		dTreeFillData.Fill_Array<Double_t>("ccal_x1", (*show)->x1,   n_ccal_shower);
+		dTreeFillData.Fill_Array<Double_t>("ccal_y1", (*show)->y1,   n_ccal_shower);
+		dTreeFillData.Fill_Array<Double_t>("ccal_z",  (*show)->z,    n_ccal_shower);
+		dTreeFillData.Fill_Array<Double_t>("ccal_t",  (*show)->time, n_ccal_shower);
 		
-		dTreeFillData.Fill_Array<Int_t>("nblocks_ccal", (*show)->dime,  n_ccal_shower);
-		dTreeFillData.Fill_Array<Int_t>(  "idmax_ccal", (*show)->idmax, n_ccal_shower);
-		dTreeFillData.Fill_Array<Int_t>(     "id_ccal", (*show)->id,    n_ccal_shower);
+		dTreeFillData.Fill_Array<Int_t>("ccal_nblocks", (*show)->dime,  n_ccal_shower);
+		dTreeFillData.Fill_Array<Int_t>("ccal_idmax",   (*show)->idmax, n_ccal_shower);
+		dTreeFillData.Fill_Array<Int_t>("ccal_id",      (*show)->id,    n_ccal_shower);
 		
 		n_ccal_shower++;
 	}
@@ -375,14 +406,38 @@ void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfT
 	for(vector<const DTOFPoint*>::const_iterator tof = tof_points.begin(); 
 		tof != tof_points.end(); tof++) {
 		
-		dTreeFillData.Fill_Array<Double_t>("x_tof", (*tof)->pos.X(), n_tof_points);
-		dTreeFillData.Fill_Array<Double_t>("y_tof", (*tof)->pos.Y(), n_tof_points);
-		dTreeFillData.Fill_Array<Double_t>("z_tof", (*tof)->pos.Z(), n_tof_points);
-		dTreeFillData.Fill_Array<Double_t>("t_tof", (*tof)->t,       n_tof_points);
+		dTreeFillData.Fill_Array<Double_t>("tof_x", (*tof)->pos.X(), n_tof_points);
+		dTreeFillData.Fill_Array<Double_t>("tof_y", (*tof)->pos.Y(), n_tof_points);
+		dTreeFillData.Fill_Array<Double_t>("tof_z", (*tof)->pos.Z(), n_tof_points);
+		dTreeFillData.Fill_Array<Double_t>("tof_t", (*tof)->t,       n_tof_points);
 		
 		n_tof_points++;
 	}
 	dTreeFillData.Fill_Single<Int_t>("ntof", n_tof_points);
+	
+	// MC Thrown:
+	size_t n_mc_thrown = 0;
+	for(vector<const DMCThrown*>::const_iterator mc = mc_thrown.begin(); mc != mc_thrown.end(); mc++) {
+		
+		dTreeFillData.Fill_Array<Double_t>("mc_pdgtype", (*mc)->pdgtype, n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_x",       (*mc)->position().X(),                n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_y",       (*mc)->position().Y(),                n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_z",       (*mc)->position().Z(),                n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_t",       (*mc)->time(),                        n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_e",       (*mc)->energy(),                      n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_p",       (*mc)->momentum().Mag(),              n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_theta",   (*mc)->momentum().Theta()*180.0/M_PI, n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_phi",     (*mc)->momentum().Phi()*180.0/M_PI,   n_mc_thrown);
+		
+		n_mc_thrown++;
+	}
+	dTreeFillData.Fill_Single<Int_t>("nmc", n_mc_thrown);
+	
+	if(mc_reaction.size() == 1) {
+		dTreeFillData.Fill_Single<Int_t>("mc_reaction_type", mc_reaction[0]->type);
+		dTreeFillData.Fill_Single<Double_t>("mc_reaction_weight", mc_reaction[0]->weight);
+		dTreeFillData.Fill_Single<Double_t>("mc_reaction_energy", mc_reaction[0]->beam.energy());
+	}
 	
 	return;
 }
