@@ -1,7 +1,7 @@
 #!/usr/bin/tcsh
 #
-set outdir = /work/halld/home/andrsmit/primex_compton_analysis/compton_mc/phaseI/default_geometry
-set script = ${outdir}/sim_compton.csh
+set outdir = /work/halld/home/andrsmit/primex_compton_analysis/compton_mc/phase1/default_geometry
+set script = ${outdir}/batch_scripts/sim_compton.csh
 set ij     = 0
 
 set submit_runs = go
@@ -19,13 +19,18 @@ set disk      = 12GB
 
 #=========================#
 
-set run_list = {"61866"}
+set run_list = {"61321","61866"}
 set tag_list = {"tagh","tagm"}
 
 foreach rnb ($run_list)
 	
-	set gendir   = /work/halld/home/andrsmit/primex_compton_analysis/compton_mc/phaseI/genDir/rnb-${rnb}
-	set writedir = ${outdir}/rnb-${rnb}
+	set run_number = $rnb
+	if ( $run_number < 100000 ) then
+		set run_number = "0$rnb"
+	endif
+	
+	set gendir   = /work/halld/home/andrsmit/primex_compton_analysis/compton_mc/genDir/Run${run_number}
+	set writedir = ${outdir}/Run${run_number}
 	
 	foreach tag_sys ($tag_list)
 		
@@ -57,7 +62,9 @@ foreach rnb ($run_list)
 			#***********************************************************#
 			# submit jobs:
 			
-			set jf = ${outdir}/jsub/compton_sim_rnb-${rnb}_${tag_sys}_${tag_counter}.jsub
+			set loc_jobname = compton_sim_rnb-${run_number}_${tag_sys}_${tag_counter}
+			
+			set jf = ${outdir}/jsub/${loc_jobname}.jsub
 			
 			# skip jobs that have already been submitted:
 			if ( -f $jf ) then
@@ -78,7 +85,7 @@ foreach rnb ($run_list)
 				if($submit_runs == "go") then
 					
 					set command = "swif2 add-job -workflow ${workflow}"
-					set command = "$command -name compton_sim_rnb-${rnb}_${tag_sys}_${tag_counter}"
+					set command = "$command -name ${loc_jobname}"
 					set command = "$command -account ${account} -partition ${partition}"
 					set command = "$command -cores ${cores} -ram ${ram} -time ${time} -disk ${disk}"
 					set command = "$command $script $rnb $tag_sys $tag_counter $gendir $writedir $jf"
