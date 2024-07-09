@@ -261,9 +261,23 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 	const DEventRFBunch *locRFBunch = NULL;
 	try { 
 		eventLoop->GetSingle(locRFBunch, "CalorimeterOnly");
-	} catch (...) { return NOERROR; }
+	} catch (...) { 
+		if(locIsMC) {
+			write_events(eventnumber, 0.0, locBeamPhotons, locFCALShowers, locCCALShowers, locTOFPoints, 
+				locMCThrown, locMCReaction);
+			dTreeInterface->Fill(dTreeFillData);
+		}
+		return NOERROR;
+	}
 	double locRFTime = locRFBunch->dTime;
-	if(locRFBunch->dNumParticleVotes < 2) return NOERROR;
+	if(locRFBunch->dNumParticleVotes < 2) {
+		if(locIsMC) {
+			write_events(eventnumber, locRFTime, locBeamPhotons, locFCALShowers, locCCALShowers, locTOFPoints, 
+				locMCThrown, locMCReaction);
+			dTreeInterface->Fill(dTreeFillData);
+		}
+		return NOERROR;
+	}
 	
 	//--------------------------------------------------------------------------------------//
 	// Criteria for writing events to Trees:
@@ -313,12 +327,11 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 		
 	} // end DFCALShower loop
 	
-	if(locEventSelector) {
+	if(locEventSelector || locIsMC) {
 		write_events(eventnumber, locRFTime, locBeamPhotons, locFCALShowers, locCCALShowers, locTOFPoints, 
 			locMCThrown, locMCReaction);
+		dTreeInterface->Fill(dTreeFillData);
 	}
-	
-	dTreeInterface->Fill(dTreeFillData);
 	
 	return NOERROR;
 }
