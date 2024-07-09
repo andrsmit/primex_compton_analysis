@@ -263,8 +263,7 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 		eventLoop->GetSingle(locRFBunch, "CalorimeterOnly");
 	} catch (...) { 
 		if(locIsMC) {
-			write_events(eventnumber, 0.0, locBeamPhotons, locFCALShowers, locCCALShowers, locTOFPoints, 
-				locMCThrown, locMCReaction);
+			write_events(eventnumber, 0.0, locMCThrown, locMCReaction);
 			dTreeInterface->Fill(dTreeFillData);
 		}
 		return NOERROR;
@@ -272,8 +271,7 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 	double locRFTime = locRFBunch->dTime;
 	if(locRFBunch->dNumParticleVotes < 2) {
 		if(locIsMC) {
-			write_events(eventnumber, locRFTime, locBeamPhotons, locFCALShowers, locCCALShowers, locTOFPoints, 
-				locMCThrown, locMCReaction);
+			write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
 			dTreeInterface->Fill(dTreeFillData);
 		}
 		return NOERROR;
@@ -327,9 +325,12 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 		
 	} // end DFCALShower loop
 	
-	if(locEventSelector || locIsMC) {
+	if(locEventSelector) {
 		write_events(eventnumber, locRFTime, locBeamPhotons, locFCALShowers, locCCALShowers, locTOFPoints, 
 			locMCThrown, locMCReaction);
+		dTreeInterface->Fill(dTreeFillData);
+	} else if(locIsMC) {
+		write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
 		dTreeInterface->Fill(dTreeFillData);
 	}
 	
@@ -343,6 +344,44 @@ jerror_t JEventProcessor_compton_tree::fini(void)
 {
 	delete dTreeInterface;
 	return NOERROR;
+}
+
+void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfTime, 
+	vector<const DMCThrown*> mc_thrown, vector<const DMCReaction*> mc_reaction) {
+	
+	dTreeFillData.Fill_Single<Int_t>("eventNum", eventnumber);
+	dTreeFillData.Fill_Single<Double_t>("rfTime", rfTime);
+	
+	dTreeFillData.Fill_Single<Int_t>("nbeam", 0);
+	dTreeFillData.Fill_Single<Int_t>("nfcal", 0);
+	dTreeFillData.Fill_Single<Int_t>("nccal", 0);
+	dTreeFillData.Fill_Single<Int_t>("ntof",  0);
+	
+	// MC Thrown:
+	size_t n_mc_thrown = 0;
+	for(vector<const DMCThrown*>::const_iterator mc = mc_thrown.begin(); mc != mc_thrown.end(); mc++) {
+		
+		dTreeFillData.Fill_Array<Double_t>("mc_pdgtype", (*mc)->pdgtype, n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_x",       (*mc)->position().X(),                n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_y",       (*mc)->position().Y(),                n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_z",       (*mc)->position().Z(),                n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_t",       (*mc)->time(),                        n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_e",       (*mc)->energy(),                      n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_p",       (*mc)->momentum().Mag(),              n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_theta",   (*mc)->momentum().Theta()*180.0/M_PI, n_mc_thrown);
+		dTreeFillData.Fill_Array<Double_t>("mc_phi",     (*mc)->momentum().Phi()*180.0/M_PI,   n_mc_thrown);
+		
+		n_mc_thrown++;
+	}
+	dTreeFillData.Fill_Single<Int_t>("nmc", n_mc_thrown);
+	
+	if(mc_reaction.size() == 1) {
+		dTreeFillData.Fill_Single<Int_t>("mc_reaction_type", mc_reaction[0]->type);
+		dTreeFillData.Fill_Single<Double_t>("mc_reaction_weight", mc_reaction[0]->weight);
+		dTreeFillData.Fill_Single<Double_t>("mc_reaction_energy", mc_reaction[0]->beam.energy());
+	}
+	
+	return;
 }
 
 void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfTime,
