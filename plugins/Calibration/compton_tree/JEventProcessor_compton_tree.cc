@@ -26,7 +26,7 @@ JEventProcessor_compton_tree::JEventProcessor_compton_tree() {
 	m_BeamEnergyCut = 6.0;
 	gPARMS->SetDefaultParameter("compton_tree:BeamEnergyCut", m_BeamEnergyCut);
 	
-	m_DeltaECut = 3.0;
+	m_DeltaECut = 8.0;
 	gPARMS->SetDefaultParameter("compton_tree:m_DeltaECut", m_DeltaECut);
 }
 
@@ -35,6 +35,12 @@ JEventProcessor_compton_tree::JEventProcessor_compton_tree() {
 //------------------
 jerror_t JEventProcessor_compton_tree::init(void)
 {
+	// Histogram to keep track of the number of events in each file:
+	
+	h_gen_flux   = new TH1F("gen_flux",   "Generated Beam Energy; [GeV]", 12000, 0., 12.);
+	h_gen_weight = new TH2F("gen_weight", "Generated Reaction Weight vs. Beam Energy; [GeV]; [mb]", 
+		12000, 0., 12., 1000, 0., 500.);
+	
 	dTreeInterface = DTreeInterface::Create_DTreeInterface("primex_compton","primex_compton.root");
 	
 	DTreeBranchRegister locTreeBranchRegister;
@@ -256,24 +262,34 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 	eventLoop->Get(locTOFPoints);
 	
 	//--------------------------------------------------------------------------------------//
+	// Save information on weights and number of simulated events for MC:
+	
+	if(locIsMC) {
+		japp->RootFillLock(this);
+		h_gen_flux->Fill(locMCReaction[0]->beam.energy());
+		h_gen_weight->Fill(locMCReaction[0]->beam.energy(), locMCReaction[0]->weight*1.e-3);
+		japp->RootFillUnLock(this);
+	}
+	
+	//--------------------------------------------------------------------------------------//
 	// RF Time
 	
 	const DEventRFBunch *locRFBunch = NULL;
 	try { 
 		eventLoop->GetSingle(locRFBunch, "CalorimeterOnly");
 	} catch (...) { 
-		if(locIsMC) {
-			write_events(eventnumber, 0.0, locMCThrown, locMCReaction);
-			dTreeInterface->Fill(dTreeFillData);
-		}
+		//if(locIsMC) {
+		//	write_events(eventnumber, 0.0, locMCThrown, locMCReaction);
+		//	dTreeInterface->Fill(dTreeFillData);
+		//}
 		return NOERROR;
 	}
 	double locRFTime = locRFBunch->dTime;
 	if(locRFBunch->dNumParticleVotes < 2) {
-		if(locIsMC) {
-			write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
-			dTreeInterface->Fill(dTreeFillData);
-		}
+		//if(locIsMC) {
+		//	write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
+		//	dTreeInterface->Fill(dTreeFillData);
+		//}
 		return NOERROR;
 	}
 	
@@ -312,7 +328,7 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 				double tb = (*gam)->time();
 				
 				if(eb < m_BeamEnergyCut) continue;
-				if(fabs(tb-locRFTime) < m_RFTimeCut) continue;
+				//if(fabs(tb-locRFTime) > m_RFTimeCut) continue;
 				
 				double locDeltaE = e1+e2 - eb;
 				if(fabs(locDeltaE) < m_DeltaECut) {
@@ -329,10 +345,11 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 		write_events(eventnumber, locRFTime, locBeamPhotons, locFCALShowers, locCCALShowers, locTOFPoints, 
 			locMCThrown, locMCReaction);
 		dTreeInterface->Fill(dTreeFillData);
-	} else if(locIsMC) {
-		write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
-		dTreeInterface->Fill(dTreeFillData);
 	}
+	//else if(locIsMC) {
+	//	write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
+	//	dTreeInterface->Fill(dTreeFillData);
+	//}
 	
 	return NOERROR;
 }
