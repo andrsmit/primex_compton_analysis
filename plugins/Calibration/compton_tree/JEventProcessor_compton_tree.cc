@@ -54,6 +54,7 @@ jerror_t JEventProcessor_compton_tree::init(void)
 	locTreeBranchRegister.Register_FundamentalArray<Int_t>("tag_sys","nbeam");
 	locTreeBranchRegister.Register_FundamentalArray<Double_t>("beam_e","nbeam");
 	locTreeBranchRegister.Register_FundamentalArray<Double_t>("beam_t","nbeam");
+	locTreeBranchRegister.Register_FundamentalArray<Double_t>("acc_scale_factor","nbeam");
 	
 	// FCAL Showers:
 	locTreeBranchRegister.Register_Single<Int_t>("nfcal");
@@ -203,6 +204,89 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 	m_fcal_correction.SetXYZ(m_fcalX_new-m_fcalX, m_fcalY_new-m_fcalY, 0.);
 	m_ccal_correction.SetXYZ(m_ccalX_new-m_ccalX, m_ccalY_new-m_ccalY, 0.);
 	
+	// Code to obtain the scaling factors for accidental beam bunches (copied from DAnalysisUtilities.cc in gluex_root_analysis)
+	
+	ostringstream locCommandStream;
+	locCommandStream << "ccdb dump ANALYSIS/accidental_scaling_factor -r " << runnumber;
+	FILE* locInputFile = gSystem->OpenPipe(locCommandStream.str().c_str(), "r");
+	if(locInputFile == NULL) {
+		cerr << "Could not load ANALYSIS/accidental_scaling_factor from CCDB !" << endl;
+		gSystem->Exit(1);        // make sure we don't fail silently
+		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+	}
+	
+	//get the first line
+	char buff[1024]; // I HATE char buffers
+	if(fgets(buff, sizeof(buff), locInputFile) == NULL)
+	{
+		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
+		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
+		gSystem->ClosePipe(locInputFile);
+		cerr << "Could not parse ANALYSIS/accidental_scaling_factor from CCDB !" << endl;
+		gSystem->Exit(1);        // make sure we don't fail silently
+		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+	}
+	
+	//get the second line (where the # is)
+	if(fgets(buff, sizeof(buff), locInputFile) == NULL)
+	{
+		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
+		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
+		gSystem->ClosePipe(locInputFile);
+		cerr << "Could not parse ANALYSIS/accidental_scaling_factor from CCDB !" << endl;
+		gSystem->Exit(1);        // make sure we don't fail silently
+		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+	}
+	
+	// catch some CCDB error conditions
+	if(strncmp(buff, "Cannot", 6) == 0) 
+	{
+		// no assignment for this run
+		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
+		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
+		gSystem->ClosePipe(locInputFile);
+		cerr << "No data available for ANALYSIS/accidental_scaling_factor, run " << runnumber << " from CCDB !" << endl;
+		gSystem->Exit(1);        // make sure we don't fail silently
+		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+	}
+	
+	istringstream locStringStream(buff);
+	
+	double locHodoscopeHiFactor = -1.0;
+	double locHodoscopeHiFactorErr = -1.0;
+	double locHodoscopeLoFactor = -1.0;
+	double locHodoscopeLoFactorErr = -1.0;
+	double locMicroscopeFactor = -1.0;
+	double locMicroscopeFactorErr = -1.0;
+	double locTAGMEnergyBoundHi = -1.0;
+	double locTAGMEnergyBoundLo = -1.0;
+	
+	//extract it
+	locStringStream >> locHodoscopeHiFactor >> locHodoscopeHiFactorErr >> locHodoscopeLoFactor
+		>> locHodoscopeLoFactorErr >> locMicroscopeFactor >> locMicroscopeFactorErr
+		>> locTAGMEnergyBoundHi >> locTAGMEnergyBoundLo;
+	
+	//Close the pipe
+	gSystem->ClosePipe(locInputFile);
+	
+	m_HodoscopeHiFactor    = locHodoscopeHiFactor;
+	m_HodoscopeHiFactorErr = locHodoscopeHiFactorErr;
+	m_HodoscopeLoFactor    = locHodoscopeLoFactor;
+	m_HodoscopeLoFactorErr = locHodoscopeLoFactorErr;
+	m_MicroscopeFactor     = locMicroscopeFactor;
+	m_MicroscopeFactorErr  = locMicroscopeFactorErr;
+	m_TAGMEnergyBoundHi    = locTAGMEnergyBoundHi;
+	m_TAGMEnergyBoundLo    = locTAGMEnergyBoundLo;
+	
+	cout << "\n\n\n\n\n";
+	cout << "==============================================================================" << endl;
+	cout << m_HodoscopeHiFactor << "; " << m_HodoscopeHiFactorErr << "; " 
+		<< m_HodoscopeLoFactor << "; " << m_HodoscopeLoFactorErr << "; " << m_MicroscopeFactor 
+		<< "; " << m_MicroscopeFactorErr << "; " << m_TAGMEnergyBoundHi << "; " 
+		<< m_TAGMEnergyBoundLo << endl;
+	cout << "==============================================================================" << endl;
+	cout << "\n\n\n\n\n";
+	
 	return NOERROR;
 }
 
@@ -325,9 +409,9 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 				gam != locBeamPhotons.end(); gam++) {
 				
 				double eb = (*gam)->lorentzMomentum().E();
-				double tb = (*gam)->time();
-				
 				if(eb < m_BeamEnergyCut) continue;
+				
+				//double tb = (*gam)->time();
 				//if(fabs(tb-locRFTime) > m_RFTimeCut) continue;
 				
 				double locDeltaE = e1+e2 - eb;
@@ -422,10 +506,12 @@ void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfT
 		if((*gam)->dSystem == SYS_TAGH) loc_sys = 0;
 		else if((*gam)->dSystem == SYS_TAGM) loc_sys = 1;
 		
-		dTreeFillData.Fill_Array<Int_t>("tag_counter", loc_counter, n_beam_photon);
-		dTreeFillData.Fill_Array<Int_t>("tag_sys",     loc_sys,     n_beam_photon);
-		dTreeFillData.Fill_Array<Double_t>("beam_e", (*gam)->lorentzMomentum().E(), n_beam_photon);
-		dTreeFillData.Fill_Array<Double_t>("beam_t", (*gam)->time(),                n_beam_photon);
+		double loc_eb = (*gam)->lorentzMomentum().E();
+		dTreeFillData.Fill_Array<Int_t>("tag_counter", loc_counter,    n_beam_photon);
+		dTreeFillData.Fill_Array<Int_t>("tag_sys",     loc_sys,        n_beam_photon);
+		dTreeFillData.Fill_Array<Double_t>("beam_e",   loc_eb,         n_beam_photon);
+		dTreeFillData.Fill_Array<Double_t>("beam_t",  (*gam)->time(),  n_beam_photon);
+		dTreeFillData.Fill_Array<Double_t>("acc_scale_factor", get_acc_scaling_factor(loc_eb), n_beam_photon);
 		
 		n_beam_photon++;
 	}
@@ -511,4 +597,14 @@ void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfT
 	}
 	
 	return;
+}
+
+double JEventProcessor_compton_tree::get_acc_scaling_factor(double eb)
+{
+	if(eb > m_TAGMEnergyBoundHi)
+		return m_HodoscopeHiFactor;
+	else if(eb > m_TAGMEnergyBoundLo)
+		return m_MicroscopeFactor;
+	else
+		return m_HodoscopeLoFactor;
 }

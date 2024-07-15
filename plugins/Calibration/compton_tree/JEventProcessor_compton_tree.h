@@ -42,6 +42,7 @@ using namespace std;
 #include "DLorentzVector.h"
 #include "DVector3.h"
 #include "TRandom3.h"
+#include "TSystem.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -64,6 +65,9 @@ class JEventProcessor_compton_tree:public jana::JEventProcessor{
 		jerror_t erun(void){return NOERROR;};
 		jerror_t fini(void);
 		
+		void write_events(uint64_t eventnumber, double rfTime, 
+			vector<const DMCThrown*> mc_thrown, vector<const DMCReaction*> mc_reaction);
+		
 		void write_events(uint64_t eventnumber, double rfTime,
 			vector<const DBeamPhoton*> beam_photons, 
 			vector<const DFCALShower*> fcal_showers,
@@ -71,6 +75,8 @@ class JEventProcessor_compton_tree:public jana::JEventProcessor{
 			vector<const DTOFPoint*> tof_points,
 			vector<const DMCThrown*> mc_thrown,
 			vector<const DMCReaction*> mc_reaction);
+		
+		double get_acc_scaling_factor(double eb);
 		
 		//----------   Constants   ----------//
 		
@@ -83,6 +89,18 @@ class JEventProcessor_compton_tree:public jana::JEventProcessor{
 		const double c = 29.9792458; // cm/ns
 		
 		double m_RFTimeCut, m_BeamEnergyCut, m_DeltaECut;
+		
+		TH1F *h_gen_flux;
+		TH2F *h_gen_weight;
+		
+		double m_HodoscopeHiFactor    = 1.0;
+		double m_HodoscopeHiFactorErr = 1.0;
+		double m_HodoscopeLoFactor    = 1.0;
+		double m_HodoscopeLoFactorErr = 1.0;
+		double m_MicroscopeFactor     = 1.0;
+		double m_MicroscopeFactorErr  = 1.0;
+		double m_TAGMEnergyBoundHi    = 1.0;
+		double m_TAGMEnergyBoundLo    = 1.0;
 		
 		//----------   TTree   ----------//
 		
