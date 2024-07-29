@@ -1,5 +1,68 @@
 #include "ComptonAna.h"
 
+// Default Constructor:
+
+ComptonAna::ComptonAna() {
+	
+	// set default run number to 61321:
+	
+	m_runNumber = 61321;
+	
+	m_random = new TRandom3(0);
+	
+	// set defaults for cut values:
+	
+	m_cut_fcalE    = 0.35;
+	m_cut_ccalE    = 3.0;
+	m_cut_fcalrfdt = 2.004;
+	m_cut_ccalrfdt = 2.004;
+	m_cut_beamrfdt = 2.004;
+	m_cut_deltaE   = 5.0;
+	m_cut_deltaK   = 5.0;
+	m_cut_deltaPhi = 5.0;
+	
+	// Defaults for Geometry from CCDB:
+	
+	m_phase_val      = 1;
+	m_target_length  = 1.7755;
+	m_target_density = 1.848;
+	m_target_atten   = 0.01172;
+	
+	m_fcal_face.SetXYZ(0.529, -0.002, 624.906);
+	m_fcal_correction.SetXYZ(0., 0., 0);
+	
+	m_ccal_face.SetXYZ(-0.0225, 0.0073, 1279.376);
+	m_ccal_correction.SetXYZ(0., 0., 0.);
+	
+	m_vertex.SetXYZ(0.1914, -0.0769, 65.);
+	
+	// Set event number to zero on initialization:
+	
+	m_event = 0;
+	
+	// set up FCAL channel number array:
+	int num_active_blocks = 0;
+	for(int row = 0; row < 59; row++){
+		for(int col = 0; col < 59; col++){
+			
+			// transform to beam axis
+			m_positionOnFace[row][col] = TVector2((col - 29) * 4.0157, (row - 29) * 4.0157);
+			
+			double thisRadius = m_positionOnFace[row][col].Mod();
+			
+			if((thisRadius < 120.471) && (thisRadius > 5.73585)){
+				
+				// build the "channel map"
+				m_channelNumber[row][col]   = num_active_blocks;
+				m_row[num_active_blocks]    = row;
+				m_column[num_active_blocks] = col;
+				
+				num_active_blocks++;
+			}
+		}
+	}
+}
+
 void ComptonAna::runAnalysis(TString infname) {
 	
 	m_infile = new TFile(infname.Data(), "READ");
@@ -590,69 +653,6 @@ int ComptonAna::cut_deltaK_two(double deltaK, double eb, double n_sigma_left, do
 	double loc_diff = deltaK - loc_mu;
 	if((-1.*n_sigma_left*loc_sigma < loc_diff) && (loc_diff < n_sigma_right*loc_sigma)) return 1;
 	else return 0;
-}
-
-// Default Constructor:
-
-ComptonAna::ComptonAna() {
-	
-	// set default run number to 61321:
-	
-	m_runNumber = 61321;
-	
-	m_random = new TRandom3(0);
-	
-	// set defaults for cut values:
-	
-	m_cut_fcalE    = 0.35;
-	m_cut_ccalE    = 3.0;
-	m_cut_fcalrfdt = 2.004;
-	m_cut_ccalrfdt = 2.004;
-	m_cut_beamrfdt = 2.004;
-	m_cut_deltaE   = 5.0;
-	m_cut_deltaK   = 5.0;
-	m_cut_deltaPhi = 5.0;
-	
-	// Defaults for Geometry from CCDB:
-	
-	m_phase_val      = 1;
-	m_target_length  = 1.7755;
-	m_target_density = 1.848;
-	m_target_atten   = 0.01172;
-	
-	m_fcal_face.SetXYZ(0.529, -0.002, 624.906);
-	m_fcal_correction.SetXYZ(0., 0., 0);
-	
-	m_ccal_face.SetXYZ(-0.0225, 0.0073, 1279.376);
-	m_ccal_correction.SetXYZ(0., 0., 0.);
-	
-	m_vertex.SetXYZ(0.1914, -0.0769, 65.);
-	
-	// Set event number to zero on initialization:
-	
-	m_event = 0;
-	
-	// set up FCAL channel number array:
-	int num_active_blocks = 0;
-	for(int row = 0; row < 59; row++){
-		for(int col = 0; col < 59; col++){
-			
-			// transform to beam axis
-			m_positionOnFace[row][col] = TVector2((col - 29) * 4.0157, (row - 29) * 4.0157);
-			
-			double thisRadius = m_positionOnFace[row][col].Mod();
-			
-			if((thisRadius < 120.471) && (thisRadius > 5.73585)){
-				
-				// build the "channel map"
-				m_channelNumber[row][col]   = num_active_blocks;
-				m_row[num_active_blocks]    = row;
-				m_column[num_active_blocks] = col;
-				
-				num_active_blocks++;
-			}
-		}
-	}
 }
 
 int ComptonAna::loadCutParameters() {

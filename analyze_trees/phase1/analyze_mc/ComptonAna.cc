@@ -15,7 +15,7 @@ ComptonAna::ComptonAna() {
 	
 	// set defaults for cut values:
 	
-	m_cut_fcalE    = 0.5;
+	m_cut_fcalE    = 0.35;
 	m_cut_ccalE    = 3.0;
 	m_cut_fcalrfdt = 2.004;
 	m_cut_ccalrfdt = 2.004;
