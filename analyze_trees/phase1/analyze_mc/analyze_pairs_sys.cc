@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
 	genSettings.file_ext_low  =     0;
 	genSettings.file_ext_high =   600;
 	genSettings.input_fname   = "none";
-	genSettings.output_fname  = "pairs_ana.root";
+	genSettings.output_fname  = "pairs_systematics.root";
 	
 	// parse command line:
 	char *argptr;
@@ -52,22 +52,21 @@ int main(int argc, char **argv) {
 	
 	// Directory where output ROOT files will be stored:
 	sprintf(rootFile_pathName, 
-		"/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/pair", 
+		"/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/pair/systematics", 
 		genSettings.run_number);
 	
 	// Construct analysis object:
 	
 	ComptonAna locAna;
 	
-	locAna.m_SHIFT_DISTRIBUTIONS = 0;
-	locAna.m_SMEAR_DISTRIBUTIONS = 0;
+	locAna.m_SHIFT_DISTRIBUTIONS = 1;
+	locAna.m_SMEAR_DISTRIBUTIONS = 1;
 	
 	locAna.setRunNumber(genSettings.run_number);
 	
 	// Initialize histograms to be filled:
 	
-	locAna.initHistograms();
-	
+	locAna.initHistograms_systematics();
 	//
 	// Check if an input filename was specificed at runtime. 
 	// If not, we'll do a loop over files from the rootTree directory above:
@@ -80,7 +79,8 @@ int main(int argc, char **argv) {
 			exit(0);
 		}
 		locAna.setOutputFileName(Form("%s",genSettings.output_fname.c_str()));
-		locAna.runAnalysis(input_fname.Data());
+		locAna.runAnalysis_systematics(input_fname.Data());
+		locAna.writeHistograms_systematics();
 		
 	} else {
 		
@@ -95,7 +95,6 @@ int main(int argc, char **argv) {
 			
 			// check if file exists:
 			if(gSystem->AccessPathName(input_fname.Data())) continue;
-			
 			cout << "  processing ext " << loc_ext << endl;
 			
 			if(first) {
@@ -103,12 +102,12 @@ int main(int argc, char **argv) {
 				first = 0;
 			}
 			max_processed = loc_ext;
-			locAna.runAnalysis(input_fname.Data());
+			locAna.runAnalysis_systematics(input_fname.Data());
 		}
 		
 		// write results to file:
 		locAna.setOutputFileName(Form("%s/pair_rec_%04d_%04d.root", rootFile_pathName, min_processed, max_processed));
-		locAna.writeHistograms();
+		locAna.writeHistograms_systematics();
 	}
 	
 	return 0;

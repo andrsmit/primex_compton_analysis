@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
 	genSettings.max_run      = 61321;
 	genSettings.run_number   =     0;
 	genSettings.input_fname  = "none";
-	genSettings.output_fname = "compton_ana.root";
+	genSettings.output_fname = "compton_systematics.root";
 	
 	// parse command line:
 	char *argptr;
@@ -52,13 +52,13 @@ int main(int argc, char **argv) {
 	
 	// Directory where output ROOT files will be stored:
 	sprintf(rootFile_pathName, 
-		"/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/analyze_data/rootFiles", 
+		"/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/analyze_data/rootFiles/systematics/test_mgg_cut", 
 		genSettings.run_number);
 	
 	// Initialize histograms to be filled:
 	
 	ComptonAna locAna;
-	locAna.initHistograms();
+	locAna.initHistograms_systematics();
 	
 	//
 	// Check if an input filename was specificed at runtime. 
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
 		}
 		locAna.setRunNumber(genSettings.run_number);
 		locAna.setOutputFileName(Form("%s",genSettings.output_fname.c_str()));
-		locAna.runAnalysis(input_fname.Data());
+		locAna.runAnalysis_systematics(input_fname.Data());
 		
 	} else {
 		
@@ -98,21 +98,20 @@ int main(int argc, char **argv) {
 			// loop over all extensions in this directory:
 			for(int loc_ext = 0; loc_ext < 250; loc_ext++) {
 				
-				TString input_fname = Form("%s/%06d/%06d_%03d.root", rootTree_pathName, loc_run, loc_run, loc_ext);
-				
 				// check if file exists:
+				TString input_fname = Form("%s/%06d/%06d_%03d.root", rootTree_pathName, loc_run, loc_run, loc_ext);
 				if(gSystem->AccessPathName(input_fname.Data())) continue;
 				
 				cout << "  processing ext " << loc_ext << endl;
-				locAna.runAnalysis(input_fname.Data());
+				locAna.runAnalysis_systematics(input_fname.Data());
 			}
 			
 			auto stop = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(stop - start);
 			//cout << duration.count() << endl;
 			
-			locAna.writeHistograms();
-			locAna.resetHistograms();
+			locAna.writeHistograms_systematics();
+			locAna.resetHistograms_systematics();
 		}
 		cout << "Done." << endl;
 	}

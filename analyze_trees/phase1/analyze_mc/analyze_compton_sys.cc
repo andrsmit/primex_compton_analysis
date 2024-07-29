@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
 	genSettings.tag_counter_high =   274;
 	genSettings.beam_current     =   200;
 	genSettings.input_fname      = "none";
-	genSettings.output_fname     = "compton_ana.root";
+	genSettings.output_fname     = "compton_systematics.root";
 	
 	// parse command line:
 	char *argptr;
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 		// Directory where output ROOT files will be stored:
 		
 		sprintf(rootFile_pathName, 
-			"%s/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/compton/noBkgd", 
+			"%s/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/compton/noBkgd_systematics", 
 			loc_path, genSettings.run_number);
 		
 	} else {
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
 		// Directory where output ROOT files will be stored:
 		
 		sprintf(rootFile_pathName, 
-			"%s/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/compton/%03dnA", 
+			"%s/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/compton/%03dnA_systematics/test_mgg_cut", 
 			loc_path, genSettings.run_number, genSettings.beam_current);
 	}
 	
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
 	
 	// Initialize histograms to be filled:
 	
-	locAna.initHistograms();
+	locAna.initHistograms_systematics();
 	
 	//
 	// Check if an input filename was specificed at runtime. 
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 			exit(0);
 		}
 		locAna.setOutputFileName(Form("%s",genSettings.output_fname.c_str()));
-		locAna.runAnalysis(input_fname.Data());
+		locAna.runAnalysis_systematics(input_fname.Data());
 		
 	} else {
 		
@@ -127,9 +127,9 @@ int main(int argc, char **argv) {
 			if(!gSystem->AccessPathName(output_fname.Data())) continue;
 			
 			locAna.setOutputFileName(output_fname.Data());
-			locAna.resetHistograms();
-			locAna.runAnalysis(input_fname.Data());
-			locAna.writeHistograms();
+			locAna.resetHistograms_systematics();
+			locAna.runAnalysis_systematics(input_fname.Data());
+			locAna.writeHistograms_systematics();
 		}
 		cout << "Done." << endl;
 	}
