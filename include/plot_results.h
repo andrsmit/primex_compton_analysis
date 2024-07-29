@@ -1,5 +1,8 @@
 #include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.h"
 
+TGraphErrors *gCS;
+TCanvas *cCS;
+
 void calc_cs(int tag_sys, int counter, double &loc_cs, double &loc_csE) {
 	
 	loc_cs = 0., loc_csE = 0.;
@@ -43,16 +46,12 @@ void calc_cs(int tag_sys, int counter, double &loc_cs, double &loc_csE) {
 	}
 	
 	loc_accE = 0.;
-	if(loc_acc <= 0. || loc_flux <= 0.) {
-		loc_cs  = 0.;
-		loc_csE = 0.;
-	} else {
-		loc_cs  = loc_yield / (loc_flux * loc_acc * n_e * mb);
-		loc_csE = sqrt(
-			pow(loc_yieldE / (loc_flux * loc_acc * n_e * mb), 2.0) + 
-			pow(loc_fluxE * loc_yield / (loc_flux * loc_flux * loc_acc * n_e * mb), 2.0)
-		);
-	}
+	
+	loc_cs  = loc_yield / (loc_flux * loc_acc * n_e * mb);
+	loc_csE = sqrt(
+		pow(loc_yieldE / (loc_flux * loc_acc * n_e * mb), 2.0) + 
+		pow(loc_fluxE * loc_yield / (loc_flux * loc_flux * loc_acc * n_e * mb), 2.0)
+	);
 	
 	loc_cs  /= f_abs;
 	loc_csE /= f_abs;
@@ -103,12 +102,12 @@ void plot_cs(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 		cross_section[ib]     = loc_cs;
 		cross_section_err[ib] = loc_cs_err;
 		
-		double loc_theory_cs  = f_theory->Eval(loc_eb);
+		double loc_theory_cs = USE_NIST_CALCULATION ? f_nist->Eval(loc_eb) : f_theory->Eval(loc_eb);
 		cs_deviation[ib]      = 100. * (loc_cs - loc_theory_cs) / loc_theory_cs;
 		cs_deviation_err[ib]  = 100. * loc_cs_err / loc_theory_cs;
 	}
 	
-	TGraphErrors *gCS = new TGraphErrors(n_bins, beam_energy, cross_section, zeros, 
+	gCS = new TGraphErrors(n_bins, beam_energy, cross_section, zeros, 
 		cross_section_err);
 	gCS->SetMarkerStyle(8);
 	gCS->SetMarkerSize(0.7);
@@ -129,7 +128,7 @@ void plot_cs(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	gCS->GetXaxis()->SetRangeUser(5.8, 11.6);
 	gCS->GetYaxis()->SetRangeUser(0.11, 0.25);
 	
-	TCanvas *cCS = new TCanvas("cCS", "cCS", 1200, 500);
+	cCS = new TCanvas("cCS", "cCS", 1200, 500);
 	cCS->SetTickx(); cCS->SetTicky();
 	gCS->Draw("AP");
 	f_theory->Draw("same");
@@ -191,20 +190,24 @@ void plot_cs(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	
 	gDev->GetXaxis()->SetTitleSize(0.1);
 	gDev->GetXaxis()->SetTitleOffset(0.9);
-	gDev->GetYaxis()->SetTitleSize(0.1);
-	gDev->GetYaxis()->SetTitleOffset(0.25);
+	gDev->GetYaxis()->SetTitleSize(0.085);
+	gDev->GetYaxis()->SetTitleOffset(0.35);
 	gDev->GetYaxis()->SetTitle("(#sigma_{exp}-#sigma_{theory})/#sigma_{theory} [%]");
 	gDev->SetTitle(" ");
 	
 	gCS->GetXaxis()->SetTitleSize(0.065);
-	gCS->GetYaxis()->SetTitleOffset(0.5);
+	gCS->GetXaxis()->SetLabelOffset(0.015);
+	gCS->GetYaxis()->SetTitleOffset(0.7);
 	
 	TF1 *f_theory_clone = (TF1*)f_theory->Clone("f_theory_clone");
 	f_theory_clone->SetLineWidth(4);
+	TF1 *f_nist_clone = (TF1*)f_nist->Clone("f_nist_clone");
+	f_nist_clone->SetLineWidth(4);
 	
 	top_pad->cd();
 	gCS->Draw("AP");
 	f_theory->Draw("same");
+	//f_nist->Draw("same");
 	
 	TLatex lat;
 	lat.SetTextColor(kBlue);
@@ -217,13 +220,41 @@ void plot_cs(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	
 	TLegend *leg = new TLegend(0.595, 0.645, 0.935, 0.835);
 	leg->AddEntry(gCSclone, "Data" , "PE");
-	leg->AddEntry(f_theory_clone, "NLO Theory" , "l");
+	//leg->AddEntry(f_nist_clone, "Theory (NIST)" , "l");
+	leg->AddEntry(f_theory_clone, "Theory (PrimEx)" , "l");
 	leg->SetBorderSize(0);
 	leg->Draw();
 	
 	bot_pad->cd();
 	gDev->Draw("AP");
 	
+	
+	TF1 *f_dev_theory = new TF1("f_dev_theory", 
+		"1.e2*([0]-[6] + ([1]-[7])*x + ([2]-[8])*pow(x,2.) + ([3]-[9])*pow(x,3.) + ([4]-[10])*pow(x,4.) + ([5]-[11])*pow(x,5.)) / ([0] + [1]*x + [2]*pow(x,2.) + [3]*pow(x,3.) + [4]*pow(x,4.) + [5]*pow(x,5.))", 5.8, 11.6);
+	TF1 *f_dev_nist   = new TF1("f_dev_nist", 
+		"1.e2*([0]-[6] + ([1]-[7])*x + ([2]-[8])*pow(x,2.) + ([3]-[9])*pow(x,3.) + ([4]-[10])*pow(x,4.) + ([5]-[11])*pow(x,5.)) / ([0] + [1]*x + [2]*pow(x,2.) + [3]*pow(x,3.) + [4]*pow(x,4.) + [5]*pow(x,5.))", 5.8, 11.6);
+	for(int ipar=0; ipar<6; ipar++) {
+		f_dev_theory->SetParameter(ipar, f_theory->GetParameter(ipar));
+		f_dev_nist->SetParameter(ipar, f_nist->GetParameter(ipar));
+	}
+	for(int ipar=6; ipar<12; ipar++) {
+		if(USE_NIST_CALCULATION) f_dev_theory->SetParameter(ipar, f_nist->GetParameter(ipar-6));
+		else f_dev_theory->SetParameter(ipar, f_theory->GetParameter(ipar-6));
+		f_dev_nist->SetParameter(ipar, f_nist->GetParameter(ipar-6));
+	}
+	f_dev_theory->SetRange(5.8, 11.2);
+	f_dev_theory->SetLineColor(kRed);
+	f_dev_theory->SetLineStyle(9);
+	f_dev_theory->SetLineWidth(2);
+	f_dev_nist->SetLineColor(kBlack);
+	f_dev_nist->SetLineStyle(1);
+	f_dev_nist->SetLineWidth(2);
+	
+	f_dev_theory->Draw("same");
+	f_dev_nist->Draw("same");
+	
+	
+	/*
 	TF1 *f_dev = new TF1("f_dev", "pol0", 8.0, 11.6);
 	gDev->Fit("f_dev", "R0");
 	
@@ -247,7 +278,7 @@ void plot_cs(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	lDev->SetLineWidth(2);
 	lDev->SetLineColor(kRed);
 	//lDev->Draw("same");
-	
+	*/
 	return;
 }
 
@@ -323,6 +354,78 @@ void plot_pair_fraction(vector<int> tagh_counter_vec, vector<int> tagm_counter_v
 	return;
 }
 
+void plot_empty_fraction(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
+	
+	int n_bins1 = (int)tagh_counter_vec.size();
+	int n_bins2 = (int)tagm_counter_vec.size();
+	int n_bins  = n_bins1+n_bins2;
+	
+	double *beam_energy        = new double[n_bins];
+	double *zeros              = new double[n_bins];
+	double *empty_fraction     = new double[n_bins];
+	double *empty_fraction_err = new double[n_bins];
+	
+	double *empty_fraction_exp = new double[n_bins];
+	
+	for(int ib=0; ib<n_bins; ib++) {
+		double loc_eb         = 0.;
+		double loc_empty_frac = 0., loc_empty_frac_err = 0.;
+		double loc_empty_frac_exp = 0.;
+		if(ib<n_bins1) {
+			int counter         = tagh_counter_vec[ib];
+			loc_eb              = tagh_en[counter-1];
+			loc_empty_frac      = tagh_empty_fraction[counter-1];
+			loc_empty_frac_err  = tagh_empty_fractionE[counter-1];
+			loc_empty_frac_exp  = tagh_empty_fraction_exp[counter-1];
+		} else {
+			int counter         = tagm_counter_vec[ib-n_bins1];
+			loc_eb              = tagm_en[counter-1];
+			loc_empty_frac      = tagm_empty_fraction[counter-1];
+			loc_empty_frac_err  = tagm_empty_fractionE[counter-1];
+			loc_empty_frac_exp  = tagm_empty_fraction_exp[counter-1];
+		}
+		beam_energy[ib]        = loc_eb;
+		zeros[ib]              = 0.;
+		empty_fraction[ib]     = loc_empty_frac     / loc_empty_frac_exp;
+		empty_fraction_err[ib] = loc_empty_frac_err / loc_empty_frac_exp;
+		empty_fraction_exp[ib] = loc_empty_frac_exp / loc_empty_frac_exp;
+	}
+	
+	TGraphErrors *gEmptyFrac = new TGraphErrors(n_bins, beam_energy, empty_fraction, 
+		zeros, empty_fraction_err);
+	gEmptyFrac->SetMarkerStyle(8);
+	gEmptyFrac->SetMarkerSize(0.7);
+	gEmptyFrac->SetMarkerColor(kBlue);
+	gEmptyFrac->SetLineColor(kBlue);
+	gEmptyFrac->SetTitle("");
+	
+	gEmptyFrac->GetXaxis()->SetTitle("Photon Beam Energy [GeV]");
+	gEmptyFrac->GetXaxis()->SetTitleSize(0.05);
+	gEmptyFrac->GetXaxis()->SetTitleOffset(0.9);
+	gEmptyFrac->GetXaxis()->CenterTitle(true);
+	
+	gEmptyFrac->GetYaxis()->SetTitle("p_{Empty} [a.u.]");
+	gEmptyFrac->GetYaxis()->SetTitleSize(0.05);
+	gEmptyFrac->GetYaxis()->SetTitleOffset(0.9);
+	gEmptyFrac->GetYaxis()->CenterTitle(true);
+	
+	gEmptyFrac->GetXaxis()->SetRangeUser(5.6, 11.8);
+	
+	TGraph *gEmptyFracExp = new TGraph(n_bins, beam_energy, empty_fraction_exp);
+	gEmptyFracExp->SetMarkerStyle(8);
+	gEmptyFracExp->SetMarkerSize(0.7);
+	gEmptyFracExp->SetMarkerColor(kGreen);
+	gEmptyFracExp->SetLineColor(kGreen);
+	gEmptyFracExp->SetTitle("");
+	
+	TCanvas *cEmptyFrac = new TCanvas("cEmptyFrac", "Empty Fraction (fit)", 1200, 500);
+	cEmptyFrac->SetTickx(); cEmptyFrac->SetTicky();
+	gEmptyFrac->Draw("AP");
+	gEmptyFracExp->Draw("P same");
+	
+	return;
+}
+
 
 bool isNaN(double x) {
 	return x != x;
@@ -336,22 +439,32 @@ void plot_chi2(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	
 	double *beam_energy = new double[n_bins];
 	double *chi2        = new double[n_bins];
+	double *pull_mean   = new double[n_bins];
+	double *pull_stdev  = new double[n_bins];
 	
 	for(int ib=0; ib<n_bins; ib++) {
-		double loc_eb   = 0.;
-		double loc_chi2 = 0.;
+		double loc_eb         = 0.;
+		double loc_chi2       = 0.;
+		double loc_pull_mean  = 0.;
+		double loc_pull_stdev = 0.;
 		if(ib<n_bins1) {
-			int counter = tagh_counter_vec[ib];
-			loc_eb      = tagh_en[counter-1];
-			loc_chi2    = tagh_yieldfit_chi2[counter-1];
+			int counter    = tagh_counter_vec[ib];
+			loc_eb         = tagh_en[counter-1];
+			loc_chi2       = tagh_yieldfit_chi2[counter-1];
+			loc_pull_mean  = tagh_yieldfit_pull_mean[counter-1];
+			loc_pull_stdev = tagh_yieldfit_pull_stdev[counter-1];
 		} else {
-			int counter = tagm_counter_vec[ib-n_bins1];
-			loc_eb      = tagm_en[counter-1];
-			loc_chi2    = tagm_yieldfit_chi2[counter-1];
+			int counter    = tagm_counter_vec[ib-n_bins1];
+			loc_eb         = tagm_en[counter-1];
+			loc_chi2       = tagm_yieldfit_chi2[counter-1];
+			loc_pull_mean  = tagm_yieldfit_pull_mean[counter-1];
+			loc_pull_stdev = tagm_yieldfit_pull_stdev[counter-1];
 		}
 		if(isNaN(loc_chi2)) loc_chi2 = 0.;
 		beam_energy[ib] = loc_eb;
 		chi2[ib]        = loc_chi2;
+		pull_mean[ib]   = loc_pull_mean;
+		pull_stdev[ib]  = loc_pull_stdev;
 	}
 	
 	TGraph *gChi2 = new TGraph(n_bins, beam_energy, chi2);
@@ -360,22 +473,61 @@ void plot_chi2(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	gChi2->SetMarkerColor(kBlue);
 	gChi2->SetLineColor(kBlue);
 	gChi2->SetTitle("");
-	
 	gChi2->GetXaxis()->SetTitle("Photon Beam Energy [GeV]");
 	gChi2->GetXaxis()->SetTitleSize(0.05);
 	gChi2->GetXaxis()->SetTitleOffset(0.9);
 	gChi2->GetXaxis()->CenterTitle(true);
-	
 	gChi2->GetYaxis()->SetTitle("#chi^{2} / n.d.f.");
 	gChi2->GetYaxis()->SetTitleSize(0.05);
 	gChi2->GetYaxis()->SetTitleOffset(0.9);
 	gChi2->GetYaxis()->CenterTitle(true);
-	
 	gChi2->GetXaxis()->SetRangeUser(5.6, 11.8);
 	
 	TCanvas *cChi2 = new TCanvas("cChi2", "Chi2 of Fit", 1200, 500);
 	cChi2->SetTickx(); cChi2->SetTicky();
 	gChi2->Draw("AP");
+	
+	
+	TGraph *gPullMean = new TGraph(n_bins, beam_energy, pull_mean);
+	gPullMean->SetMarkerStyle(8);
+	gPullMean->SetMarkerSize(0.7);
+	gPullMean->SetMarkerColor(kBlue);
+	gPullMean->SetLineColor(kBlue);
+	gPullMean->SetTitle("");
+	gPullMean->GetXaxis()->SetTitle("Photon Beam Energy [GeV]");
+	gPullMean->GetXaxis()->SetTitleSize(0.05);
+	gPullMean->GetXaxis()->SetTitleOffset(0.9);
+	gPullMean->GetXaxis()->CenterTitle(true);
+	gPullMean->GetYaxis()->SetTitle("Average Pull of Fit");
+	gPullMean->GetYaxis()->SetTitleSize(0.05);
+	gPullMean->GetYaxis()->SetTitleOffset(0.9);
+	gPullMean->GetYaxis()->CenterTitle(true);
+	gPullMean->GetXaxis()->SetRangeUser(5.6, 11.8);
+	
+	TGraph *gPullStdev = new TGraph(n_bins, beam_energy, pull_stdev);
+	gPullStdev->SetMarkerStyle(8);
+	gPullStdev->SetMarkerSize(0.7);
+	gPullStdev->SetMarkerColor(kBlue);
+	gPullStdev->SetLineColor(kBlue);
+	gPullStdev->SetTitle("");
+	gPullStdev->GetXaxis()->SetTitle("Photon Beam Energy [GeV]");
+	gPullStdev->GetXaxis()->SetTitleSize(0.05);
+	gPullStdev->GetXaxis()->SetTitleOffset(0.9);
+	gPullStdev->GetXaxis()->CenterTitle(true);
+	gPullStdev->GetYaxis()->SetTitle("Std Dev of Pull");
+	gPullStdev->GetYaxis()->SetTitleSize(0.05);
+	gPullStdev->GetYaxis()->SetTitleOffset(0.9);
+	gPullStdev->GetYaxis()->CenterTitle(true);
+	gPullStdev->GetXaxis()->SetRangeUser(5.6, 11.8);
+	
+	TCanvas *cPull = new TCanvas("cPull", "Pull of Fit", 1200, 1000);
+	cPull->Divide(1,2);
+	TPad *pPullMean = (TPad*)cPull->cd(1);
+	pPullMean->SetTickx(); pPullMean->SetTicky();
+	gPullMean->Draw("AP");
+	TPad *pPullStdev = (TPad*)cPull->cd(2);
+	pPullStdev->SetTickx(); pPullStdev->SetTicky();
+	gPullStdev->Draw("AP");
 	
 	return;
 }

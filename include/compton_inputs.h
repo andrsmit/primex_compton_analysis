@@ -33,23 +33,31 @@ bool DRAW_FITS_TAGM = false;
 bool SAVE_FITS_TAGH = false;
 bool SAVE_FITS_TAGM = false;
 
-TCanvas *canvas_fit, *canvas_draw, *c_debug;
+TCanvas *canvas_fit;
 TPad *canvas_fit_lin, *canvas_fit_log;
 
+TCanvas *canvas_draw;
+TPad *canvas_draw_top, *canvas_draw_bot;
+
+TCanvas *c_debug, *canvas_pull, *canvas_pull_dist;
+
 vector<int> bad_counters_tagh, bad_counters_tagm;
+int n_bad_counters_tagh = 0, n_bad_counters_tagm = 0;
 
-double tagh_yieldfit_chi2[274],      tagm_yieldfit_chi2[102];
+double tagh_yieldfit_chi2[274],       tagm_yieldfit_chi2[102];
+double tagh_yieldfit_pull_mean[274],  tagm_yieldfit_pull_mean[102];
+double tagh_yieldfit_pull_stdev[274], tagm_yieldfit_pull_stdev[102];
 
-double tagh_compton_fraction[274],   tagm_compton_fraction[102];
-double tagh_compton_fractionE[274],  tagm_compton_fractionE[102];
+double tagh_compton_fraction[274],    tagm_compton_fraction[102];
+double tagh_compton_fractionE[274],   tagm_compton_fractionE[102];
 
-double tagh_pair_fraction[274],      tagm_pair_fraction[102];
-double tagh_pair_fractionE[274],     tagm_pair_fractionE[102];
-double tagh_pair_fraction_exp[274],  tagm_pair_fraction_exp[102];
+double tagh_pair_fraction[274],       tagm_pair_fraction[102];
+double tagh_pair_fractionE[274],      tagm_pair_fractionE[102];
+double tagh_pair_fraction_exp[274],   tagm_pair_fraction_exp[102];
 
-double tagh_empty_fraction[274],     tagm_empty_fraction[102];
-double tagh_empty_fractionE[274],    tagm_empty_fractionE[102];
-double tagh_empty_fraction_exp[274], tagm_empty_fraction_exp[102];
+double tagh_empty_fraction[274],      tagm_empty_fraction[102];
+double tagh_empty_fractionE[274],     tagm_empty_fractionE[102];
+double tagh_empty_fraction_exp[274],  tagm_empty_fraction_exp[102];
 
 double bin_size = 16.0/2000.0;
 int rebins, n_mev;
@@ -76,6 +84,13 @@ TString tagh_xscale_fname, tagm_xscale_fname;
 
 // arrays storing the mid-point energy values of each counter:
 double tagh_en[274], tagm_en[102];
+
+// For phase 1 specifically (needed for proper scaling of e+e- simulation):
+
+double endpoint_energy_phase1 = 11.6061, endpoint_energy_calib_phase1 = 11.6061;
+double tagh_en_phase1[274], tagm_en_phase1[102];
+TString tagh_xscale_fname_phase1 = "/work/halld/home/andrsmit/primex_compton_analysis/photon_flux/phase1/primex_tagh.txt";
+TString tagm_xscale_fname_phase1 = "/work/halld/home/andrsmit/primex_compton_analysis/photon_flux/phase1/primex_tagm.txt";
 
 // routine to read input files and get tagger counter energies:
 int get_counter_energies() {
@@ -105,6 +120,28 @@ int get_counter_energies() {
 		double emin   = b * endpoint_energy_calib  +  deltaE;
 		double emax   = c * endpoint_energy_calib  +  deltaE;
 		tagm_en[i] = 0.5 * (emin + emax);
+	}
+	inf_tagm.close();
+	
+	// Get Phase 1 Energy Bins:
+	
+	inf_tagh.open(tagh_xscale_fname_phase1.Data());
+	for(int i=0; i<274; i++) {
+		inf_tagh >> a >> b >> c;
+		double deltaE = endpoint_energy_phase1 - endpoint_energy_calib_phase1;
+		double emin   = b * endpoint_energy_calib_phase1  +  deltaE;
+		double emax   = c * endpoint_energy_calib_phase1  +  deltaE;
+		tagh_en_phase1[i] = 0.5 * (emin + emax);
+	}
+	inf_tagh.close();
+	
+	inf_tagm.open(tagm_xscale_fname_phase1.Data());
+	for(int i=0; i<102; i++) {
+		inf_tagm >> a >> b >> c;
+		double deltaE = endpoint_energy_phase1 - endpoint_energy_calib_phase1;
+		double emin   = b * endpoint_energy_calib_phase1  +  deltaE;
+		double emax   = c * endpoint_energy_calib_phase1  +  deltaE;
+		tagm_en_phase1[i] = 0.5 * (emin + emax);
 	}
 	inf_tagm.close();
 	
@@ -186,7 +223,7 @@ TString nist_theory_fname = "/home/andrsmit/root_macros/compton/nist_cs.dat";
 
 TString theory_cs_pathName;
 
-TF1 *f_theory;
+TF1 *f_theory, *f_nist;
 
 TGraph  *g_theory;
 TGraph  *g_theory_min, *g_theory_max, *g_theory_band;
@@ -296,13 +333,20 @@ int get_theory_calc() {
 	g_theory->SetMarkerColor(kBlack);
 	
 	f_theory  = new TF1("f_theory", "pol5", 3., 12.);
-	g_theory->Fit("f_theory", "R0Q");
+	g_theory->Fit(f_theory, "R0Q");
 	f_theory->SetLineColor(kRed);
-	f_theory->SetLineStyle(2);
+	f_theory->SetLineStyle(9);
 	
+	f_nist = new TF1("f_nist", "pol5", 3., 12.);
+	g_nist->Fit(f_nist, "R0Q");
+	f_nist->SetLineColor(kBlack);
+	f_nist->SetLineStyle(1);
+	
+	/*
 	if(USE_NIST_CALCULATION) {
-		g_nist->Fit("f_theory", "R0Q");
+		g_nist->Fit(f_theory, "R0Q");
 	}
+	*/
 	
 	double *gen_cs_min = new double[n_cs_files];
 	double *gen_cs_max = new double[n_cs_files];
@@ -525,7 +569,8 @@ void get_target_parameters()
 		
 		n_Z   = 2.0;
 		n_A   = 4.0;
-		f_abs = 0.9908;
+		//f_abs = 0.9908;
+		f_abs = 0.9856;
 		n_e   = 1.0816e+24; // p = 0.1217 g/cm3, t = 29.535cm
 		
 		// correction for cold residual gas:

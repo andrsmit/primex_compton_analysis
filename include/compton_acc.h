@@ -16,6 +16,8 @@ void get_compton_acc() {
 	
 	for(int tagh_counter = 1; tagh_counter <= 274; tagh_counter++) {
 		
+		if(tagh_counter>125 && tagh_counter<179) continue;
+		
 		char fname[256];
 		sprintf(fname, "%s/tagh_%03d.root", comp_mc_dir.Data(), tagh_counter);
 		
@@ -46,15 +48,15 @@ void get_compton_acc() {
 		
 		//-----------------------------------------------------//
 		
-		TH1F *h1 = (TH1F*)h2_tagh->ProjectionY("h1_tagh");//, tagh_counter, tagh_counter);
-		h1->Add((TH1F*)h2_tagm->ProjectionY("h1_tagm"));
+		TH1F *h1 = (TH1F*)h2_tagh->ProjectionY("h1_tagh", tagh_counter-1, tagh_counter+1);
+		//h1->Add((TH1F*)h2_tagm->ProjectionY("h1_tagm"));
 		
 		//if(!(PHASE_VAL==1 && !IS_BE_TARGET))
 		//	h1->Add((TH1F*)h2_tagm->ProjectionY(Form("h1_sim_tagh_tagm_%d",tagh_counter)));
 		
 		if(h1->Integral() < 1.e2) continue;
 		
-		h1->Rebin(20);
+		h1->Rebin(rebins);
 		h1->GetXaxis()->SetTitle("E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]");
 		h1->GetXaxis()->CenterTitle(true);
 		h1->GetXaxis()->SetTitleOffset(1.1);
@@ -63,7 +65,13 @@ void get_compton_acc() {
 		h1->SetLineColor(kBlack);
 		h1->SetLineWidth(2);
 		
-		double n_rec = h1->Integral();
+		for(int ib=1; ib<=h1->GetXaxis()->GetNbins(); ib++) {
+			if(h1->GetBinContent(ib)<0.) {
+				//h1->SetBinContent(ib,0.);
+			}
+		}
+		
+		double n_rec = h1->Integral(h1->FindBin(-8.0), h1->FindBin(8.0));
 		
 		double loc_acc  = n_rec / n_gen;
 		double loc_accE = sqrt(n_gen*loc_acc*(1.-loc_acc)) / n_gen;
@@ -80,7 +88,7 @@ void get_compton_acc() {
 		h2_tagm->Delete();
 	}
 	
-	for(int tagm_counter = 1; tagm_counter <= 102; tagm_counter++) {
+	for(int tagm_counter = 5; tagm_counter <= 95; tagm_counter++) {
 		
 		char fname[256];
 		sprintf(fname, "%s/tagm_%03d.root", comp_mc_dir.Data(), tagm_counter);
@@ -112,15 +120,15 @@ void get_compton_acc() {
 		
 		//-----------------------------------------------------//
 		
-		TH1F *h1 = (TH1F*)h2_tagm->ProjectionY("h1_tagm");//, tagm_counter, tagm_counter);
-		h1->Add((TH1F*)h2_tagh->ProjectionY("h1_tagh"));
+		TH1F *h1 = (TH1F*)h2_tagm->ProjectionY("h1_tagm", tagm_counter-1, tagm_counter+1);
+		//h1->Add((TH1F*)h2_tagh->ProjectionY("h1_tagh"));
 		
 		//if(!(PHASE_VAL==1 && !IS_BE_TARGET))
 		//	h1->Add((TH1F*)h2_tagm->ProjectionY(Form("h1_sim_tagm_tagm_%d",tagm_counter)));
 		
 		if(h1->Integral() < 1.e2) continue;
 		
-		h1->Rebin(20);
+		h1->Rebin(rebins);
 		h1->GetXaxis()->SetTitle("E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]");
 		h1->GetXaxis()->CenterTitle(true);
 		h1->GetXaxis()->SetTitleOffset(1.1);
@@ -129,7 +137,13 @@ void get_compton_acc() {
 		h1->SetLineColor(kBlack);
 		h1->SetLineWidth(2);
 		
-		double n_rec = h1->Integral();
+		for(int ib=1; ib<=h1->GetXaxis()->GetNbins(); ib++) {
+			if(h1->GetBinContent(ib)<0.) {
+				//h1->SetBinContent(ib,0.);
+			}
+		}
+		
+		double n_rec = h1->Integral(h1->FindBin(-8.0), h1->FindBin(8.0));
 		
 		double loc_acc  = n_rec / n_gen;
 		double loc_accE = sqrt(n_gen*loc_acc*(1.-loc_acc)) / n_gen;

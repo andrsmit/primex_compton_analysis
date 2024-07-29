@@ -1,5 +1,8 @@
 #include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.h"
 #include "/work/halld/home/andrsmit/primex_compton_analysis/include/fit_yield.h"
+#include "/work/halld/home/andrsmit/primex_compton_analysis/include/fit_yield_empty.h"
+
+bool FIT_EMPTY = true;
 
 void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_vec) {
 	
@@ -79,6 +82,33 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		canvas_draw->SetBottomMargin(0.10);
 		canvas_draw->SetRightMargin(0.05);
 		canvas_draw->SetLeftMargin(0.15);
+		
+		canvas_draw_top = new TPad("canvas_draw_top", "top_pad", 0.005, 0.30, 0.995, 0.995);
+		canvas_draw_bot = new TPad("canvas_draw_bot", "bot_pad", 0.005, 0.005,  0.995, 0.2975);
+		
+		canvas_draw_top->SetLeftMargin(0.10);
+		canvas_draw_top->SetRightMargin(0.02);
+		canvas_draw_top->SetTopMargin(0.075);
+		canvas_draw_top->SetBottomMargin(0.015);
+		canvas_draw_top->SetTickx(); canvas_draw_top->SetTicky();
+		canvas_draw_top->SetFrameLineWidth(2);
+		
+		canvas_draw_bot->SetLeftMargin(0.10);
+		canvas_draw_bot->SetRightMargin(0.02);
+		canvas_draw_bot->SetTopMargin(0.005);
+		canvas_draw_bot->SetBottomMargin(0.225);
+		canvas_draw_bot->SetTickx(); canvas_draw_bot->SetTicky();
+		canvas_draw_bot->SetFrameLineWidth(2);
+		
+		canvas_draw->cd();
+		canvas_draw_bot->Draw();
+		canvas_draw_top->Draw();
+		
+		canvas_pull = new TCanvas("canvas_pull", "Pull of Fit", 1200, 400);
+		canvas_pull->SetTickx(); canvas_pull->SetTicky();
+		
+		canvas_pull_dist = new TCanvas("canvas_pull_dist", "Pull of Fit", 700, 500);
+		canvas_pull_dist->SetTickx(); canvas_pull_dist->SetTicky();
 	}
 	
 	//------------------------------------------------------------------------------------------//
@@ -100,6 +130,12 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		
 		//if(eb<6.180) continue;
 		
+		if(tagh_counter>150) {
+			rebins   =  2;
+			bin_size = (16.0/1000.0)*(double)rebins;
+			n_mev    = bin_size * 1.e3;
+		}
+		
 		// Skip bins that have no flux:
 		
 		if(loc_flux <= 0. || loc_flux_empty <= 0.) {
@@ -114,12 +150,6 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 			continue;
 		}
 		
-		// Subtract empty target background:
-		
-		//h1_tagh[tagh_counter-1]->Add( 
-		//	h1e_tagh[tagh_counter-1], -1.0*loc_flux/loc_flux_empty);
-		h1e_tagh[tagh_counter-1]->Scale(loc_flux/loc_flux_empty);
-		
 		h1_tagh[tagh_counter-1]->SetTitle( 
 			Form("TAGH Counter %d (E_{#gamma} = %.3f GeV)", tagh_counter, eb));
 		h1_tagh[tagh_counter-1]->Rebin(rebins);
@@ -127,18 +157,23 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		h1_tagh[tagh_counter-1]->GetXaxis()->SetTitle("E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]");
 		h1_tagh[tagh_counter-1]->SetLineWidth(2);
 		
-		for(int ib=1; ib<=h1_tagh[tagh_counter-1]->GetXaxis()->GetNbins(); ib++) {
-			if(h1_tagh[tagh_counter-1]->GetBinContent(ib)<0.) {
-				h1_tagh[tagh_counter-1]->SetBinContent(ib,0.);
-			}
-		}
+		h1e_tagh[tagh_counter-1]->Rebin(rebins);
 		
 		cout << endl;
 		cout << "==================================" << endl;
 		cout << "Fitting TAGH Counter " << tagh_counter << endl;
+		
 		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0., loc_counts = 0.;
-		int fit_val = fit_yield(0, tagh_counter, h1_tagh[tagh_counter-1], h1e_tagh[tagh_counter-1],
-			loc_yield, loc_yieldE, loc_chi2);
+		int fit_val;
+		if(FIT_EMPTY) {
+			h1e_tagh[tagh_counter-1]->Scale(loc_flux/loc_flux_empty);
+			fit_val = fit_yield_empty(0, tagh_counter, h1_tagh[tagh_counter-1], h1e_tagh[tagh_counter-1], 
+				loc_yield, loc_yieldE, loc_chi2);
+		} else {
+			h1_tagh[tagh_counter-1]->Add(h1e_tagh[tagh_counter-1], -1.0*loc_flux/loc_flux_empty);
+			fit_val = fit_yield(0, tagh_counter, h1_tagh[tagh_counter-1], loc_yield, loc_yieldE, loc_chi2);
+		}
+		
 		if(fit_val <= 0) continue;
 		
 		tagh_yield[tagh_counter-1]  = loc_yield;
@@ -152,7 +187,11 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		tagh_counter_vec.push_back(tagh_counter);
 	}
 	
-	for(int tagm_counter = 1; tagm_counter <= 102; tagm_counter++) {
+	rebins   =  5;
+	bin_size = (16.0/1000.0)*(double)rebins;
+	n_mev    = bin_size * 1.e3;
+	
+	for(int tagm_counter = 10; tagm_counter <= 102; tagm_counter++) {
 		
 		int bad_val = 0;
 		for(int ic = 0; ic < bad_counters_tagm.size(); ic++) {
@@ -181,12 +220,6 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 			continue;
 		}
 		
-		// Subtract empty target background:
-		
-		//h1_tagm[tagm_counter-1]->Add( 
-		//	h1e_tagm[tagm_counter-1], -1.0*loc_flux/loc_flux_empty);
-		h1e_tagm[tagm_counter-1]->Scale(loc_flux/loc_flux_empty);
-		
 		h1_tagm[tagm_counter-1]->SetTitle( 
 			Form("TAGM Counter %d (E_{#gamma} = %.3f GeV)", tagm_counter, eb));
 		h1_tagm[tagm_counter-1]->Rebin(rebins);
@@ -194,18 +227,24 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		h1_tagm[tagm_counter-1]->GetXaxis()->SetTitle("E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]");
 		h1_tagm[tagm_counter-1]->SetLineWidth(2);
 		
+		h1e_tagm[tagm_counter-1]->Rebin(rebins);
+		
 		cout << endl;
 		cout << "==================================" << endl;
 		cout << "Fitting TAGM Counter " << tagm_counter << endl;
-		for(int ib=1; ib<=h1_tagm[tagm_counter-1]->GetXaxis()->GetNbins(); ib++) {
-			if(h1_tagm[tagm_counter-1]->GetBinContent(ib)<0.) {
-				h1_tagm[tagm_counter-1]->SetBinContent(ib,0.);
-			}
-		}
 		
 		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0., loc_counts = 0.;
-		int fit_val = fit_yield(1, tagm_counter, h1_tagm[tagm_counter-1], h1e_tagm[tagm_counter-1],
-			loc_yield, loc_yieldE, loc_chi2);
+		int fit_val;
+		
+		if(FIT_EMPTY) {
+			h1e_tagm[tagm_counter-1]->Scale(loc_flux/loc_flux_empty);
+			fit_val = fit_yield_empty(1, tagm_counter, h1_tagm[tagm_counter-1], h1e_tagm[tagm_counter-1], 
+				loc_yield, loc_yieldE, loc_chi2);
+		} else {
+			h1_tagm[tagm_counter-1]->Add(h1e_tagm[tagm_counter-1], -1.0*loc_flux/loc_flux_empty);
+			fit_val = fit_yield(1, tagm_counter, h1_tagm[tagm_counter-1], loc_yield, loc_yieldE, loc_chi2);
+		}
+		
 		if(fit_val <= 0) continue;
 		
 		tagm_yield[tagm_counter-1]  = loc_yield;

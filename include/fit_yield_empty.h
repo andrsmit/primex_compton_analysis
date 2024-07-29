@@ -3,7 +3,7 @@
 
 int get_neighbor(int tag_sys, int counter, int sim_case);
 
-int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE, double &chi2) {
+int fit_yield_empty(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield, double &yieldE, double &chi2) {
 	
 	int fit_val = 1;
 	
@@ -73,22 +73,23 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	double comp_flux_sim = n_comp_thrown / (comp_cs * n_e * mb * f_abs);
 	
 	if(n_comp_thrown < 1.e3) return 0;
+	TH2F *h2_compton;
+	
+	if(tag_sys==0) 
+		h2_compton = (TH2F*)fSim->Get(Form("%s", hname_tagh_comp.Data()));
+	else 
+		h2_compton = (TH2F*)fSim->Get(Form("%s", hname_tagm_comp.Data()));
+	
+	TH1F *h1_compton = (TH1F*)h2_compton->ProjectionY(Form("h1_comp_%d_%d", tag_sys, counter));
+	h1_compton->SetDirectory(0);
+	
 	/*
 	TH2F *h2_compton_tagh = (TH2F*)fSim->Get(Form("%s", hname_tagh_comp.Data()));
 	TH2F *h2_compton_tagm = (TH2F*)fSim->Get(Form("%s", hname_tagm_comp.Data()));
 	TH1F *h1_compton      = (TH1F*)h2_compton_tagh->ProjectionY(Form("h1_comp_%d_%d", tag_sys, counter));
 	h1_compton->Add((TH1F*)h2_compton_tagm->ProjectionY(Form("h1_comp_tagm_%d_%d", tag_sys, counter)));
-	*/
-	
-	TH2F *h2_compton;
-	if(tag_sys==0) 
-		h2_compton = (TH2F*)fSim->Get(Form("%s", hname_tagh_comp.Data()));
-	else 
-		h2_compton = (TH2F*)fSim->Get(Form("%s", hname_tagm_comp.Data()));
-	TH1F *h1_compton = (TH1F*)h2_compton->ProjectionY(Form("h1_comp_%d_%d", tag_sys, counter));
-	
 	h1_compton->SetDirectory(0);
-	
+	*/
 	fSim->Close();
 	
 	if(h1_compton->Integral() < 1.e1) return 0;
@@ -137,6 +138,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	double loc_pair_gen_flux = 0.;
 	
 	int n_bins_combine = 10;
+	if(eb<7.5) n_bins_combine = 3;
 	int min_counter = phase1_tag_counter-n_bins_combine;
 	int max_counter = phase1_tag_counter+n_bins_combine;
 	
@@ -179,6 +181,16 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	
 	//=================================================================================//
 	
+	//h1_empty->Rebin(rebins);
+	h1_empty->GetXaxis()->SetTitle("E_{Comp} - E_{#gamma} [GeV]");
+	h1_empty->GetXaxis()->SetTitleOffset(1.1);
+	h1_empty->GetYaxis()->SetTitle(Form("counts / %d MeV", n_mev));
+	h1_empty->GetYaxis()->SetTitleOffset(1.3);
+	h1_empty->SetLineColor(kMagenta);
+	h1_empty->SetFillColor(kMagenta);
+	h1_empty->SetFillStyle(3004);
+	h1_empty->SetLineWidth(2);
+	
 	h1_compton->Rebin(rebins);
 	h1_compton->Scale(loc_flux / comp_flux_sim);
 	h1_compton->GetXaxis()->SetTitle("E_{Comp} - E_{#gamma} [GeV]");
@@ -206,32 +218,39 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	
 	for(int ib=1; ib<=h1_fit->GetXaxis()->GetNbins(); ib++) {
 		if(h1_fit->GetBinContent(ib)<0.) {
-			h1_fit->SetBinContent(ib,0.);
+			h1_fit->SetBinContent(ib,0.1);
+		}
+	}
+	for(int ib=1; ib<=h1_empty->GetXaxis()->GetNbins(); ib++) {
+		if(h1_empty->GetBinContent(ib)<0.) {
+			h1_empty->SetBinContent(ib,0.1);
 		}
 	}
 	for(int ib=1; ib<=h1_compton_fit->GetXaxis()->GetNbins(); ib++) {
 		if(h1_compton_fit->GetBinContent(ib)<0.) {
-			h1_compton_fit->SetBinContent(ib,0.);
+			h1_compton_fit->SetBinContent(ib,0.1);
 		}
 	}
 	for(int ib=1; ib<=h1_pair->GetXaxis()->GetNbins(); ib++) {
 		if(h1_pair->GetBinContent(ib)<0.) {
-			h1_pair->SetBinContent(ib,0.);
+			h1_pair->SetBinContent(ib,0.1);
 		}
 	}
 	
-	/*
 	double min_counts = 0.01*h1->GetMaximum();
-	//if(eb<9.0) min_counts=10.;
-	// loop through bins and if there are any where all mc distributions have zero counts, set that to the max range:
+	if(eb<9.0) min_counts=10.;
+	/*
+	// loop through bins and if there are any where all 3 distributions have zero counts, set that to the max range:
 	for(int ib=h1->FindBin(0.); ib<h1->FindBin(max_fit_x); ib++) {
-		if(h1_compton->GetBinContent(ib)<=min_counts && h1_pair->GetBinContent(ib)<=min_counts) {
+		if(h1_empty->GetBinContent(ib)<=min_counts && h1_compton->GetBinContent(ib)<=min_counts 
+			&& h1_pair->GetBinContent(ib)<=min_counts) {
 			max_fit_x = h1->GetXaxis()->GetBinCenter(ib-1);
 			break;
 		}
 	}
 	for(int ib=h1->FindBin(0.); ib>h1->FindBin(min_fit_x); ib--) {
-		if(h1_compton->GetBinContent(ib)<=min_counts && h1_pair->GetBinContent(ib)<=min_counts) {
+		if(h1_empty->GetBinContent(ib)<=min_counts && h1_compton->GetBinContent(ib)<=min_counts 
+			&& h1_pair->GetBinContent(ib)<=min_counts) {
 			min_fit_x = h1->GetXaxis()->GetBinCenter(ib+1);
 			break;
 		}
@@ -247,14 +266,20 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	//if(max_fit_x < 2.0) max_fit_x = 2.0;
 	*/
 	
+	//min_fit_x = loc_deltaK_mu - 10.0*loc_deltaK_sig;
+	//max_fit_x = loc_deltaK_mu + 10.0*loc_deltaK_sig;
+	
 	h1_fit->GetXaxis()->SetRangeUser(min_fit_x, max_fit_x);
+	h1_empty->GetXaxis()->SetRangeUser(min_fit_x, max_fit_x);
 	h1_compton_fit->GetXaxis()->SetRangeUser(min_fit_x, max_fit_x);
 	h1_pair->GetXaxis()->SetRangeUser(min_fit_x, max_fit_x);
 	
 	double n_total_exp   = h1->Integral(h1->FindBin(min_fit_x), h1->FindBin(max_fit_x));
+	double n_empty_exp   = h1_empty->Integral(h1_empty->FindBin(min_fit_x), h1_empty->FindBin(max_fit_x));
 	double n_compton_exp = h1_compton->Integral(h1_compton->FindBin(min_fit_x), h1_compton->FindBin(max_fit_x));
 	double n_pair_exp    = h1_pair->Integral(h1_pair->FindBin(min_fit_x), h1_pair->FindBin(max_fit_x));
 	
+	double empty_frac_exp = n_empty_exp / n_total_exp;
 	double comp_frac_exp  = n_compton_exp / n_total_exp;
 	double pair_frac_exp  = n_pair_exp / n_total_exp;
 	
@@ -267,6 +292,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		}
 		TH1F *h1_debug = (TH1F*)h1->Clone("h1_debug");
 		h1_debug->SetLineColor(kRed);
+		h1_debug->Add(h1_empty);
 		h1_debug->Add(h1_compton);
 		h1_debug->Add(h1_pair);
 		h1_debug->Add(h1,-1.0);
@@ -275,6 +301,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		
 		c_debug->cd();
 		h1->Draw("PE");
+		h1_empty->Draw("same hist");
 		h1_compton->Draw("same hist");
 		h1_pair->Draw("same hist");
 		h1_debug->Draw("same hist");
@@ -286,7 +313,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	
 	// if fraction of pairs is low enough, don't bother with fit:
 	if(pair_frac_exp<0.015) {
-		yield  = n_total_exp * (1.0 - pair_frac_exp);
+		yield  = n_total_exp * (1.0 - pair_frac_exp - empty_frac_exp);
 		yield *= (loc_yield1/loc_yield2);
 		yieldE = sqrt(yield);
 		
@@ -297,26 +324,34 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 			tagh_pair_fraction[counter-1]      = pair_frac_exp;
 			tagh_pair_fractionE[counter-1]     = 0.;
 			tagh_pair_fraction_exp[counter-1]  = pair_frac_exp;
+			tagh_empty_fraction[counter-1]     = empty_frac_exp;
+			tagh_empty_fractionE[counter-1]    = 0.;
+			tagh_empty_fraction_exp[counter-1] = empty_frac_exp;
 		} else {
 			tagm_compton_fraction[counter-1]   = comp_frac_exp;
 			tagm_compton_fractionE[counter-1]  = 0.;
 			tagm_pair_fraction[counter-1]      = pair_frac_exp;
 			tagm_pair_fractionE[counter-1]     = 0.;
 			tagm_pair_fraction_exp[counter-1]  = pair_frac_exp;
+			tagm_empty_fraction[counter-1]     = empty_frac_exp;
+			tagm_empty_fractionE[counter-1]    = 0.;
+			tagm_empty_fraction_exp[counter-1] = empty_frac_exp;
 		}
 		return fit_val;
 	}
 	
 	
-	TObjArray *mc = new TObjArray(2);
+	TObjArray *mc = new TObjArray(3);
 	mc->Add(h1_compton_fit);
 	mc->Add(h1_pair);
+	mc->Add(h1_empty);
 	
 	TFractionFitter *fit = new TFractionFitter(h1_fit, mc);
 	
 	fit->Constrain(0, 0.000, 1.000);
 	fit->Constrain(1, 0.000, 1.000);
-	//fit->Constrain(1, 0.75*pair_frac_exp, 1.25*pair_frac_exp);
+	fit->Constrain(2, 0.000, 1.000);
+	//fit->Constrain(2, 0.98*empty_frac_exp, 1.02*empty_frac_exp);
 	
 	fit->SetRangeX(h1_fit->FindBin(min_fit_x),h1_fit->FindBin(max_fit_x));
 	
@@ -325,30 +360,36 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	
 	double comp_frac,  comp_fracE;
 	double pair_frac,  pair_fracE;
+	double empty_frac, empty_fracE;
 	fit->GetResult(0, comp_frac, comp_fracE);
 	fit->GetResult(1, pair_frac, pair_fracE);
+	fit->GetResult(2, empty_frac, empty_fracE);
 	
 	h1->GetXaxis()->SetRangeUser(-8.0,8.0);
 	
-	yield  = n_total_exp * (1.0 - pair_frac);
+	yield  = n_total_exp * (1.0 - pair_frac - empty_frac);
 	yield /= (loc_yield1/loc_yield2);
 	yieldE = sqrt(yield);
 	
-	yieldE  = sqrt(pow(sqrt(n_total_exp)*(1.0 - pair_frac),2.0) + pow(n_total_exp*pair_fracE,2.0));
-	yieldE /= (loc_yield1/loc_yield2);
+	//yieldE  = sqrt(pow(sqrt(n_total_exp)*(1.0 - pair_frac - empty_frac),2.0) + pow(n_total_exp*pair_fracE,2.0) 
+	//	+ pow(empty_fracE*n_total_exp,2.0));
+	//yieldE /= (loc_yield1/loc_yield2);
 	
 	chi2 = fit->GetChisquare() / fit->GetNDF();
 	
 	chi2 = 0.;
 	double n_bins = 0.;
 	for(int ib=h1->FindBin(min_fit_x); ib<=h1_fit->FindBin(max_fit_x); ib++) {
-		double loc_data_counts = h1_fit->GetBinContent(ib);
+		double loc_data_counts = h1->GetBinContent(ib);
 		double loc_fit_counts  = fit_result->GetBinContent(fit_result->FindBin(h1_fit->GetBinCenter(ib)));
-		if(loc_fit_counts <= 0.) continue;
-		chi2 += pow(loc_data_counts-loc_fit_counts, 2.0) / loc_fit_counts;
+		
+		double loc_var = loc_fit_counts<=0.0 ? 1.0 : loc_fit_counts;
+		chi2 += pow(loc_data_counts-loc_fit_counts, 2.0) / loc_var;
 		n_bins += 1.0;
 	}
-	chi2 /= (n_bins/2);
+	chi2 /= fit->GetNDF();
+	//cout << "\n\n\nNumber degrees of Freedom: " << fit->GetNDF() << endl;
+	//cout << "n_bins: " << n_bins << endl;
 	
 	if(tag_sys==0) {
 		tagh_compton_fraction[counter-1]   = comp_frac;
@@ -356,23 +397,21 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		tagh_pair_fraction[counter-1]      = pair_frac;
 		tagh_pair_fractionE[counter-1]     = pair_fracE;
 		tagh_pair_fraction_exp[counter-1]  = pair_frac_exp;
+		tagh_empty_fraction[counter-1]     = empty_frac;
+		tagh_empty_fractionE[counter-1]    = empty_fracE;
+		tagh_empty_fraction_exp[counter-1] = empty_frac_exp;
 	} else {
 		tagm_compton_fraction[counter-1]   = comp_frac;
 		tagm_compton_fractionE[counter-1]  = comp_fracE;
 		tagm_pair_fraction[counter-1]      = pair_frac;
 		tagm_pair_fractionE[counter-1]     = pair_fracE;
 		tagm_pair_fraction_exp[counter-1]  = pair_frac_exp;
+		tagm_empty_fraction[counter-1]     = empty_frac;
+		tagm_empty_fractionE[counter-1]    = empty_fracE;
+		tagm_empty_fraction_exp[counter-1] = empty_frac_exp;
 	}
 	
 	//----------------------------------------------------------------------//
-	
-	bool loc_DRAW_FITS = false;
-	if(!tag_sys) {
-		if(DRAW_FITS_TAGH) loc_DRAW_FITS = true;
-	} else {
-		if(DRAW_FITS_TAGM) loc_DRAW_FITS = true;
-	}
-	
 	
 	fit_result->SetLineColor(kRed+1);
 	fit_result->GetXaxis()->SetRangeUser(min_fit_x,max_fit_x);
@@ -380,22 +419,17 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	double Nmc   = fit_result->Integral(fit_result->FindBin(min_fit_x), fit_result->FindBin(max_fit_x));
 	double Ndata = h1->Integral(h1->FindBin(min_fit_x), h1->FindBin(max_fit_x));
 	
-	TH1F *h_comp_fit, *h_pair_fit;
+	TH1F *h_comp_fit, *h_pair_fit, *h_empty_fit;
 	
 	h_comp_fit = (TH1F*)fit->GetMCPrediction(0);
 	h_comp_fit->GetXaxis()->SetRangeUser(min_fit_x, max_fit_x);
 	h_pair_fit = (TH1F*)fit->GetMCPrediction(1);
 	h_pair_fit->GetXaxis()->SetRangeUser(min_fit_x, max_fit_x);
+	h_empty_fit = (TH1F*)fit->GetMCPrediction(2);
+	h_empty_fit->GetXaxis()->SetRangeUser(min_fit_x, max_fit_x);
 	
 	h_comp_fit->Scale(comp_frac*Ndata/h_comp_fit->Integral(h_comp_fit->FindBin(min_fit_x), h_comp_fit->FindBin(max_fit_x)));
 	double Ncomp = h_comp_fit->Integral();
-	/*
-	// Test of Code:
-	yield  = Ncomp;
-	//yield /= (loc_yield1/loc_yield2);
-	yieldE = sqrt(yield);
-	yield = h1_compton->Integral(h1_compton->FindBin(-8.0), h1_compton->FindBin(8.0));
-	*/
 	h_comp_fit->SetLineColor(kCyan);
 	h_comp_fit->SetMarkerColor(kCyan);
 	h_comp_fit->SetFillColor(kCyan);
@@ -414,6 +448,17 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	h_pair_fit->SetMarkerStyle(8);
 	h_pair_fit->SetMarkerSize(0.6);
 	
+	h_empty_fit->Scale(empty_frac*Ndata/h_empty_fit->Integral(h_empty_fit->FindBin(min_fit_x), 
+		h_empty_fit->FindBin(max_fit_x)));
+	double Nempty = h_empty_fit->Integral(h_empty_fit->FindBin(-8.),h_empty_fit->FindBin(8.));
+	h_empty_fit->SetLineColor(kMagenta);
+	h_empty_fit->SetMarkerColor(kMagenta);
+	h_empty_fit->SetFillColor(kMagenta);
+	h_empty_fit->SetFillStyle(3005);
+	h_empty_fit->SetLineWidth(2);
+	h_empty_fit->SetMarkerStyle(8);
+	h_empty_fit->SetMarkerSize(0.6);
+	
 	fit_result->SetMaximum(fit_result->GetMaximum()*1.4);
 	
 	fit_result->GetYaxis()->SetTitle(Form("Counts / %d MeV", (int)(bin_size*1.e3)));
@@ -424,11 +469,14 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	FitResultSignal->Scale(1./FitResultSignal->Integral()*comp_frac*Ndata);
 	TH1F *FitResultBkgd   = (TH1F*)h1_pair->Clone(Form("FitResultBkgd_%d_%d", tag_sys, counter));
 	FitResultBkgd->Scale(1./FitResultBkgd->Integral()*pair_frac*Ndata);
+	TH1F *FitResultEmpty  = (TH1F*)h1_empty->Clone(Form("FitResultEmpty_%d_%d", tag_sys, counter));
+	FitResultEmpty->Scale(1./FitResultEmpty->Integral()*empty_frac*Ndata);
 	
 	TH1F *FitResultAll = (TH1F*)h1->Clone(Form("FitResultAll_%d_%d", tag_sys, counter));
 	FitResultAll->Reset();
 	FitResultAll->Add(FitResultSignal);
 	FitResultAll->Add(FitResultBkgd);
+	FitResultAll->Add(FitResultEmpty);
 	FitResultAll->SetMinimum(0);
 	FitResultAll->SetMaximum(FitResultAll->GetMaximum()*1.2);
 	FitResultAll->SetLineColor(kRed);
@@ -449,6 +497,9 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	FitResultBkgd->SetLineColor(kGreen+2);
 	FitResultBkgd->SetFillColor(kGreen-10);
 	FitResultBkgd->SetFillStyle(3001);
+	FitResultEmpty->SetLineColor(kMagenta+2);
+	FitResultEmpty->SetFillColor(kMagenta-9);
+	FitResultEmpty->SetFillStyle(3001);
 	
 	// Plot the pull distribution:
 	
@@ -461,11 +512,13 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		double loc_x     = h1_fit->GetBinCenter(ibin);
 		double loc_count = h1_fit->GetBinContent(ibin);
 		double loc_fit   = FitResultSignal->GetBinContent(FitResultSignal->FindBin(loc_x)) 
-			+ FitResultBkgd->GetBinContent(FitResultBkgd->FindBin(loc_x));
+			+ FitResultBkgd->GetBinContent(FitResultBkgd->FindBin(loc_x))
+			+ FitResultEmpty->GetBinContent(FitResultEmpty->FindBin(loc_x));
 		
-		double loc_stat_unc  = pow(h1->GetBinError(ibin), 2.0);
+		double loc_stat_unc  = pow(h1_fit->GetBinError(ibin), 2.0);
 		loc_stat_unc += pow(h1_compton->GetBinError(h1_compton->FindBin(loc_x)), 2.0);
 		loc_stat_unc += pow(h1_pair->GetBinError(h1_pair->FindBin(loc_x)), 2.0);
+		loc_stat_unc += pow(h1_empty->GetBinError(h1_empty->FindBin(loc_x)), 2.0);
 		loc_stat_unc  = sqrt(loc_stat_unc);
 		if(loc_stat_unc <= 1.) loc_stat_unc = 1.0;
 		
@@ -483,11 +536,13 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		double loc_x     = h1_fit->GetBinCenter(ibin);
 		double loc_count = h1_fit->GetBinContent(ibin);
 		double loc_fit   = FitResultSignal->GetBinContent(FitResultSignal->FindBin(loc_x)) 
-			+ FitResultBkgd->GetBinContent(FitResultBkgd->FindBin(loc_x));
+			+ FitResultBkgd->GetBinContent(FitResultBkgd->FindBin(loc_x))
+			+ FitResultEmpty->GetBinContent(FitResultEmpty->FindBin(loc_x));
 		
-		double loc_stat_unc  = pow(h1->GetBinError(ibin), 2.0);
+		double loc_stat_unc  = pow(h1_fit->GetBinError(ibin), 2.0);
 		loc_stat_unc += pow(h1_compton->GetBinError(h1_compton->FindBin(loc_x)), 2.0);
 		loc_stat_unc += pow(h1_pair->GetBinError(h1_pair->FindBin(loc_x)), 2.0);
+		loc_stat_unc += pow(h1_empty->GetBinError(h1_empty->FindBin(loc_x)), 2.0);
 		loc_stat_unc  = sqrt(loc_stat_unc);
 		if(loc_stat_unc <= 1.) loc_stat_unc = 1.0;
 		
@@ -519,6 +574,13 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		tagm_yieldfit_pull_stdev[counter-1] = stdev_pull;
 	}
 	
+	bool loc_DRAW_FITS = false;
+	if(!tag_sys) {
+		if(DRAW_FITS_TAGH) loc_DRAW_FITS = true;
+	} else {
+		if(DRAW_FITS_TAGM) loc_DRAW_FITS = true;
+	}
+	
 	if(loc_DRAW_FITS) {
 		
 		TH1F *h1_lin = (TH1F*)h1->Clone(Form("h1_lin_%d_%d", tag_sys, counter));
@@ -529,6 +591,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		leg->AddEntry(fit_result, "Full Fit",              "l");
 		leg->AddEntry(h_comp_fit, "Compton Signal (fit)",  "l");
 		leg->AddEntry(h_pair_fit, "e+e- Background (fit)", "l");
+		leg->AddEntry(h_empty_fit, "Empty-Target Background (fit)", "l");
 		leg->SetBorderSize(0);
 		
 		canvas_fit_lin->cd();
@@ -536,6 +599,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		fit_result->Draw("same");
 		h_comp_fit->Draw("same hist");
 		h_pair_fit->Draw("same hist");
+		h_empty_fit->Draw("same hist");
 		h1_lin->Draw("PE same");
 		leg->Draw();
 		
@@ -544,6 +608,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		fit_result->Draw("same");
 		h_comp_fit->Draw("same hist");
 		h_pair_fit->Draw("same hist");
+		h_empty_fit->Draw("same hist");
 		h1->Draw("PE same");
 		
 		canvas_draw_top->cd();
@@ -551,6 +616,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		dataInput->Draw("PE1same");
 		FitResultSignal->Draw("same hist");
 		FitResultBkgd->Draw("same hist");
+		FitResultEmpty->Draw("same hist");
    	
 		TLegend *leg1 = new TLegend(0.132,0.650,0.501,0.883);
 		char text[200];
@@ -573,6 +639,8 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		leg1->AddEntry(FitResultSignal, text, "f");
 		sprintf(text, "e^{+}e^{-} Bkgd = %.2f(%%)", 100.*FitResultBkgd->Integral()/fit_result->Integral());
 		leg1->AddEntry(FitResultBkgd, text, "f");
+		sprintf(text, "Empty Bkgd = %.2f(%%)", 100.*FitResultEmpty->Integral()/fit_result->Integral());
+		leg1->AddEntry(FitResultEmpty, text, "f");
 		leg1->Draw();
 		
 		TLatex lat_new;
@@ -596,19 +664,6 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		l1->Draw("same");
 		l2->Draw("same");
 		
-		/*
-		TF1 *f_pull = new TF1("f_pull", "gaus", -4., 4.);
-		h1_pull_dist->Fit(f_pull, "R0QL");
-		
-		lat_new.DrawLatexNDC(0.115, 0.375, Form("#scale[1.5]{Mean of Pull Distribution: %.2f}", f_pull->GetParameter(1)));
-		lat_new.DrawLatexNDC(0.115, 0.275, Form("#scale[1.5]{Std Dev. of Pull Distribution: %.2f}", f_pull->GetParameter(2)));
-		
-		canvas_pull_dist->cd();
-		h1_pull_dist->Draw("hist");
-		f_pull->Draw("same");
-		//canvas_pull_dist->Update();
-		*/
-		
 		lat_new.DrawLatexNDC(0.115, 0.375, Form("#scale[1.5]{Mean of Pull Distribution: %.2f}", mean_pull));
 		lat_new.DrawLatexNDC(0.115, 0.275, Form("#scale[1.5]{Std Dev. of Pull Distribution: %.2f}", stdev_pull));
 		
@@ -622,145 +677,4 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	//h_pair_gen_flux->Delete();
 	
 	return fit_val;
-}
-
-int get_neighbor(int tag_sys, int counter, int sim_case) {
-	
-	char mc_dir[256];
-	
-	if(sim_case==0)      sprintf(mc_dir, "%s", comp_mc_dir.Data());
-	else if(sim_case==1) sprintf(mc_dir, "%s", pair_mc_dir.Data());
-	else if(sim_case==2) sprintf(mc_dir, "%s", trip_mc_dir.Data());
-	else return 0;
-	
-	int trial_counter = counter;
-	
-	if(tag_sys==0) {
-		
-		//if(counter>219) return 0;
-		if(counter>127&&counter<179) return 0;
-		else {
-			
-			int keep_going = 1;
-			int loc_incr   = 1;
-			
-			while(keep_going) {
-				
-				int pos_incr;
-				
-				if(fabs(tagh_en[counter+loc_incr]-tagh_en[counter])
-					< fabs(tagh_en[counter-loc_incr]-tagh_en[counter])) {
-					
-					pos_incr = 1;
-					trial_counter = counter+loc_incr;
-					
-					if((trial_counter>127&&trial_counter<179) 
-						|| trial_counter>219) {
-						trial_counter = counter-loc_incr;
-						if((trial_counter>127&&trial_counter<179) 
-							|| trial_counter<1) {
-							return 0;
-						}
-					}
-					
-				} else {
-					
-					pos_incr = 0;
-					trial_counter = counter-loc_incr;
-					
-					if((trial_counter>127&&trial_counter<179) 
-						|| trial_counter<1) {
-						trial_counter = counter+loc_incr;
-						if((trial_counter>127&&trial_counter<179) 
-							|| trial_counter>219) {
-							return 0;
-						}
-					}
-				}
-				
-				char temp_fname[256];
-				sprintf(temp_fname, "%s/tagh_%03d.root", mc_dir, 
-					trial_counter);
-				if(gSystem->AccessPathName(temp_fname)) {
-					if(pos_incr) {
-						trial_counter = counter-loc_incr;
-					} else {
-						trial_counter = counter+loc_incr;
-					}
-				}
-				sprintf(temp_fname, "%s/tagh_%03d.root", mc_dir, 
-					trial_counter);
-				if(!gSystem->AccessPathName(temp_fname)) keep_going = 0;
-				
-				loc_incr++;
-				if(loc_incr>5) keep_going = 0;
-			}
-			
-			char temp_fname[256];
-			sprintf(temp_fname, "%s/tagh_%03d.root", mc_dir, trial_counter);
-			if(gSystem->AccessPathName(temp_fname)) return 0;
-			
-		}
-	} else {
-		if(counter>101) return 0;
-		else if(counter<1) return 0;
-		else {
-			
-			int keep_going = 1;
-			int loc_incr = 1;
-			while(keep_going) {
-				
-				int pos_incr;
-				
-				if(fabs(tagm_en[counter+loc_incr]-tagm_en[counter])
-					< fabs(tagm_en[counter-loc_incr]-tagm_en[counter])) {
-					
-					pos_incr = 1;
-					trial_counter = counter+loc_incr;
-					
-					if(trial_counter>101) {
-						trial_counter = counter-loc_incr;
-						if(trial_counter<1) {
-							return 0;
-						}
-					}
-					
-				} else {
-					
-					pos_incr = 0;
-					trial_counter = counter-loc_incr;
-					
-					if(trial_counter<1) {
-						trial_counter = counter+loc_incr;
-						if(trial_counter>101) {
-							return 0;
-						}
-					}
-				}
-				
-				char temp_fname[256];
-				sprintf(temp_fname, "%s/tagm_%03d.root", mc_dir, 
-					trial_counter);
-				if(gSystem->AccessPathName(temp_fname)) {
-					if(pos_incr) {
-						trial_counter = counter-loc_incr;
-					} else {
-						trial_counter = counter+loc_incr;
-					}
-				}
-				sprintf(temp_fname, "%s/tagm_%03d.root", comp_mc_dir.Data(), 
-					trial_counter);
-				if(!gSystem->AccessPathName(temp_fname)) keep_going = 0;
-				
-				loc_incr++;
-				if(loc_incr>5) keep_going = 0;
-			}
-			
-			char temp_fname[256];
-			sprintf(temp_fname, "%s/tagm_%03d.root", mc_dir, trial_counter);
-			if(gSystem->AccessPathName(temp_fname)) return 0;
-		}
-	}
-	
-	return trial_counter;
 }
