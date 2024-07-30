@@ -1,98 +1,6 @@
-#ifndef _COMPTONINPUTS_
-#define _COMPTONINPUTS_
-
-// Useful variable switches:
-
-int  PHASE_VAL    = 1;
-int  BEAM_CURRENT = 200;
-bool IS_BE_TARGET = true;
-bool IS_FIELD_OFF = true;
-
-TString TARGET_STR = "Be", FIELD_STR = "FIELDOFF";
+#include "compton_cs.h"
 
 /*************************************************************************/
-// Data:
-
-TString root_fname, empty_target_root_fname;
-TString hname_tagh, hname_tagm;
-
-double tagh_yield[274],  tagm_yield[102];
-double tagh_yieldE[274], tagm_yieldE[102];
-
-bool USE_F_ACC = true;
-
-double tagh_cs[274],  tagm_cs[102];
-double tagh_csE[274], tagm_csE[102];
-
-/*********************************************/
-// fitting:
-
-bool DEBUG_FITS = false;
-bool DRAW_FITS_TAGH = false;
-bool DRAW_FITS_TAGM = false;
-bool SAVE_FITS_TAGH = false;
-bool SAVE_FITS_TAGM = false;
-
-TCanvas *canvas_fit;
-TPad *canvas_fit_lin, *canvas_fit_log;
-
-TCanvas *canvas_draw;
-TPad *canvas_draw_top, *canvas_draw_bot;
-
-TCanvas *c_debug, *canvas_pull, *canvas_pull_dist;
-
-vector<int> bad_counters_tagh, bad_counters_tagm;
-int n_bad_counters_tagh = 0, n_bad_counters_tagm = 0;
-
-double tagh_yieldfit_chi2[274],       tagm_yieldfit_chi2[102];
-double tagh_yieldfit_pull_mean[274],  tagm_yieldfit_pull_mean[102];
-double tagh_yieldfit_pull_stdev[274], tagm_yieldfit_pull_stdev[102];
-
-double tagh_compton_fraction[274],    tagm_compton_fraction[102];
-double tagh_compton_fractionE[274],   tagm_compton_fractionE[102];
-
-double tagh_pair_fraction[274],       tagm_pair_fraction[102];
-double tagh_pair_fractionE[274],      tagm_pair_fractionE[102];
-double tagh_pair_fraction_exp[274],   tagm_pair_fraction_exp[102];
-
-double tagh_empty_fraction[274],      tagm_empty_fraction[102];
-double tagh_empty_fractionE[274],     tagm_empty_fractionE[102];
-double tagh_empty_fraction_exp[274],  tagm_empty_fraction_exp[102];
-
-double bin_size = 16.0/2000.0;
-int rebins, n_mev;
-
-/*********************************************/
-// simulation:
-
-TString comp_root_dir_name, pair_root_dir_name;
-
-TString hname_tagh_comp, hname_tagm_comp;
-TString hname_tagh_pair, hname_tagm_pair;
-TString hname_tagh_trip, hname_tagm_trip;
-
-TString comp_mc_dir, pair_mc_dir, trip_mc_dir;
-
-/*************************************************************************/
-// Get energies for each tagger counter:
-
-// run-dependent electron beam energy:
-double endpoint_energy, endpoint_energy_calib;
-
-// pathname of files containing fraction energy values for each tagger counter:
-TString tagh_xscale_fname, tagm_xscale_fname;
-
-// arrays storing the mid-point energy values of each counter:
-double tagh_en[274], tagm_en[102];
-
-// For phase 1 specifically (needed for proper scaling of e+e- simulation):
-
-double endpoint_energy_phase1 = 11.6061, endpoint_energy_calib_phase1 = 11.6061;
-double tagh_en_phase1[274], tagm_en_phase1[102];
-TString tagh_xscale_fname_phase1 = "/work/halld/home/andrsmit/primex_compton_analysis/photon_flux/phase1/primex_tagh.txt";
-TString tagm_xscale_fname_phase1 = "/work/halld/home/andrsmit/primex_compton_analysis/photon_flux/phase1/primex_tagm.txt";
-
-// routine to read input files and get tagger counter energies:
 int get_counter_energies() {
 	
 	// first check that input filenames exist:
@@ -150,14 +58,6 @@ int get_counter_energies() {
 
 /*************************************************************************/
 // Read in photon flux:
-
-TString              tagh_flux_fname,              tagm_flux_fname;
-TString empty_target_tagh_flux_fname, empty_target_tagm_flux_fname;
-
-double tagh_flux[274], tagh_fluxE[274];
-double tagm_flux[102], tagm_fluxE[102];
-double tagh_flux_empty[274], tagh_fluxE_empty[274];
-double tagm_flux_empty[274], tagm_fluxE_empty[274];
 
 int get_flux() 
 {
@@ -218,22 +118,6 @@ int get_flux()
 
 /*************************************************************************/
 // Get NLO Theory Calculation from NIST and from primex_compton generator:
-
-TString nist_theory_fname = "/home/andrsmit/root_macros/compton/nist_cs.dat";
-
-TString theory_cs_pathName;
-
-TF1 *f_theory, *f_nist;
-
-TGraph  *g_theory;
-TGraph  *g_theory_min, *g_theory_max, *g_theory_band;
-TGraph  *g_dev_min,    *g_dev_max,    *g_dev_band;
-TGraph  *g_nist;
-
-TCanvas *c_theory;
-
-bool USE_NIST_CALCULATION = false;
-bool DRAW_THEORY          = true;
 
 int get_theory_calc() {
 	
@@ -414,12 +298,6 @@ int get_theory_calc() {
 /*************************************************************************/
 // Get e+e- pair production cross section (from NIST):
 
-TString pair_cs_fname;
-
-TF1 *f_pair_cs, *f_triplet_cs;
-
-TCanvas *c_pair_cs;
-
 void get_pair_cs()
 {
 	// read in cross section from NIST:
@@ -493,14 +371,6 @@ void get_pair_cs()
 
 /*************************************************************************/
 // Get target parameters:
-
-double n_e = 0.0;
-double n_Z = 0.0;
-double n_A = 0.0;
-
-double mb = 1.e-27;
-
-double f_abs = 1.0;
 
 void get_target_parameters()
 {
@@ -576,10 +446,7 @@ void get_target_parameters()
 		// correction for cold residual gas:
 		
 		//n_e *= 0.9817;
-		
 	}
 	
 	return;
 }
-
-#endif

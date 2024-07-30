@@ -1,38 +1,37 @@
-#include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.h"
-#include "/work/halld/home/andrsmit/primex_compton_analysis/include/fit_yield.h"
-#include "/work/halld/home/andrsmit/primex_compton_analysis/include/fit_yield_empty.h"
-
-bool FIT_EMPTY = true;
+#include "compton_cs.h"
+#include "fit_yield.cc"
 
 void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_vec) {
 	
 	tagh_counter_vec.clear();
 	tagm_counter_vec.clear();
 	
-	for(int tagh_counter=1; tagh_counter<=274; tagh_counter++) {
+	for(int tagh_counter=1; tagh_counter<=N_TAGH_COUNTERS; tagh_counter++) {
 		tagh_yield[tagh_counter-1]  = 0.;
 		tagh_yieldE[tagh_counter-1] = 0.;
 		
-		tagh_yieldfit_chi2[tagh_counter-1] = 0.;
-		
-		tagh_compton_fraction[tagh_counter-1]  = 0.;
-		tagh_compton_fractionE[tagh_counter-1] = 0.;
-		tagh_pair_fraction[tagh_counter-1]     = 0.;
-		tagh_pair_fractionE[tagh_counter-1]    = 0.;
-		tagh_pair_fraction_exp[tagh_counter-1] = 0.;
+		tagh_yieldfit_chi2.push_back(0.);
+		tagh_yieldfit_pull.push_back({0.,0.});
 	}
-	for(int tagm_counter=1; tagm_counter<=102; tagm_counter++) {
+	for(int tagm_counter=1; tagm_counter<=N_TAGM_COUNTERS; tagm_counter++) {
 		tagm_yield[tagm_counter-1]  = 0.;
 		tagm_yieldE[tagm_counter-1] = 0.;
 		
-		tagm_yieldfit_chi2[tagm_counter-1] = 0.;
-		
-		tagm_compton_fraction[tagm_counter-1]  = 0.;
-		tagm_compton_fractionE[tagm_counter-1] = 0.;
-		tagm_pair_fraction[tagm_counter-1]     = 0.;
-		tagm_pair_fractionE[tagm_counter-1]    = 0.;
-		tagm_pair_fraction_exp[tagm_counter-1] = 0.;
+		tagm_yieldfit_chi2.push_back(0.);
+		tagm_yieldfit_pull.push_back({0.,0.});
 	}
+	
+	for(int imc=0; imc<(int)mc_templates.size(); imc++) {
+		tagh_fit_fraction[mc_templates[imc]]     = tagh_yieldfit_pull;
+		tagh_fit_fraction_exp[mc_templates[imc]] = tagh_yieldfit_pull;
+		tagm_fit_fraction[mc_templates[imc]]     = tagm_yieldfit_pull;
+		tagm_fit_fraction_exp[mc_templates[imc]] = tagm_yieldfit_pull;
+	}
+	
+	hist_color_map["compton"] = kCyan;
+	hist_color_map["pair"]    = kGreen;
+	hist_color_map["triplet"] = kMagenta;
+	hist_color_map["empty"]   = kBlue;
 	
 	TFile *fFull  = new TFile(root_fname.Data(),              "READ");
 	TFile *fEmpty = new TFile(empty_target_root_fname.Data(), "READ");
@@ -42,8 +41,8 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 	TH2F *h2e_tagh = (TH2F*)fEmpty->Get(hname_tagh.Data())->Clone("h2e_tagh");
 	TH2F *h2e_tagm = (TH2F*)fEmpty->Get(hname_tagm.Data())->Clone("h2e_tagm");
 	
-	TH1F  *h1_tagh[274],  *h1_tagm[102];
-	TH1F *h1e_tagh[274], *h1e_tagm[102];
+	TH1F *h1_tagh[N_TAGH_COUNTERS], *h1e_tagh[N_TAGH_COUNTERS];
+	TH1F *h1_tagm[N_TAGM_COUNTERS], *h1e_tagm[N_TAGM_COUNTERS];
 	
 	for(int tagh_counter=1; tagh_counter<=274; tagh_counter++) {
 		h1_tagh[tagh_counter-1]  = (TH1F*)h2_tagh->ProjectionY(Form("h1_tagh_%03d",
@@ -66,6 +65,7 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 	fEmpty->Close();
 	
 	if(DRAW_FITS_TAGH || DRAW_FITS_TAGM) {
+		/*
 		canvas_fit = new TCanvas("canvas_fit", "Fits", 1200, 600);
 		canvas_fit->Divide(2,1);
 		
@@ -75,7 +75,7 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		canvas_fit_log = (TPad*)canvas_fit->cd(2);
 		canvas_fit_log->SetTickx(); canvas_fit_log->SetTicky();
 		canvas_fit_log->SetGrid();  canvas_fit_log->SetLogy();
-		
+		*/
 		canvas_draw = new TCanvas("canvas_draw","canvas_draw",800,800);
 		canvas_draw->SetTickx(); canvas_draw->SetTicky();
 		canvas_draw->SetTopMargin(0.10);
@@ -113,8 +113,6 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 	
 	//------------------------------------------------------------------------------------------//
 	
-	int tagh_first = 1, tagm_first = 1;
-	
 	for(int tagh_counter = 20; tagh_counter <= 221; tagh_counter++) {
 		
 		int bad_val = 0;
@@ -128,9 +126,7 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		double loc_flux_empty = tagh_flux_empty[tagh_counter-1];
 		double loc_fluxE      = tagh_fluxE[tagh_counter-1];
 		
-		//if(eb<6.180) continue;
-		
-		if(tagh_counter>150) {
+		if(tagh_counter>178) {
 			rebins   =  2;
 			bin_size = (16.0/1000.0)*(double)rebins;
 			n_mev    = bin_size * 1.e3;
@@ -158,26 +154,20 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		h1_tagh[tagh_counter-1]->SetLineWidth(2);
 		
 		h1e_tagh[tagh_counter-1]->Rebin(rebins);
+		h1e_tagh[tagh_counter-1]->Scale(loc_flux/loc_flux_empty);
 		
 		cout << endl;
 		cout << "==================================" << endl;
 		cout << "Fitting TAGH Counter " << tagh_counter << endl;
 		
-		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0., loc_counts = 0.;
-		int fit_val;
-		if(FIT_EMPTY) {
-			h1e_tagh[tagh_counter-1]->Scale(loc_flux/loc_flux_empty);
-			fit_val = fit_yield_empty(0, tagh_counter, h1_tagh[tagh_counter-1], h1e_tagh[tagh_counter-1], 
-				loc_yield, loc_yieldE, loc_chi2);
-		} else {
-			h1_tagh[tagh_counter-1]->Add(h1e_tagh[tagh_counter-1], -1.0*loc_flux/loc_flux_empty);
-			fit_val = fit_yield(0, tagh_counter, h1_tagh[tagh_counter-1], loc_yield, loc_yieldE, loc_chi2);
-		}
+		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0.;
+		int fit_val = fit_yield(0, tagh_counter, h1_tagh[tagh_counter-1], h1e_tagh[tagh_counter-1], 
+			loc_yield, loc_yieldE, loc_chi2);
 		
 		if(fit_val <= 0) continue;
 		
-		tagh_yield[tagh_counter-1]  = loc_yield;
-		tagh_yieldE[tagh_counter-1] = loc_yieldE;
+		tagh_yield[tagh_counter-1]         = loc_yield;
+		tagh_yieldE[tagh_counter-1]        = loc_yieldE;
 		tagh_yieldfit_chi2[tagh_counter-1] = loc_chi2;
 		
 		if(SAVE_FITS_TAGH && DRAW_FITS_TAGH) {
@@ -228,22 +218,15 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		h1_tagm[tagm_counter-1]->SetLineWidth(2);
 		
 		h1e_tagm[tagm_counter-1]->Rebin(rebins);
+		h1e_tagm[tagm_counter-1]->Scale(loc_flux/loc_flux_empty);
 		
 		cout << endl;
 		cout << "==================================" << endl;
 		cout << "Fitting TAGM Counter " << tagm_counter << endl;
 		
-		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0., loc_counts = 0.;
-		int fit_val;
-		
-		if(FIT_EMPTY) {
-			h1e_tagm[tagm_counter-1]->Scale(loc_flux/loc_flux_empty);
-			fit_val = fit_yield_empty(1, tagm_counter, h1_tagm[tagm_counter-1], h1e_tagm[tagm_counter-1], 
-				loc_yield, loc_yieldE, loc_chi2);
-		} else {
-			h1_tagm[tagm_counter-1]->Add(h1e_tagm[tagm_counter-1], -1.0*loc_flux/loc_flux_empty);
-			fit_val = fit_yield(1, tagm_counter, h1_tagm[tagm_counter-1], loc_yield, loc_yieldE, loc_chi2);
-		}
+		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0.;
+		int fit_val = fit_yield(1, tagm_counter, h1_tagm[tagm_counter-1], h1e_tagm[tagm_counter-1], 
+			loc_yield, loc_yieldE, loc_chi2);
 		
 		if(fit_val <= 0) continue;
 		

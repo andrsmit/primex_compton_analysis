@@ -1,7 +1,7 @@
 #ifndef _PHASE1ENERGY_
 #define _PHASE1ENERGY_
 
-#include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.h"
+#include "compton_cs.h"
 
 void get_phase1_energy_bin(double eb, int &old_tag_counter, int &old_tag_sys) {
 	

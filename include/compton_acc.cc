@@ -1,13 +1,4 @@
-#include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.h"
-
-TF1 *f_acc;
-TCanvas *canvas_acc;
-
-bool DRAW_ACCEPTANCE   = false;
-bool CALC_ACC_FROM_FIT = false; // use a di-Gaussian fit to DeltaK Distribution to get acceptance
-
-double tagh_acc[274], tagh_accE[274];
-double tagm_acc[102], tagm_accE[102];
+#include "compton_cs.h"
 
 void get_compton_acc() {
 	
@@ -274,7 +265,8 @@ void get_compton_acc() {
 		
 		TLatex lat_form;
 		lat_form.SetTextFont(52);
-		lat_form.DrawLatexNDC(0.4, 0.8, "f_{acc}#left(E_{#gamma}#right) = #sum_{i=0}^{5}#left(p_{i}E_{#gamma}^{i}#right)");
+		lat_form.DrawLatexNDC(0.4, 0.8, 
+			"f_{acc}#left(E_{#gamma}#right) = #sum_{i=0}^{5}#left(p_{i}E_{#gamma}^{i}#right)");
 	}
 	
 	return;

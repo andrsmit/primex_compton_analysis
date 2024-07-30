@@ -1,7 +1,4 @@
-#include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.h"
-
-TGraphErrors *gCS;
-TCanvas *cCS;
+#include "compton_cs.h"
 
 void calc_cs(int tag_sys, int counter, double &loc_cs, double &loc_csE) {
 	
@@ -253,179 +250,103 @@ void plot_cs(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	f_dev_theory->Draw("same");
 	f_dev_nist->Draw("same");
 	
-	
-	/*
-	TF1 *f_dev = new TF1("f_dev", "pol0", 8.0, 11.6);
-	gDev->Fit("f_dev", "R0");
-	
-	f_dev->SetRange(5.8,11.6);
-	
-	f_dev->SetLineColor(kGreen+1);
-	f_dev->SetLineStyle(2);
-	f_dev->SetLineWidth(2);
-	f_dev->Draw("same");
-	
-	double f_dev_chi2 = f_dev->GetChisquare() / f_dev->GetNDF();
-	
-	TLatex lat2;
-	lat2.SetTextColor(kGreen+1);
-	lat2.DrawLatexNDC(0.13,0.85,Form("#scale[1.1]{Deviation: p_{0} = %.3f%% #pm %.3f%%}", 
-		f_dev->GetParameter(0), f_dev->GetParError(0)));
-	lat2.DrawLatexNDC(0.13,0.75,Form("#scale[1.1]{#chi^{2}/n.d.f = %.2f}", f_dev_chi2));
-	
-	bot_pad->Update();
-	TLine *lDev = new TLine(gPad->GetUxmin(), 0.0, gPad->GetUxmax(), 0.0);
-	lDev->SetLineWidth(2);
-	lDev->SetLineColor(kRed);
-	//lDev->Draw("same");
-	*/
 	return;
 }
 
-void plot_pair_fraction(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
+void plot_fit_fractions(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
+	
+	map<TString, vector<pair<double,double>>>::iterator fraction_it;
+	
+	vector<TGraphErrors*> gFitFractions, gFitFractionExps;
+	vector<TCanvas*> cFitFractions;
 	
 	int n_bins1 = (int)tagh_counter_vec.size();
 	int n_bins2 = (int)tagm_counter_vec.size();
 	int n_bins  = n_bins1+n_bins2;
 	
-	double *beam_energy       = new double[n_bins];
-	double *zeros             = new double[n_bins];
-	double *pair_fraction     = new double[n_bins];
-	double *pair_fraction_err = new double[n_bins];
-	
-	double *pair_fraction_exp = new double[n_bins];
-	
+	double *beam_energy = new double[n_bins];
+	double *zeros       = new double[n_bins];
 	for(int ib=0; ib<n_bins; ib++) {
-		double loc_eb        = 0.;
-		double loc_pair_frac = 0., loc_pair_frac_err = 0.;
-		double loc_pair_frac_exp = 0.;
-		if(ib<n_bins1) {
-			int counter        = tagh_counter_vec[ib];
-			loc_eb             = tagh_en[counter-1];
-			loc_pair_frac      = tagh_pair_fraction[counter-1];
-			loc_pair_frac_err  = tagh_pair_fractionE[counter-1];
-			loc_pair_frac_exp  = tagh_pair_fraction_exp[counter-1];
-		} else {
-			int counter        = tagm_counter_vec[ib-n_bins1];
-			loc_eb             = tagm_en[counter-1];
-			loc_pair_frac      = tagm_pair_fraction[counter-1];
-			loc_pair_frac_err  = tagm_pair_fractionE[counter-1];
-			loc_pair_frac_exp  = tagm_pair_fraction_exp[counter-1];
-		}
-		beam_energy[ib]       = loc_eb;
-		zeros[ib]             = 0.;
-		pair_fraction[ib]     = loc_pair_frac;
-		pair_fraction_err[ib] = loc_pair_frac_err;
-		pair_fraction_exp[ib] = loc_pair_frac_exp;
+		beam_energy[ib] = ib<n_bins1 ? tagh_en[tagh_counter_vec[ib]-1] : tagm_en[tagm_counter_vec[ib-n_bins1]-1];
+		zeros[ib]       = 0.;
 	}
 	
-	TGraphErrors *gPairFrac = new TGraphErrors(n_bins, beam_energy, pair_fraction, 
-		zeros, pair_fraction_err);
-	gPairFrac->SetMarkerStyle(8);
-	gPairFrac->SetMarkerSize(0.7);
-	gPairFrac->SetMarkerColor(kBlue);
-	gPairFrac->SetLineColor(kBlue);
-	gPairFrac->SetTitle("");
+	vector<TString> loc_mc_templates; loc_mc_templates.clear();
+	loc_mc_templates.push_back("pair");
+	if(FIT_TRIPLET) loc_mc_templates.push_back("triplet");
+	if(FIT_EMPTY) loc_mc_templates.push_back("empty");
 	
-	gPairFrac->GetXaxis()->SetTitle("Photon Beam Energy [GeV]");
-	gPairFrac->GetXaxis()->SetTitleSize(0.05);
-	gPairFrac->GetXaxis()->SetTitleOffset(0.9);
-	gPairFrac->GetXaxis()->CenterTitle(true);
-	
-	gPairFrac->GetYaxis()->SetTitle("p_{Pair} [a.u.]");
-	gPairFrac->GetYaxis()->SetTitleSize(0.05);
-	gPairFrac->GetYaxis()->SetTitleOffset(0.9);
-	gPairFrac->GetYaxis()->CenterTitle(true);
-	
-	gPairFrac->GetXaxis()->SetRangeUser(5.6, 11.8);
-	
-	TGraph *gPairFracExp = new TGraph(n_bins, beam_energy, pair_fraction_exp);
-	gPairFracExp->SetMarkerStyle(8);
-	gPairFracExp->SetMarkerSize(0.7);
-	gPairFracExp->SetMarkerColor(kGreen);
-	gPairFracExp->SetLineColor(kGreen);
-	gPairFracExp->SetTitle("");
-	
-	TCanvas *cPairFrac = new TCanvas("cPairFrac", "Pair Fraction (fit)", 1200, 500);
-	cPairFrac->SetTickx(); cPairFrac->SetTicky();
-	gPairFrac->Draw("AP");
-	gPairFracExp->Draw("P same");
+	for(int imc=0; imc<(int)loc_mc_templates.size(); imc++) {
+		
+		TString loc_template = loc_mc_templates[imc];
+		
+		fraction_it = tagh_fit_fraction.find(loc_template);
+		if(fraction_it == tagh_fit_fraction.end()) continue;
+		
+		double *fit_fraction         = new double[n_bins];
+		double *fit_fraction_err     = new double[n_bins];
+		double *fit_fraction_exp     = new double[n_bins];
+		double *fit_fraction_exp_err = new double[n_bins];
+		
+		for(int ib=0; ib<n_bins; ib++) {
+			double loc_fit_frac     = 0., loc_fit_frac_err     = 0.;
+			double loc_fit_frac_exp = 0., loc_fit_frac_exp_err = 0.;
+			if(ib<n_bins1) {
+				int counter          = tagh_counter_vec[ib];
+				loc_fit_frac         = tagh_fit_fraction[loc_template][counter-1].first;
+				loc_fit_frac_err     = tagh_fit_fraction[loc_template][counter-1].second;
+				loc_fit_frac_exp     = tagh_fit_fraction_exp[loc_template][counter-1].first;
+				loc_fit_frac_exp_err = tagh_fit_fraction_exp[loc_template][counter-1].second;
+			} else {
+				int counter          = tagm_counter_vec[ib-n_bins1];
+				loc_fit_frac         = tagm_fit_fraction[loc_template][counter-1].first;
+				loc_fit_frac_err     = tagm_fit_fraction[loc_template][counter-1].second;
+				loc_fit_frac_exp     = tagm_fit_fraction_exp[loc_template][counter-1].first;
+				loc_fit_frac_exp_err = tagm_fit_fraction_exp[loc_template][counter-1].second;
+			}
+			fit_fraction[ib]         = loc_fit_frac;
+			fit_fraction_err[ib]     = loc_fit_frac_err;
+			fit_fraction_exp[ib]     = loc_fit_frac_exp;
+			fit_fraction_exp_err[ib] = loc_fit_frac_exp_err;
+		}
+		
+		TGraphErrors *loc_gFitFrac = new TGraphErrors(n_bins, beam_energy, fit_fraction, zeros, fit_fraction_err);
+		loc_gFitFrac->SetMarkerStyle(8);
+		loc_gFitFrac->SetMarkerSize(0.7);
+		loc_gFitFrac->SetMarkerColor(kBlue);
+		loc_gFitFrac->SetLineColor(kBlue);
+		loc_gFitFrac->SetTitle("");
+		loc_gFitFrac->GetXaxis()->SetTitle("Photon Beam Energy [GeV]");
+		loc_gFitFrac->GetXaxis()->SetTitleSize(0.05);
+		loc_gFitFrac->GetXaxis()->SetTitleOffset(0.9);
+		loc_gFitFrac->GetXaxis()->CenterTitle(true);
+		loc_gFitFrac->GetYaxis()->SetTitle(Form("p_{%s} [a.u.]",loc_template.Data()));
+		loc_gFitFrac->GetYaxis()->SetTitleSize(0.05);
+		loc_gFitFrac->GetYaxis()->SetTitleOffset(0.9);
+		loc_gFitFrac->GetYaxis()->CenterTitle(true);
+		loc_gFitFrac->GetXaxis()->SetRangeUser(5.6, 11.8);
+		
+		TGraphErrors *loc_gFitFracExp = new TGraphErrors(n_bins, beam_energy, fit_fraction_exp, 
+			zeros, fit_fraction_exp_err);
+		loc_gFitFracExp->SetMarkerStyle(8);
+		loc_gFitFracExp->SetMarkerSize(0.7);
+		loc_gFitFracExp->SetMarkerColor(kGreen);
+		loc_gFitFracExp->SetLineColor(kGreen);
+		loc_gFitFracExp->SetTitle("");
+		
+		TCanvas *loc_cFitFrac = new TCanvas(Form("loc_cFitFrac_%s",loc_template.Data()), 
+			Form("%s Fraction (fit)", loc_template.Data()), 1200, 500);
+		loc_cFitFrac->SetTickx(); loc_cFitFrac->SetTicky();
+		loc_gFitFrac->Draw("AP");
+		loc_gFitFracExp->Draw("P same");
+		
+		cFitFractions.push_back(loc_cFitFrac);
+		gFitFractions.push_back(loc_gFitFrac);
+		gFitFractionExps.push_back(loc_gFitFracExp);
+	}
 	
 	return;
 }
-
-void plot_empty_fraction(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
-	
-	int n_bins1 = (int)tagh_counter_vec.size();
-	int n_bins2 = (int)tagm_counter_vec.size();
-	int n_bins  = n_bins1+n_bins2;
-	
-	double *beam_energy        = new double[n_bins];
-	double *zeros              = new double[n_bins];
-	double *empty_fraction     = new double[n_bins];
-	double *empty_fraction_err = new double[n_bins];
-	
-	double *empty_fraction_exp = new double[n_bins];
-	
-	for(int ib=0; ib<n_bins; ib++) {
-		double loc_eb         = 0.;
-		double loc_empty_frac = 0., loc_empty_frac_err = 0.;
-		double loc_empty_frac_exp = 0.;
-		if(ib<n_bins1) {
-			int counter         = tagh_counter_vec[ib];
-			loc_eb              = tagh_en[counter-1];
-			loc_empty_frac      = tagh_empty_fraction[counter-1];
-			loc_empty_frac_err  = tagh_empty_fractionE[counter-1];
-			loc_empty_frac_exp  = tagh_empty_fraction_exp[counter-1];
-		} else {
-			int counter         = tagm_counter_vec[ib-n_bins1];
-			loc_eb              = tagm_en[counter-1];
-			loc_empty_frac      = tagm_empty_fraction[counter-1];
-			loc_empty_frac_err  = tagm_empty_fractionE[counter-1];
-			loc_empty_frac_exp  = tagm_empty_fraction_exp[counter-1];
-		}
-		beam_energy[ib]        = loc_eb;
-		zeros[ib]              = 0.;
-		empty_fraction[ib]     = loc_empty_frac     / loc_empty_frac_exp;
-		empty_fraction_err[ib] = loc_empty_frac_err / loc_empty_frac_exp;
-		empty_fraction_exp[ib] = loc_empty_frac_exp / loc_empty_frac_exp;
-	}
-	
-	TGraphErrors *gEmptyFrac = new TGraphErrors(n_bins, beam_energy, empty_fraction, 
-		zeros, empty_fraction_err);
-	gEmptyFrac->SetMarkerStyle(8);
-	gEmptyFrac->SetMarkerSize(0.7);
-	gEmptyFrac->SetMarkerColor(kBlue);
-	gEmptyFrac->SetLineColor(kBlue);
-	gEmptyFrac->SetTitle("");
-	
-	gEmptyFrac->GetXaxis()->SetTitle("Photon Beam Energy [GeV]");
-	gEmptyFrac->GetXaxis()->SetTitleSize(0.05);
-	gEmptyFrac->GetXaxis()->SetTitleOffset(0.9);
-	gEmptyFrac->GetXaxis()->CenterTitle(true);
-	
-	gEmptyFrac->GetYaxis()->SetTitle("p_{Empty} [a.u.]");
-	gEmptyFrac->GetYaxis()->SetTitleSize(0.05);
-	gEmptyFrac->GetYaxis()->SetTitleOffset(0.9);
-	gEmptyFrac->GetYaxis()->CenterTitle(true);
-	
-	gEmptyFrac->GetXaxis()->SetRangeUser(5.6, 11.8);
-	
-	TGraph *gEmptyFracExp = new TGraph(n_bins, beam_energy, empty_fraction_exp);
-	gEmptyFracExp->SetMarkerStyle(8);
-	gEmptyFracExp->SetMarkerSize(0.7);
-	gEmptyFracExp->SetMarkerColor(kGreen);
-	gEmptyFracExp->SetLineColor(kGreen);
-	gEmptyFracExp->SetTitle("");
-	
-	TCanvas *cEmptyFrac = new TCanvas("cEmptyFrac", "Empty Fraction (fit)", 1200, 500);
-	cEmptyFrac->SetTickx(); cEmptyFrac->SetTicky();
-	gEmptyFrac->Draw("AP");
-	gEmptyFracExp->Draw("P same");
-	
-	return;
-}
-
 
 bool isNaN(double x) {
 	return x != x;
@@ -451,14 +372,14 @@ void plot_chi2(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 			int counter    = tagh_counter_vec[ib];
 			loc_eb         = tagh_en[counter-1];
 			loc_chi2       = tagh_yieldfit_chi2[counter-1];
-			loc_pull_mean  = tagh_yieldfit_pull_mean[counter-1];
-			loc_pull_stdev = tagh_yieldfit_pull_stdev[counter-1];
+			loc_pull_mean  = tagh_yieldfit_pull[counter-1].first;
+			loc_pull_stdev = tagh_yieldfit_pull[counter-1].second;
 		} else {
 			int counter    = tagm_counter_vec[ib-n_bins1];
 			loc_eb         = tagm_en[counter-1];
 			loc_chi2       = tagm_yieldfit_chi2[counter-1];
-			loc_pull_mean  = tagm_yieldfit_pull_mean[counter-1];
-			loc_pull_stdev = tagm_yieldfit_pull_stdev[counter-1];
+			loc_pull_mean  = tagm_yieldfit_pull[counter-1].first;
+			loc_pull_stdev = tagm_yieldfit_pull[counter-1].second;
 		}
 		if(isNaN(loc_chi2)) loc_chi2 = 0.;
 		beam_energy[ib] = loc_eb;
@@ -486,7 +407,6 @@ void plot_chi2(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	TCanvas *cChi2 = new TCanvas("cChi2", "Chi2 of Fit", 1200, 500);
 	cChi2->SetTickx(); cChi2->SetTicky();
 	gChi2->Draw("AP");
-	
 	
 	TGraph *gPullMean = new TGraph(n_bins, beam_energy, pull_mean);
 	gPullMean->SetMarkerStyle(8);
@@ -531,4 +451,3 @@ void plot_chi2(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	
 	return;
 }
-
