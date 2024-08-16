@@ -175,13 +175,16 @@ void ComptonAna::comptonAnalysis() {
 			((m_beam_bunches_main+5.5)*4.008 < fabs(loc_dt)) && 
 			(fabs(loc_dt) < (m_beam_bunches_main+5.5+m_beam_bunches_acc)*4.008)
 		) loc_weight = -1.0/(2.0*m_beam_bunches_acc);
-		//else continue;
+		else continue;
 		
-		//if(loc_weight < 0.0) loc_weight *= m_acc_scale_factor[igam];
-		
-		locGoodBeamPhotons.push_back(igam);
-		locGoodBeamPhotons_weight.push_back(loc_weight);
+		if(loc_weight < 0.0) loc_weight *= m_acc_scale_factor[igam];
+		if(m_beam_e[igam] > 6.0) {
+			locGoodBeamPhotons.push_back(igam);
+			locGoodBeamPhotons_weight.push_back(loc_weight);
+		}
 	}
+	
+	if(locNGoodFCALShowers!=1 || locNGoodCCALShowers!=1) return;
 	
 	for(auto &ifcal : locGoodFCALShowers) {
 		
@@ -257,184 +260,35 @@ void ComptonAna::comptonAnalysis() {
 				}
 				if(fill_weight==0.0) continue;
 				
-				//-------------------------------------------------------------//
-				//
-				// We want to look at how the following set of cuts change the data:
-				//
-				//    1. Multiplicity cut (3 options)
-				//        a. No extra showers
-				//        b. Allow extra showers if they are below some energy threshold
-				//        c. Allow any ammount of extra showers
-				//    2. TOF Veto
-				//        a. No match betweeen FCAL and TOF
-				//        b. Maybe a match, maybe not (no information)
-				//    3. FCAL fiducial cut
-				//        a. One layer cut
-				//        b. Two layer cut
-				//
 				
-				int cut_vals[m_n_cuts];
-				for(int icut=0; icut<m_n_cuts; icut++) cut_vals[icut] = 0;
-				
-				int loc_fid_cut = fcal_fiducial_cut(pos1, 2.0);
-				
-				cut_vals[0] = 1;
-				if(!tof_match) {
-					cut_vals[1] = 1;
-					if(!loc_fid_cut) {
-						cut_vals[2] = 1;
-					}
-				}
-				if(!loc_fid_cut) cut_vals[3] = 1;
-				
-				if(locNGoodFCALShowers==1 && locNGoodCCALShowers==1) {
-					cut_vals[4] = 1;
-					if(!tof_match) {
-						cut_vals[5] = 1;
-						if(!loc_fid_cut) {
-							cut_vals[6] = 1;
-						}
-					}
-					if(!loc_fid_cut) cut_vals[7] = 1;
-				}
-				
-				if(locNFCALShowers==1 && locNCCALShowers==1) {
-					cut_vals[8] = 1;
-					if(!tof_match) {
-						cut_vals[9] = 1;
-						if(!loc_fid_cut) {
-							cut_vals[10] = 1;
-						}
-					}
-					if(!loc_fid_cut) cut_vals[11] = 1;
-				}
-				
-				for(int icut = 0; icut < m_n_cuts; icut++) {
-					
-					int loc_e_cut   = e_cut;
-					int loc_phi_cut = phi_cut;
-					int loc_k_cut   = k_cut;
-					if(icut%4==2 || icut%4==3) {
-						loc_e_cut = e_cut_two;
-						loc_phi_cut = phi_cut_two;
-						loc_k_cut = k_cut_two;
-					}
+				if(e_cut && phi_cut) {
 					
 					if(loc_tag_sys==0) {
-						
-						h_opangle_tagh[icut]->Fill(loc_tag_counter, opangle, fill_weight);
-						if(loc_e_cut) {
-							h_opangle_tagh_ecut[icut]->Fill(loc_tag_counter, opangle, fill_weight);
-							if(loc_k_cut) {
-								h_opangle_tagh_ekcut[icut]->Fill(loc_tag_counter, opangle, fill_weight);
+						if(fill_weight>0.) {
+							h_deltaK_tagh[0]->Fill(loc_tag_counter, deltaK);
+						} else {
+							h_deltaK_tagh[1]->Fill(loc_tag_counter, deltaK);
+						}
+						if(k_cut) {
+							if(fill_weight>0.) {
+								h_deltaK_tagh[2]->Fill(loc_tag_counter, deltaK);
+							} else {
+								h_deltaK_tagh[3]->Fill(loc_tag_counter, deltaK);
 							}
 						}
-						
-						if(cut_vals[icut]) {
-							h_deltaE_tagh[icut]->Fill(loc_tag_counter, deltaE, fill_weight);
-							if(loc_e_cut) {
-								h_deltaPhi_tagh[icut]->Fill(loc_tag_counter, deltaPhi, fill_weight);
-								if(loc_phi_cut) {
-									h_deltaK_tagh[icut]->Fill(loc_tag_counter, deltaK, fill_weight);
-								}
+					} else {
+						if(fill_weight>0.) {
+							h_deltaK_tagm[0]->Fill(loc_tag_counter, deltaK);
+						} else {
+							h_deltaK_tagm[1]->Fill(loc_tag_counter, deltaK);
+						}
+						if(k_cut) {
+							if(fill_weight>0.) {
+								h_deltaK_tagm[2]->Fill(loc_tag_counter, deltaK);
+							} else {
+								h_deltaK_tagm[3]->Fill(loc_tag_counter, deltaK);
 							}
 						}
-					} else if(loc_tag_sys==1) {
-						
-						h_opangle_tagm[icut]->Fill(loc_tag_counter, opangle, fill_weight);
-						if(loc_e_cut) {
-							h_opangle_tagm_ecut[icut]->Fill(loc_tag_counter, opangle, fill_weight);
-							if(loc_k_cut) {
-								h_opangle_tagm_ekcut[icut]->Fill(loc_tag_counter, opangle, fill_weight);
-							}
-						}
-						
-						if(cut_vals[icut]) {
-							h_deltaE_tagm[icut]->Fill(loc_tag_counter, deltaE, fill_weight);
-							if(loc_e_cut) {
-								h_deltaPhi_tagm[icut]->Fill(loc_tag_counter, deltaPhi, fill_weight);
-								if(loc_phi_cut) {
-									h_deltaK_tagm[icut]->Fill(loc_tag_counter, deltaK, fill_weight);
-								}
-							}
-						}
-					}
-					
-					double deltaKCCAL = e2 - (1. / (1./eb + (1.-cos(pos2.Theta()))/m_e));
-					double deltaKFCAL = e1 - (1. / (1./eb + (1.-cos(pos1.Theta()))/m_e));
-					
-					if(cut_vals[icut]) {
-						
-						h_deltaE_ccal[icut]->Fill(m_ccal_idmax[iccal], deltaE, fill_weight);
-						
-						h_elas_vs_deltaE[icut]->Fill(deltaE, 
-							(deltaE-deltaK), fill_weight);
-						
-						//h_mgg_vs_deltaE[icut]->Fill(deltaE_smeared, invmass, fill_weight);
-						//h_mgg_vs_deltaK[icut]->Fill(deltaK_smeared, invmass, fill_weight);
-						
-						if(eb > 9.0) {
-							h_deltaK_vs_deltaE[icut]->Fill(deltaE, deltaK, fill_weight);
-							
-							h_deltaCCAL_vs_deltaE[icut]->Fill(deltaE, deltaKCCAL, fill_weight);
-							h_deltaCCAL_vs_deltaK[icut]->Fill(deltaK, deltaKCCAL, fill_weight);
-							h_deltaFCAL_vs_deltaE[icut]->Fill(deltaE, deltaKFCAL, fill_weight);
-							h_deltaFCAL_vs_deltaK[icut]->Fill(deltaK, deltaKFCAL, fill_weight);
-							
-							h_deltaFCAL_vs_deltaCCAL[icut]->Fill(deltaKCCAL, deltaKFCAL, fill_weight);
-						}
-						
-						if(loc_e_cut && loc_k_cut && loc_phi_cut) {
-							h_ccal_xy[icut]->Fill(pos2.X(), pos2.Y(), fill_weight);
-							h_fcal_xy[icut]->Fill(pos1.X(), pos1.Y(), fill_weight);
-						}
-					}
-				}
-				
-				if(cut_vals[4]) {
-					
-					// get FCAL channel number:
-					
-					double fcal_face_x = m_vertex.X() + (pos1.X() * (m_fcal_face.Z() - m_vertex.Z())/pos1.Z());
-					fcal_face_x -= m_fcal_face.X();
-					double fcal_face_y = m_vertex.Y() + (pos1.Y() * (m_fcal_face.Z() - m_vertex.Z())/pos1.Z());
-					fcal_face_y -= m_fcal_face.Y();
-					
-					int row = (int)((fcal_face_x/4.0157) + 29.5);
-					int col = (int)((fcal_face_y/4.0157) + 29.5);
-					int fcal_chan = m_channelNumber[row][col];
-					
-					h_deltaE_fcal->Fill(fcal_chan, deltaE, fill_weight);
-				}
-				
-				if(cut_vals[8]) {
-					
-					h_deltaE_vs_deltaK->Fill(deltaK, deltaE, fill_weight);
-					h_deltaPhi_vs_deltaE->Fill(deltaE, deltaPhi, fill_weight);
-					h_deltaPhi_vs_deltaK->Fill(deltaK, deltaPhi, fill_weight);
-					if(e_cut && k_cut && phi_cut) {
-						h_deltaE_vs_deltaK_cut->Fill(deltaK, deltaE, fill_weight);
-						h_deltaPhi_vs_deltaE_cut->Fill(deltaE, deltaPhi, fill_weight);
-						h_deltaPhi_vs_deltaK_cut->Fill(deltaK, deltaPhi, fill_weight);
-					}
-					
-					
-					if(e_cut) {
-						double sumPhi = (pos2.Phi()+ pos1.Phi()) * (180./TMath::Pi());
-						h_sumPhi_vs_deltaPhi->Fill(deltaPhi/2.0, sumPhi/2.0, fill_weight);
-					}
-					
-					h_ccal_nblocks->Fill(m_ccal_nblocks[iccal], fill_weight);
-					h_fcal_nblocks->Fill(m_fcal_nblocks[ifcal], fill_weight);
-					if(deltaE > 0.65) {
-						h_ccal_xy_highdeltaE->Fill(pos2.X(), pos2.Y(), fill_weight);
-						h_fcal_xy_highdeltaE->Fill(pos1.X(), pos1.Y(), fill_weight);
-						h_ccal_nblocks_cut->Fill(m_ccal_nblocks[iccal], fill_weight);
-						h_fcal_nblocks_cut->Fill(m_fcal_nblocks[ifcal], fill_weight);
-					}
-					if(deltaE < -3.5 && eb>8.5) {
-						h_ccal_xy_lowdeltaE->Fill(pos2.X(), pos2.Y(), fill_weight);
-						h_fcal_xy_lowdeltaE->Fill(pos1.X(), pos1.Y(), fill_weight);
 					}
 				}
 				
@@ -956,9 +810,6 @@ void ComptonAna::initHistograms() {
 	h_beam_rf_dt     = new TH1F("beam_rf_dt",     "t_{Beam} - t_{RF}; [ns]", 10000, -100., 100.);
 	h_beam_rf_dt_cut = new TH1F("beam_rf_dt_cut", "t_{Beam} - t_{RF}; [ns]", 10000, -100., 100.);
 	
-	h_deltaE_fcal = new TH2F("deltaE_fcal", "#DeltaE; FCAL Channel; E_{1} + E_{2} - E_{#gamma} [GeV]",
-		2800, -0.5, 2799.5, 2000, -8.0, 8.0);
-	
 	h_deltaE_vs_deltaK     = new TH2F("deltaE_vs_deltaK",     "; #DeltaK [GeV]; #DeltaE [GeV]", 
 		1000, -8.0, 8.0, 1000, -8.0, 8.0);
 	h_deltaE_vs_deltaK_cut = new TH2F("deltaE_vs_deltaK_cut", "; #DeltaK [GeV]; #DeltaE [GeV]", 
@@ -973,6 +824,12 @@ void ComptonAna::initHistograms() {
 		1000, -8.0, 8.0, 1000,  0.0, 360.0);
 	h_deltaPhi_vs_deltaK_cut = new TH2F("deltaPhi_vs_deltaK_cut", "; #DeltaK [GeV]; #Delta#phi [#circ]", 
 		1000, -8.0, 8.0, 1000,  0.0, 360.0);
+	
+	h_ccal_energy  = new TH2F("ccal_energy", "Energy of CCAL Shower (All Cuts Applied); E_{#gamma} [GeV]; E_{CCAL} [GeV]",
+		120, 0., 12., 1200, 0., 12.);
+	h_fcal_energy  = new TH2F("fcal_energy", "Energy of FCAL Shower (All Cuts Applied); E_{#gamma} [GeV]; E_{FCAL} [GeV]",
+		120, 0., 12., 1200, 0., 12.);
+	
 	
 	//---------------------------------------------//
 	for(int ihist=0; ihist<m_n_cuts; ihist++) {
@@ -1033,6 +890,9 @@ void ComptonAna::initHistograms() {
 		h_deltaFCAL_vs_deltaCCAL[ihist] = new TH2F(Form("deltaFCAL_vs_deltaCCAL_%d",ihist),
 			"E_{FCAL} - E_{Comp} vs. E_{CCAL} - E_{Comp}; E_{CCAL} - E_{Comp} [GeV]; E_{FCAL} - E_{Comp} [GeV]",
 			500, -8.0, 8.0, 500, -8.0, 8.0);
+		h_deltaFCAL_vs_deltaCCAL_cut[ihist] = new TH2F(Form("deltaFCAL_vs_deltaCCAL_cut_%d",ihist),
+			"E_{FCAL} - E_{Comp} vs. E_{CCAL} - E_{Comp}; E_{CCAL} - E_{Comp} [GeV]; E_{FCAL} - E_{Comp} [GeV]",
+			500, -8.0, 8.0, 500, -8.0, 8.0);
 		
 		h_ccal_xy[ihist] = new TH2F(Form("ccal_xy_%d",ihist),
 			"CCAL Shower Occupancy; x_{CCAL} [cm]; y_{CCAL} [cm]",
@@ -1090,8 +950,6 @@ void ComptonAna::resetHistograms() {
 	h_beam_rf_dt->Reset();
 	h_beam_rf_dt_cut->Reset();
 	
-	h_deltaE_fcal->Reset();
-	
 	h_deltaE_vs_deltaK->Reset();
 	h_deltaE_vs_deltaK_cut->Reset();
 	
@@ -1100,6 +958,9 @@ void ComptonAna::resetHistograms() {
 	
 	h_deltaPhi_vs_deltaK->Reset();
 	h_deltaPhi_vs_deltaK_cut->Reset();
+	
+	h_ccal_energy->Reset();
+	h_fcal_energy->Reset();
 	
 	for(int ihist=0; ihist<m_n_cuts; ihist++) {
 		h_deltaE_ccal[ihist]->Reset();
@@ -1132,6 +993,7 @@ void ComptonAna::resetHistograms() {
 	}
 	for(int ihist=0; ihist<m_n_cuts; ihist++) {
 		h_deltaFCAL_vs_deltaCCAL[ihist]->Reset();
+		h_deltaFCAL_vs_deltaCCAL_cut[ihist]->Reset();
 	}
 	for(int ihist=0; ihist<m_n_cuts; ihist++) {
 		h_ccal_xy[ihist]->Reset();
@@ -1175,8 +1037,6 @@ void ComptonAna::writeHistograms() {
 	h_beam_rf_dt->Write();
 	h_beam_rf_dt_cut->Write();
 	
-	h_deltaE_fcal->Write();
-	
 	h_deltaE_vs_deltaK->Write();
 	h_deltaE_vs_deltaK_cut->Write();
 	
@@ -1185,6 +1045,9 @@ void ComptonAna::writeHistograms() {
 	
 	h_deltaPhi_vs_deltaK->Write();
 	h_deltaPhi_vs_deltaK_cut->Write();
+	
+	h_ccal_energy->Write();
+	h_fcal_energy->Write();
 	
 	TDirectory *dir_deltaE_ccal = new TDirectoryFile("deltaE_ccal", "deltaE_ccal");
 	dir_deltaE_ccal->cd();
@@ -1251,6 +1114,7 @@ void ComptonAna::writeHistograms() {
 	dir_dFdC->cd();
 	for(int ihist=0; ihist<m_n_cuts; ihist++) {
 		h_deltaFCAL_vs_deltaCCAL[ihist]->Write();
+		h_deltaFCAL_vs_deltaCCAL_cut[ihist]->Write();
 	}
 	dir_dFdC->cd("../");
 	

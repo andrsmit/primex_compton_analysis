@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
 		// Directory where output ROOT files will be stored:
 		
 		sprintf(rootFile_pathName, 
-			"%s/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/compton/%03dnA_systematics/test_mgg_cut", 
+			"%s/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/compton/%03dnA_systematics", 
 			loc_path, genSettings.run_number, genSettings.beam_current);
 	}
 	

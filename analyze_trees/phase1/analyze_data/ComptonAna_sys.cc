@@ -35,6 +35,9 @@ void ComptonAna::comptonAnalysis_systematics() {
 	vector<int> locNGoodFCALShowers_fid_cut; locNGoodFCALShowers_fid_cut.clear();
 	for(int i=0; i<m_n_fid_cuts; i++) locNGoodFCALShowers_fid_cut.push_back(0.);
 	
+	vector<int> locNGoodFCALShowers_t_cut; locNGoodFCALShowers_t_cut.clear();
+	for(int i=0; i<m_n_hists_fcalT; i++) locNGoodFCALShowers_t_cut.push_back(0.);
+	
 	int locNFCALShowers = 0, locNGoodFCALShowers = 0;
 	for(int ishow=0; ishow<m_nfcal; ishow++) {
 		
@@ -54,8 +57,7 @@ void ComptonAna::comptonAnalysis_systematics() {
 		
 		double loc_t = m_fcal_t[ishow] - (loc_pos.Mag()/m_c) - m_rfTime;
 		
-		if(fabs(loc_t) < m_cut_fcalrfdt) {
-			locNFCALShowers++;
+		if(fabs(loc_t) < 6.0) {
 			locGoodFCALShowers.push_back(ishow);
 		} else {
 			continue;
@@ -67,8 +69,11 @@ void ComptonAna::comptonAnalysis_systematics() {
 		// nominal FCAL fiducial cut:
 		int fid_cut_norm = fcal_fiducial_cut(loc_pos, 1.0);
 		
+		// nominal FCAL timing cut:
+		int   t_cut_norm = fabs(loc_t) < m_cut_fcalrfdt ? 1 : 0;
+		
 		// loop over all minimum energy cuts and count number of showers 
-		if(!fid_cut_norm) {
+		if(!fid_cut_norm && t_cut_norm) {
 			for(int icut=0; icut<m_n_hists_fcalE; icut++) {
 				double loc_e_cut = 0.05 * (double)icut;
 				if(m_fcal_e[ishow] > loc_e_cut) locNGoodFCALShowers_e_cut[icut]++;
@@ -76,14 +81,22 @@ void ComptonAna::comptonAnalysis_systematics() {
 		}
 		
 		// loop over all fiducial cuts and count number of showers:
-		if(e_cut_norm) {
+		if(e_cut_norm && t_cut_norm) {
 			for(int icut=0; icut<m_n_fid_cuts; icut++) {
 				int loc_fid_cut = fcal_fiducial_cut(loc_pos, 0.5 + 0.1*(double)icut);
 				if(!loc_fid_cut) locNGoodFCALShowers_fid_cut[icut]++;
 			}
 		}
 		
-		if(!fid_cut_norm && e_cut_norm) locNGoodFCALShowers++;
+		// loop over all timing cuts and count number of showers:
+		if(e_cut_norm && !fid_cut_norm) {
+			for(int icut=0; icut<m_n_hists_fcalT; icut++) {
+				double loc_t_cut = 0.5*(double)(icut+1);
+				if(fabs(loc_t) < loc_t_cut) locNGoodFCALShowers_t_cut[icut]++;
+			}
+		}
+		
+		if(!fid_cut_norm && e_cut_norm && t_cut_norm) locNGoodFCALShowers++;
 	}
 	
 	//---------------------------------------------------------------------------//
@@ -98,14 +111,16 @@ void ComptonAna::comptonAnalysis_systematics() {
 	vector<int> locNGoodCCALShowers_fid_cut; locNGoodCCALShowers_fid_cut.clear();
 	for(int i=0; i<m_n_fid_cuts; i++) locNGoodCCALShowers_fid_cut.push_back(0.);
 	
+	vector<int> locNGoodCCALShowers_t_cut; locNGoodCCALShowers_t_cut.clear();
+	for(int i=0; i<m_n_hists_ccalT; i++) locNGoodCCALShowers_t_cut.push_back(0.);
+	
 	int locNCCALShowers = 0, locNGoodCCALShowers = 0;
 	for(int ishow=0; ishow<m_nccal; ishow++) {
 		
 		TVector3 loc_pos = getCCALPosition(ishow);
 		double loc_t = m_ccal_t[ishow] - (loc_pos.Mag()/m_c) - m_rfTime;
 		
-		if(fabs(loc_t) < m_cut_ccalrfdt) {
-			locNCCALShowers++;
+		if(fabs(loc_t) < 6.0) {
 			locGoodCCALShowers.push_back(ishow);
 		} else {
 			continue;
@@ -117,8 +132,11 @@ void ComptonAna::comptonAnalysis_systematics() {
 		// nominal CCAL fiducial cut:
 		int fid_cut_norm = ccal_fiducial_cut(loc_pos, 1.0);
 		
+		// nominal CCAL timing cut:
+		int   t_cut_norm = fabs(loc_t) < m_cut_ccalrfdt ? 1 : 0;
+		
 		// loop over all minimum energy cuts and count number of showers 
-		if(!fid_cut_norm) {
+		if(!fid_cut_norm && t_cut_norm) {
 			for(int icut=0; icut<m_n_hists_ccalE; icut++) {
 				double loc_e_cut = 0.5 * (double)icut;
 				if(m_ccal_e[ishow] > loc_e_cut) locNGoodCCALShowers_e_cut[icut]++;
@@ -126,14 +144,22 @@ void ComptonAna::comptonAnalysis_systematics() {
 		}
 		
 		// loop over all fiducial cuts and count number of showers:
-		if(e_cut_norm) {
+		if(e_cut_norm && t_cut_norm) {
 			for(int icut=0; icut<m_n_fid_cuts; icut++) {
 				int loc_fid_cut = ccal_fiducial_cut(loc_pos, 0.1*(double)icut);
 				if(!loc_fid_cut) locNGoodCCALShowers_fid_cut[icut]++;
 			}
 		}
 		
-		if(!fid_cut_norm && e_cut_norm) locNGoodCCALShowers++;
+		// loop over all timing cuts and count number of showers:
+		if(e_cut_norm && !fid_cut_norm) {
+			for(int icut=0; icut<m_n_hists_ccalT; icut++) {
+				double loc_t_cut = 0.5*(double)(icut+1);
+				if(fabs(loc_t) < loc_t_cut) locNGoodCCALShowers_t_cut[icut]++;
+			}
+		}
+		
+		if(!fid_cut_norm && e_cut_norm && t_cut_norm) locNGoodCCALShowers++;
 	}
 	
 	//---------------------------------------------------------------------------//
@@ -158,10 +184,11 @@ void ComptonAna::comptonAnalysis_systematics() {
 		) loc_weight = -1.0/(2.0*m_beam_bunches_acc);
 		else continue;
 		
-		//if(loc_weight < 0.0) loc_weight *= m_acc_scale_factor[igam];
-		
-		locGoodBeamPhotons.push_back(igam);
-		locGoodBeamPhotons_weight.push_back(loc_weight);
+		if(loc_weight < 0.0) loc_weight *= (m_acc_scale_factor[igam]-0.0);
+		if(m_beam_e[igam] > 6.0) {
+			locGoodBeamPhotons.push_back(igam);
+			locGoodBeamPhotons_weight.push_back(loc_weight);
+		}
 	}
 	
 	//---------------------------------------------------------------------------//
@@ -198,10 +225,14 @@ void ComptonAna::comptonAnalysis_systematics() {
 			}
 		}
 		
-		// check if FCAL shower passes nominal energy and fiducial cuts:
+		// lets place a 2degree cut on the angle of the FCAL shower:
+		//if((theta1*(180./TMath::Pi())) < 2.0) continue;
+		
+		// check if FCAL shower passes nominal energy, timing, and fiducial cuts:
 		
 		int fcal_e_cut_norm   = e1 > m_cut_fcalE ? 1 : 0;
 		int fcal_fid_cut_norm = fcal_fiducial_cut(pos1, 1.0);
+		int fcal_t_cut_norm   = fabs(t1) < m_cut_fcalrfdt ? 1 : 0;
 		
 		//--------------------------------------------------------------------------------//
 		
@@ -236,10 +267,11 @@ void ComptonAna::comptonAnalysis_systematics() {
 				}
 			}
 			
-			// check if CCAL shower passes nominal energy and fiducial cuts:
+			// check if CCAL shower passes nominal energy, timing, and fiducial cuts:
 			
 			int ccal_e_cut_norm   = e2 > m_cut_ccalE ? 1 : 0;
 			int ccal_fid_cut_norm = ccal_fiducial_cut(pos2, 1.0);
+			int ccal_t_cut_norm   = fabs(t2) < m_cut_ccalrfdt ? 1 : 0;
 			
 			// calculate deltaPhi:
 			
@@ -275,8 +307,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 				int   deltaK_cut_norm = cut_deltaK(  deltaK,   eb, m_cut_deltaK,   m_cut_deltaK);
 				
 				if(deltaPhi_cut_norm && 
-					fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-					ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1) {
+					fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+					ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1) {
 					
 					h_mgg_vs_deltaK->Fill(deltaK, invmass, fill_weight);
 					if(deltaE_cut_norm) {
@@ -294,8 +326,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm &&  deltaPhi_cut_norm && 
-						fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-						ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
 					{
 						h_deltaK_tagh_fcal_phi[fcal_phi_sect]->Fill(loc_tag_counter, deltaK, fill_weight);
 						h_deltaK_tagh_ccal_phi[ccal_phi_sect]->Fill(loc_tag_counter, deltaK, fill_weight);
@@ -315,8 +347,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm &&  deltaPhi_cut_norm && 
-						                   !fcal_fid_cut_norm && 
-						ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+						                   fcal_t_cut_norm && !fcal_fid_cut_norm && 
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
 					{
 						for(int icut=0; icut<m_n_hists_fcalE; icut++) {
 							double loc_e_cut = 0.05 * (double)icut;
@@ -330,8 +362,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm &&  deltaPhi_cut_norm && 
-						fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-						                   !ccal_fid_cut_norm)
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						                   ccal_t_cut_norm && !ccal_fid_cut_norm)
 					{
 						for(int icut=0; icut<m_n_hists_ccalE; icut++) {
 							double loc_e_cut = 0.5 * (double)icut;
@@ -345,8 +377,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm &&  deltaPhi_cut_norm && 
-						fcal_e_cut_norm &&
-						ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+						fcal_e_cut_norm && fcal_t_cut_norm && 
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
 					{
 						for(int icut=0; icut<m_n_fid_cuts; icut++) {
 							int loc_fid_cut = fcal_fiducial_cut(pos1, 0.5 + 0.1*(double)icut);
@@ -360,8 +392,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm &&  deltaPhi_cut_norm && 
-						fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-						ccal_e_cut_norm)
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						ccal_e_cut_norm && ccal_t_cut_norm)
 					{
 						for(int icut=0; icut<m_n_fid_cuts; icut++) {
 							int loc_fid_cut = ccal_fiducial_cut(pos2, 0.1*(double)icut);
@@ -371,12 +403,42 @@ void ComptonAna::comptonAnalysis_systematics() {
 						}
 					}
 					
+					// Vary minuum FCAL shower timing cut:
+					
+					if(
+						deltaE_cut_norm &&  deltaPhi_cut_norm && 
+						fcal_e_cut_norm &&                    !fcal_fid_cut_norm && 
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+					{
+						for(int icut=0; icut<m_n_hists_fcalT; icut++) {
+							double loc_t_cut = 0.5 * (double)(icut+1);
+							if(fabs(t1) < loc_t_cut && locNGoodFCALShowers_t_cut[icut]==1) {
+								h_deltaK_tagh_fcalT[icut]->Fill(loc_tag_counter, deltaK, fill_weight);
+							}
+						}
+					}
+					
+					// Vary minuum CCAL shower timing cut:
+					
+					if(
+						deltaE_cut_norm &&  deltaPhi_cut_norm && 
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						ccal_t_cut_norm &&                    !ccal_fid_cut_norm)
+					{
+						for(int icut=0; icut<m_n_hists_ccalT; icut++) {
+							double loc_t_cut = 0.5 * (double)(icut+1);
+							if(fabs(t2) < loc_t_cut && locNGoodCCALShowers_t_cut[icut]==1) {
+								h_deltaK_tagh_ccalT[icut]->Fill(loc_tag_counter, deltaK, fill_weight);
+							}
+						}
+					}
+					
 					// Vary DeltaE cut:
 					
-					if(invmass < 0.12 &&
+					if(
 						                    deltaPhi_cut_norm && 
-						fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-						ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
 					{
 						for(int icut=0; icut<m_n_hists_deltaE; icut++) {
 							if(cut_deltaE(deltaE, eb, m_deltaE_cuts[icut], 1.e2)) {
@@ -389,8 +451,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm && 
-						fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-						ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
 					{
 						for(int icut=0; icut<m_n_hists_deltaPhi; icut++) {
 							if(cut_deltaPhi(deltaPhi, eb, m_deltaPhi_cuts[icut], m_deltaPhi_cuts[icut])) {
@@ -404,8 +466,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm &&  deltaPhi_cut_norm && 
-						fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-						ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
 					{
 						h_deltaK_tagm_fcal_phi[fcal_phi_sect]->Fill(loc_tag_counter, deltaK, fill_weight);
 						h_deltaK_tagm_ccal_phi[ccal_phi_sect]->Fill(loc_tag_counter, deltaK, fill_weight);
@@ -424,8 +486,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm &&  deltaPhi_cut_norm && 
-						                   !fcal_fid_cut_norm && 
-						ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+						                   fcal_t_cut_norm && !fcal_fid_cut_norm && 
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
 					{
 						for(int icut=0; icut<m_n_hists_fcalE; icut++) {
 							double loc_e_cut = 0.05 * (double)icut;
@@ -439,8 +501,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm &&  deltaPhi_cut_norm && 
-						fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-						                   !ccal_fid_cut_norm)
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						                   ccal_t_cut_norm && !ccal_fid_cut_norm)
 					{
 						for(int icut=0; icut<m_n_hists_ccalE; icut++) {
 							double loc_e_cut = 0.5 * (double)icut;
@@ -454,8 +516,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm &&  deltaPhi_cut_norm && 
-						fcal_e_cut_norm &&
-						ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+						fcal_e_cut_norm && fcal_t_cut_norm && 
+						ccal_e_cut_norm && fcal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
 					{
 						for(int icut=0; icut<m_n_fid_cuts; icut++) {
 							int loc_fid_cut = fcal_fiducial_cut(pos1, 0.5 + 0.1*(double)icut);
@@ -469,8 +531,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm &&  deltaPhi_cut_norm && 
-						fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-						ccal_e_cut_norm)
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						ccal_e_cut_norm && ccal_t_cut_norm)
 					{
 						for(int icut=0; icut<m_n_fid_cuts; icut++) {
 							int loc_fid_cut = ccal_fiducial_cut(pos2, 0.1*(double)icut);
@@ -480,12 +542,42 @@ void ComptonAna::comptonAnalysis_systematics() {
 						}
 					}
 					
+					// Vary minuum FCAL shower timing cut:
+					
+					if(
+						deltaE_cut_norm &&  deltaPhi_cut_norm && 
+						fcal_e_cut_norm &&                    !fcal_fid_cut_norm && 
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+					{
+						for(int icut=0; icut<m_n_hists_fcalT; icut++) {
+							double loc_t_cut = 0.5 * (double)(icut+1);
+							if(fabs(t1) < loc_t_cut && locNGoodFCALShowers_t_cut[icut]==1) {
+								h_deltaK_tagm_fcalT[icut]->Fill(loc_tag_counter, deltaK, fill_weight);
+							}
+						}
+					}
+					
+					// Vary minuum CCAL shower timing cut:
+					
+					if(
+						deltaE_cut_norm &&  deltaPhi_cut_norm && 
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						ccal_t_cut_norm &&                    !ccal_fid_cut_norm)
+					{
+						for(int icut=0; icut<m_n_hists_ccalT; icut++) {
+							double loc_t_cut = 0.5 * (double)(icut+1);
+							if(fabs(t2) < loc_t_cut && locNGoodCCALShowers_t_cut[icut]==1) {
+								h_deltaK_tagm_ccalT[icut]->Fill(loc_tag_counter, deltaK, fill_weight);
+							}
+						}
+					}
+					
 					// Vary DeltaE cut:
 					
-					if(invmass < 0.12 &&
+					if(
 						                    deltaPhi_cut_norm && 
-						fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-						ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
 					{
 						for(int icut=0; icut<m_n_hists_deltaE; icut++) {
 							if(cut_deltaE(deltaE, eb, m_deltaE_cuts[icut], 1.e2)) {
@@ -498,8 +590,8 @@ void ComptonAna::comptonAnalysis_systematics() {
 					
 					if(
 						deltaE_cut_norm && 
-						fcal_e_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
-						ccal_e_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
+						fcal_e_cut_norm && fcal_t_cut_norm && !fcal_fid_cut_norm && locNGoodFCALShowers==1 &&
+						ccal_e_cut_norm && ccal_t_cut_norm && !ccal_fid_cut_norm && locNGoodCCALShowers==1)
 					{
 						for(int icut=0; icut<m_n_hists_deltaPhi; icut++) {
 							if(cut_deltaPhi(deltaPhi, eb, m_deltaPhi_cuts[icut], m_deltaPhi_cuts[icut])) {
@@ -558,6 +650,42 @@ void ComptonAna::initHistograms_systematics() {
 			Form("#DeltaK (E_{CCAL} > %.2f GeV); TAGM Counter; E_{Compton} - E_{#gamma} [GeV]", loc_cut_val), 
 			102, 0.5, 102.5, 1000, -8.0, 8.0);
 		h_deltaK_tagm_ccalE[ihist]->Sumw2();
+	}
+	
+	//-----------------------------------------//
+	// Vary minimum FCAL shower timing cut:
+	
+	for(int ihist=0; ihist<m_n_hists_fcalT; ihist++) {
+		double loc_cut_val = 0.5 * (double)(ihist+1);
+		int loc_hist_index = (int)(10.*loc_cut_val);
+		
+		h_deltaK_tagh_fcalT[ihist] = new TH2F(Form("deltaK_tagh_%02dfcalT", loc_hist_index), 
+			Form("#DeltaK (|t_{FCAL}-t_{RF}| < %.2f ns); TAGH Counter; E_{Compton} - E_{#gamma} [GeV]", loc_cut_val), 
+			274, 0.5, 274.5, 1000, -8.0, 8.0);
+		h_deltaK_tagh_fcalT[ihist]->Sumw2();
+		
+		h_deltaK_tagm_fcalT[ihist] = new TH2F(Form("deltaK_tagm_%02dfcalT", loc_hist_index), 
+			Form("#DeltaK (|t_{FCAL}-t_{RF}| < %.2f ns); TAGM Counter; E_{Compton} - E_{#gamma} [GeV]", loc_cut_val), 
+			102, 0.5, 102.5, 1000, -8.0, 8.0);
+		h_deltaK_tagm_fcalT[ihist]->Sumw2();
+	}
+	
+	//-----------------------------------------//
+	// Vary minimum CCAL shower timing cut:
+	
+	for(int ihist=0; ihist<m_n_hists_ccalT; ihist++) {
+		double loc_cut_val = 0.5 * (double)(ihist+1);
+		int loc_hist_index = (int)(10.*loc_cut_val);
+		
+		h_deltaK_tagh_ccalT[ihist] = new TH2F(Form("deltaK_tagh_%02dccalT", loc_hist_index), 
+			Form("#DeltaK (|t_{CCAL}-t_{RF}| < %.2f ns); TAGH Counter; E_{Compton} - E_{#gamma} [GeV]", loc_cut_val), 
+			274, 0.5, 274.5, 1000, -8.0, 8.0);
+		h_deltaK_tagh_ccalT[ihist]->Sumw2();
+		
+		h_deltaK_tagm_ccalT[ihist] = new TH2F(Form("deltaK_tagm_%02dccalT", loc_hist_index), 
+			Form("#DeltaK (|t_{CCAL}-t_{RF}| < %.2f ns); TAGM Counter; E_{Compton} - E_{#gamma} [GeV]", loc_cut_val), 
+			102, 0.5, 102.5, 1000, -8.0, 8.0);
+		h_deltaK_tagm_ccalT[ihist]->Sumw2();
 	}
 	
 	//-----------------------------------------//
@@ -703,6 +831,22 @@ void ComptonAna::resetHistograms_systematics() {
 	}
 	
 	//-----------------------------------------//
+	// Vary minimum FCAL shower timing cut:
+	
+	for(int ihist=0; ihist<m_n_hists_fcalT; ihist++) {
+		h_deltaK_tagh_fcalT[ihist]->Reset();
+		h_deltaK_tagm_fcalT[ihist]->Reset();
+	}
+	
+	//-----------------------------------------//
+	// Vary minimum CCAL shower timing cut:
+	
+	for(int ihist=0; ihist<m_n_hists_ccalT; ihist++) {
+		h_deltaK_tagh_ccalT[ihist]->Reset();
+		h_deltaK_tagm_ccalT[ihist]->Reset();
+	}
+	
+	//-----------------------------------------//
 	// Vary size of square fiducial beam-hole cuts:
 	
 	for(int icut=0; icut<m_n_fid_cuts; icut++) {
@@ -792,6 +936,28 @@ void ComptonAna::writeHistograms_systematics() {
 		h_deltaK_tagm_ccalE[ihist]->Write();
 	}
 	dir_ccalE->cd("../");
+	
+	//-----------------------------------------//
+	// Vary minimum FCAL shower timing cut:
+	
+	TDirectory *dir_fcalT = new TDirectoryFile("fcalT", "fcalT");
+	dir_fcalT->cd();
+	for(int ihist=0; ihist<m_n_hists_fcalT; ihist++) {
+		h_deltaK_tagh_fcalT[ihist]->Write();
+		h_deltaK_tagm_fcalT[ihist]->Write();
+	}
+	dir_fcalT->cd("../");
+	
+	//-----------------------------------------//
+	// Vary minimum CCAL shower timing cut:
+	
+	TDirectory *dir_ccalT = new TDirectoryFile("ccalT", "ccalT");
+	dir_ccalT->cd();
+	for(int ihist=0; ihist<m_n_hists_ccalT; ihist++) {
+		h_deltaK_tagh_ccalT[ihist]->Write();
+		h_deltaK_tagm_ccalT[ihist]->Write();
+	}
+	dir_ccalT->cd("../");
 	
 	//-----------------------------------------//
 	// Vary size of square fiducial beam-hole cuts:

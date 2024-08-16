@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
 	
 	// Directory where output ROOT files will be stored:
 	sprintf(rootFile_pathName, 
-		"/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/analyze_data/rootFiles/systematics/test_mgg_cut", 
+		"/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/analyze_data/rootFiles/systematics", 
 		genSettings.run_number);
 	
 	// Initialize histograms to be filled:

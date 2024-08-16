@@ -76,6 +76,38 @@ void ComptonAna::comptonAnalysis() {
 		return;
 	}
 	
+	int is_triplet = false;
+	if(m_nmc=3) {
+		if(m_mc_pdgtype[2]==11.0) is_triplet = true;
+	}
+	//if(!is_triplet) return;
+	
+	if(m_event > 5.e5) return;
+	
+	// get the angle of the scattered photon:
+	
+	double loc_thrown_photon_angle = m_mc_theta[1];
+	h_thrown_photon_angle->Fill(loc_thrown_photon_angle);
+	
+	// calculate invariant mass of thrown pair:
+	int part1 = 0;
+	int part2 = 1;
+	//if(is_triplet && m_mc_e[2]>m_mc_e[1]) part2 = 2;
+	
+	double  e_thrown = m_mc_e[part1] + m_mc_e[part2];
+	
+	double px_thrown = m_mc_p[part1]*sin(m_mc_theta[part1]*TMath::Pi()/180.0)*cos(m_mc_phi[part1]*TMath::Pi()/180.0)
+		+ m_mc_p[part2]*sin(m_mc_theta[part2]*TMath::Pi()/180.0)*cos(m_mc_phi[part2]*TMath::Pi()/180.0);
+	
+	double py_thrown = m_mc_p[part1]*sin(m_mc_theta[part1]*TMath::Pi()/180.0)*sin(m_mc_phi[part1]*TMath::Pi()/180.0)
+		+ m_mc_p[part2]*sin(m_mc_theta[part2]*TMath::Pi()/180.0)*sin(m_mc_phi[part2]*TMath::Pi()/180.0);
+	
+	double pz_thrown = m_mc_p[part1]*cos(m_mc_theta[part1]*TMath::Pi()/180.0) 
+		+ m_mc_p[part2]*cos(m_mc_theta[part2]*TMath::Pi()/180.0);
+	
+	double invmass_thrown = sqrt(pow(e_thrown,2.0) - pow(px_thrown,2.0) - pow(py_thrown,2.0) - pow(pz_thrown,2.0));
+	h_thrown_mass->Fill(invmass_thrown);
+	
 	//
 	// Make a list of good FCAL showers to use in analysis:
 	//
@@ -88,6 +120,7 @@ void ComptonAna::comptonAnalysis() {
 		double loc_t = m_fcal_t[ishow] - (loc_pos.Mag()/m_c) - m_rfTime;
 		
 		h_fcal_rf_dt->Fill(loc_t);
+		//locGoodFCALShowers.push_back(ishow);
 		
 		int loc_fid_cut = fcal_fiducial_cut(loc_pos, 1.0);
 		if(fabs(loc_t) < m_cut_fcalrfdt) {
@@ -113,6 +146,7 @@ void ComptonAna::comptonAnalysis() {
 		double loc_t = m_ccal_t[ishow] - (loc_pos.Mag()/m_c) - m_rfTime;
 		
 		h_ccal_rf_dt->Fill(loc_t);
+		//locGoodCCALShowers.push_back(ishow);
 		
 		int loc_fid_cut = ccal_fiducial_cut(loc_pos);
 		if(fabs(loc_t) < m_cut_ccalrfdt) {
@@ -139,6 +173,8 @@ void ComptonAna::comptonAnalysis() {
 		double loc_dt     = m_beam_t[igam] - m_rfTime;
 		double loc_weight = 0.0;
 		
+		h_beam_rf_dt->Fill(loc_dt);
+		
 		double loc_beam_cut = m_beam_bunches_main*m_cut_beamrfdt;
 		
 		if(fabs(loc_dt) < loc_beam_cut) loc_weight = 1.0;
@@ -148,10 +184,11 @@ void ComptonAna::comptonAnalysis() {
 		) loc_weight = -1.0/(2.0*m_beam_bunches_acc);
 		else continue;
 		
-		if(loc_weight < 0.0) loc_weight *= m_acc_scale_factor[igam];
-		
-		locGoodBeamPhotons.push_back(igam);
-		locGoodBeamPhotons_weight.push_back(loc_weight);
+		//if(loc_weight < 0.0) loc_weight *= m_acc_scale_factor[igam];
+		if(m_beam_e[igam] > 6.0) {
+			locGoodBeamPhotons.push_back(igam);
+			locGoodBeamPhotons_weight.push_back(loc_weight);
+		}
 	}
 	
 	for(auto &ifcal : locGoodFCALShowers) {
@@ -175,6 +212,10 @@ void ComptonAna::comptonAnalysis() {
 		
 		//--------------------------------------------------------------------------------//
 		
+		int   fid_cut_1 = fcal_fiducial_cut(pos1, 1.0);
+		int min_e_cut_1 = e1 > 0.35 ? 1 : 0;
+		int  rf_t_cut_1 = fabs(t1) < 2.004 ? 1 : 0;
+		
 		for(auto &iccal : locGoodCCALShowers) {
 			
 			double e2 = m_ccal_e[iccal];
@@ -195,6 +236,10 @@ void ComptonAna::comptonAnalysis() {
 			double invmass = sqrt(2.0*e1*e2*(1.-cos12));
 			
 			double opangle = acos(cos12) * (180./TMath::Pi());
+			
+			int   fid_cut_2 = ccal_fiducial_cut(pos2);
+			int min_e_cut_2 = e2 > 3.0 ? 1 : 0;
+			int  rf_t_cut_2 = fabs(t2) < 2.004 ? 1 : 0;
 			
 			// loop over beam photons:
 			
@@ -375,7 +420,23 @@ void ComptonAna::comptonAnalysis() {
 					}
 				}
 				
-				if(cut_vals[8]) {
+				
+				h_deltaE_vs_thrown_mass->Fill(invmass_thrown, deltaE_smeared, fill_weight);
+				h_deltaE_vs_rec_mass->Fill(invmass, deltaE_smeared, fill_weight);
+				h_deltaK_vs_thrown_mass->Fill(invmass_thrown, deltaK_smeared, fill_weight);
+				h_deltaK_vs_rec_mass->Fill(invmass, deltaK_smeared, fill_weight);
+				if(invmass_thrown<0.03) {
+					h_elas_low_mass->Fill(deltaE_smeared, deltaK_smeared, fill_weight);
+				} else {
+					h_elas_high_mass->Fill(deltaE_smeared, deltaK_smeared, fill_weight);
+				}
+				h_rec_vs_thrown_mass->Fill(invmass_thrown, invmass, fill_weight);
+				
+				if(cut_vals[4]) {
+					
+					if(e_cut && phi_cut && k_cut) {
+						h_thrown_photon_angle_accepted->Fill(loc_thrown_photon_angle, fill_weight);
+					}
 					
 					if(e_cut) {
 						double sumPhi = (pos2.Phi()+ pos1.Phi()) * (180./TMath::Pi());
@@ -396,7 +457,72 @@ void ComptonAna::comptonAnalysis() {
 					}
 				}
 				
-			}
+				if(is_triplet) {
+					h_deltaE_triplet[0]->Fill(eb, deltaE_smeared, fill_weight);
+					h_deltaK_triplet[0]->Fill(eb, deltaK_smeared, fill_weight);
+					h_deltaPhi_triplet[0]->Fill(eb, deltaPhi_smeared, fill_weight);
+				} else {
+					h_deltaE_pair[0]->Fill(eb, deltaE_smeared, fill_weight);
+					h_deltaK_pair[0]->Fill(eb, deltaK_smeared, fill_weight);
+					h_deltaPhi_pair[0]->Fill(eb, deltaPhi_smeared, fill_weight);
+				}
+				if(!fid_cut_1 && !fid_cut_2) {
+					if(is_triplet) {
+						h_deltaE_triplet[1]->Fill(eb, deltaE_smeared, fill_weight);
+						h_deltaK_triplet[1]->Fill(eb, deltaK_smeared, fill_weight);
+						h_deltaPhi_triplet[1]->Fill(eb, deltaPhi_smeared, fill_weight);
+					} else {
+						h_deltaE_pair[1]->Fill(eb, deltaE_smeared, fill_weight);
+						h_deltaK_pair[1]->Fill(eb, deltaK_smeared, fill_weight);
+						h_deltaPhi_pair[1]->Fill(eb, deltaPhi_smeared, fill_weight);
+					}
+					if(min_e_cut_1 && min_e_cut_2) {
+						if(is_triplet) {
+							h_deltaE_triplet[2]->Fill(eb, deltaE_smeared, fill_weight);
+							h_deltaK_triplet[2]->Fill(eb, deltaK_smeared, fill_weight);
+							h_deltaPhi_triplet[2]->Fill(eb, deltaPhi_smeared, fill_weight);
+						} else {
+							h_deltaE_pair[2]->Fill(eb, deltaE_smeared, fill_weight);
+							h_deltaK_pair[2]->Fill(eb, deltaK_smeared, fill_weight);
+							h_deltaPhi_pair[2]->Fill(eb, deltaPhi_smeared, fill_weight);
+						}
+						if(rf_t_cut_1 && rf_t_cut_2) {
+							if(is_triplet) {
+								h_deltaE_triplet[3]->Fill(eb, deltaE_smeared, fill_weight);
+								h_deltaK_triplet[3]->Fill(eb, deltaK_smeared, fill_weight);
+								h_deltaPhi_triplet[3]->Fill(eb, deltaPhi_smeared, fill_weight);
+							} else {
+								h_deltaE_pair[3]->Fill(eb, deltaE_smeared, fill_weight);
+								h_deltaK_pair[3]->Fill(eb, deltaK_smeared, fill_weight);
+								h_deltaPhi_pair[3]->Fill(eb, deltaPhi_smeared, fill_weight);
+							}
+							if(e_cut) {
+								if(is_triplet) {
+									h_deltaE_triplet[4]->Fill(eb, deltaE_smeared, fill_weight);
+									h_deltaK_triplet[4]->Fill(eb, deltaK_smeared, fill_weight);
+									h_deltaPhi_triplet[4]->Fill(eb, deltaPhi_smeared, fill_weight);
+								} else {
+									h_deltaE_pair[4]->Fill(eb, deltaE_smeared, fill_weight);
+									h_deltaK_pair[4]->Fill(eb, deltaK_smeared, fill_weight);
+									h_deltaPhi_pair[4]->Fill(eb, deltaPhi_smeared, fill_weight);
+								}
+								if(phi_cut) {
+									if(is_triplet) {
+										h_deltaE_triplet[5]->Fill(eb, deltaE_smeared, fill_weight);
+										h_deltaK_triplet[5]->Fill(eb, deltaK_smeared, fill_weight);
+										h_deltaPhi_triplet[5]->Fill(eb, deltaPhi_smeared, fill_weight);
+									} else {
+										h_deltaE_pair[5]->Fill(eb, deltaE_smeared, fill_weight);
+										h_deltaK_pair[5]->Fill(eb, deltaK_smeared, fill_weight);
+										h_deltaPhi_pair[5]->Fill(eb, deltaPhi_smeared, fill_weight);
+									}
+								} // deltaPhi cut
+							} // deltaE cut
+						} // rf timing cut
+					} // min energy cut
+				} // fiducial cut
+				
+			} // end loop over beam photons
 		} // end loop over CCAL shower
 	} // end loop over FCAL showers
 	
@@ -1075,6 +1201,11 @@ void ComptonAna::readEvent() {
 
 void ComptonAna::initHistograms() {
 	
+	h_thrown_photon_angle          = new TH1F("thrown_photon_angle", 
+		"Thrown Photon Angle; #theta_{#gamma} [#circ]", 1000, 0., 10.);
+	h_thrown_photon_angle_accepted = new TH1F("thrown_photon_angle_accepted", 
+		"Thrown Photon Angle; #theta_{#gamma} [#circ]", 1000, 0., 10.);
+	
 	h_reaction_weight        = new TH1F("reaction_weight",        "Reaction Weight",                  10000, 0., 1.e4);
 	h_reaction_weight_double = new TH1F("reaction_weight_double", "Reaction Weight (Double Compton)", 10000, 0., 1.e4);
 	
@@ -1084,6 +1215,41 @@ void ComptonAna::initHistograms() {
 	h_fcal_rf_dt = new TH1F("fcal_rf_dt", "t_{FCAL} - t_{RF}; [ns]", 2000, -100., 100.);
 	h_ccal_rf_dt = new TH1F("ccal_rf_dt", "t_{FCAL} - t_{RF}; [ns]", 2000, -100., 100.);
 	h_beam_rf_dt = new TH1F("beam_rf_dt", "t_{FCAL} - t_{RF}; [ns]", 2000, -100., 100.);
+	
+	h_thrown_mass           = new TH1F("thrown_mass", "; M_{e^{+}e^{-}}(thrown) [GeV/c^{2}]", 1000,  0., 1.);
+	
+	h_deltaE_vs_thrown_mass = new TH2F("deltaE_vs_thrown_mass", "; M_{e^{+}e^{-}}(thrown) [GeV/c^{2}]; #DeltaE [GeV]",
+		1000, 0.0, 1.0, 1000, -8.0, 8.0);
+	h_deltaE_vs_rec_mass = new TH2F("deltaE_vs_rec_mass", "; M_{e^{+}e^{-}}(reconstructed) [GeV/c^{2}]; #DeltaE [GeV]",
+		1000, 0.0, 1.0, 1000, -8.0, 8.0);
+	h_deltaK_vs_thrown_mass = new TH2F("deltaK_vs_thrown_mass", "; M_{e^{+}e^{-}}(thrown) [GeV/c^{2}]; #DeltaK [GeV]",
+		1000, 0.0, 1.0, 1000, -8.0, 8.0);
+	h_deltaK_vs_rec_mass = new TH2F("deltaK_vs_rec_mass", "; M_{e^{+}e^{-}}(reconstructed) [GeV/c^{2}]; #DeltaK [GeV]",
+		1000, 0.0, 1.0, 1000, -8.0, 8.0);
+	h_elas_low_mass = new TH2F("elas_low_mass", "; #DeltaE [GeV]; #DeltaK [GeV]",
+		1000, -8.0, 8.0, 1000, -8.0, 8.0);
+	h_elas_high_mass = new TH2F("elas_high_mass", "; #DeltaE [GeV]; #DeltaK [GeV]",
+		1000, -8.0, 8.0, 1000, -8.0, 8.0);
+	
+	h_rec_vs_thrown_mass = new TH2F("rec_vs_thrown_mass", 
+		"; M_{e^{+}e^{-}}(thrown) [GeV/c^{2}]; M_{e^{+}e^{-}}(reconstructed) [GeV/c^{2}]",
+		1000, 0.0, 1.0, 1000, 0.0, 1.0);
+	
+	for(int ihist=0; ihist<6; ihist++) {
+		h_deltaE_pair[ihist]   = new TH2F(Form("deltaE_pair_%d",ihist),   "#DeltaE vs. E_{#gamma}; [GeV]; [GeV]", 
+			120, 0., 12., 2000, -8.0, 8.0);
+		h_deltaK_pair[ihist]   = new TH2F(Form("deltaK_pair_%d",ihist),   "#DeltaK vs. E_{#gamma}; [GeV]; [GeV]", 
+			120, 0., 12., 1000, -8.0, 8.0);
+		h_deltaPhi_pair[ihist] = new TH2F(Form("deltaPhi_pair_%d",ihist), "#Delta#phi vs. E_{#gamma}; [GeV]; [#circ]", 
+			120, 0., 12., 2000, 0.0, 360.0);
+		
+		h_deltaE_triplet[ihist]   = new TH2F(Form("deltaE_triplet_%d",ihist),   "#DeltaE vs. E_{#gamma}; [GeV]; [GeV]", 
+			120, 0., 12., 2000, -8.0, 8.0);
+		h_deltaK_triplet[ihist]   = new TH2F(Form("deltaK_triplet_%d",ihist),   "#DeltaK vs. E_{#gamma}; [GeV]; [GeV]", 
+			120, 0., 12., 1000, -8.0, 8.0);
+		h_deltaPhi_triplet[ihist] = new TH2F(Form("deltaPhi_triplet_%d",ihist), "#Delta#phi vs. E_{#gamma}; [GeV]; [#circ]", 
+			120, 0., 12., 2000, 0.0, 360.0);
+	}
 	
 	//---------------------------------------------//
 	for(int ihist=0; ihist<m_n_cuts; ihist++) {
@@ -1189,6 +1355,9 @@ void ComptonAna::initHistograms() {
 
 void ComptonAna::resetHistograms() {
 	
+	h_thrown_photon_angle->Reset();
+	h_thrown_photon_angle_accepted->Reset();
+	
 	h_reaction_weight->Reset();
 	h_reaction_weight_double->Reset();
 	
@@ -1198,6 +1367,24 @@ void ComptonAna::resetHistograms() {
 	h_fcal_rf_dt->Reset();
 	h_ccal_rf_dt->Reset();
 	h_beam_rf_dt->Reset();
+	
+	h_thrown_mass->Reset();
+	h_deltaE_vs_thrown_mass->Reset();
+	h_deltaE_vs_rec_mass->Reset();
+	h_deltaK_vs_thrown_mass->Reset();
+	h_deltaK_vs_rec_mass->Reset();
+	h_elas_low_mass->Reset();
+	h_elas_high_mass->Reset();
+	h_rec_vs_thrown_mass->Reset();
+	
+	for(int ihist=0; ihist<6; ihist++) {
+		h_deltaE_pair[ihist]->Reset();
+		h_deltaK_pair[ihist]->Reset();
+		h_deltaPhi_pair[ihist]->Reset();
+		h_deltaE_triplet[ihist]->Reset();
+		h_deltaK_triplet[ihist]->Reset();
+		h_deltaPhi_triplet[ihist]->Reset();
+	}
 	
 	for(int ihist=0; ihist<m_n_cuts; ihist++) {
 		h_deltaE_tagh[ihist]->Reset();
@@ -1262,6 +1449,9 @@ void ComptonAna::writeHistograms() {
 	TFile *fOut = new TFile(m_output_fname.c_str(), "RECREATE");
 	fOut->cd();
 	
+	h_thrown_photon_angle->Write();
+	h_thrown_photon_angle_accepted->Write();
+	
 	h_reaction_weight->Write();
 	h_reaction_weight_double->Write();
 	
@@ -1271,6 +1461,27 @@ void ComptonAna::writeHistograms() {
 	h_fcal_rf_dt->Write();
 	h_ccal_rf_dt->Write();
 	h_beam_rf_dt->Write();
+	
+	h_thrown_mass->Write();
+	h_deltaE_vs_thrown_mass->Write();
+	h_deltaE_vs_rec_mass->Write();
+	h_deltaK_vs_thrown_mass->Write();
+	h_deltaK_vs_rec_mass->Write();
+	h_elas_low_mass->Write();
+	h_elas_high_mass->Write();
+	h_rec_vs_thrown_mass->Write();
+	
+	TDirectory *dir_cuts = new TDirectoryFile("cuts", "cuts");
+	dir_cuts->cd();
+	for(int ihist=0; ihist<6; ihist++) {
+		h_deltaE_pair[ihist]->Write();
+		h_deltaK_pair[ihist]->Write();
+		h_deltaPhi_pair[ihist]->Write();
+		h_deltaE_triplet[ihist]->Write();
+		h_deltaK_triplet[ihist]->Write();
+		h_deltaPhi_triplet[ihist]->Write();
+	}
+	dir_cuts->cd("../");
 	
 	TDirectory *dir_deltaE = new TDirectoryFile("deltaE", "deltaE");
 	dir_deltaE->cd();
