@@ -15,11 +15,18 @@ void calc_cs(int tag_sys, int counter, double &loc_cs, double &loc_csE) {
 		loc_yieldE = tagh_yieldE[counter-1];
 		loc_flux   = tagh_flux[counter-1];
 		loc_fluxE  = tagh_fluxE[counter-1];
-		if(USE_F_ACC) loc_acc = f_acc->Eval(loc_eb);
-		else {
+		if(USE_F_ACC) {
+			loc_acc  = f_acc->Eval(loc_eb);
+			loc_accE = 0.;
+		} else {
 			double test_acc = tagh_acc[counter-1];
-			if(test_acc==0.) loc_acc = f_acc->Eval(tagh_en[counter-1]);
-			else loc_acc = test_acc;
+			if(test_acc==0.) {
+				loc_acc  = f_acc->Eval(tagh_en[counter-1]);
+				loc_accE = 0.;
+			} else {
+				loc_acc  = test_acc;
+				loc_accE = tagh_accE[counter-1];
+			}
 		}
 	} else {
 		
@@ -28,11 +35,18 @@ void calc_cs(int tag_sys, int counter, double &loc_cs, double &loc_csE) {
 		loc_yieldE = tagm_yieldE[counter-1];
 		loc_flux   = tagm_flux[counter-1];
 		loc_fluxE  = tagm_fluxE[counter-1];
-		if(USE_F_ACC) loc_acc = f_acc->Eval(loc_eb);
-		else {
+		if(USE_F_ACC) {
+			loc_acc  = f_acc->Eval(loc_eb);
+			loc_accE = 0.;
+		} else {
 			double test_acc = tagm_acc[counter-1];
-			if(test_acc==0.) loc_acc = f_acc->Eval(tagm_en[counter-1]);
-			else loc_acc = test_acc;
+			if(test_acc==0.) {
+				loc_acc  = f_acc->Eval(tagm_en[counter-1]);
+				loc_accE = 0.;
+			} else {
+				loc_acc  = test_acc;
+				loc_accE = tagm_accE[counter-1];
+			}
 		}
 	}
 	
@@ -42,13 +56,17 @@ void calc_cs(int tag_sys, int counter, double &loc_cs, double &loc_csE) {
 		return;
 	}
 	
-	loc_accE = 0.;
+	double flux_sysE = 0.;//tag_sys==0 ? tagh_flux_unc[counter-1] : tagm_flux_unc[counter-1];
+	loc_fluxE = sqrt(pow(1.e-2*flux_sysE*loc_flux,2.0) + pow(loc_fluxE,2.0));
+	
 	
 	loc_cs  = loc_yield / (loc_flux * loc_acc * n_e * mb);
 	loc_csE = sqrt(
 		pow(loc_yieldE / (loc_flux * loc_acc * n_e * mb), 2.0) + 
 		pow(loc_fluxE * loc_yield / (loc_flux * loc_flux * loc_acc * n_e * mb), 2.0)
 	);
+	//	pow(loc_accE * loc_yield / (loc_flux * loc_acc * loc_acc * n_e * mb), 2.0)
+	//);
 	
 	loc_cs  /= f_abs;
 	loc_csE /= f_abs;
@@ -204,20 +222,21 @@ void plot_cs(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	top_pad->cd();
 	gCS->Draw("AP");
 	f_theory->Draw("same");
-	//f_nist->Draw("same");
+	f_nist->Draw("same");
 	
 	TLatex lat;
 	lat.SetTextColor(kBlue);
-	//lat.SetTextSize(44);
+	//lat.SetTextSize(36);
 	lat.SetTextFont(52);
-	lat.DrawLatexNDC(0.138,0.122,"#scale[1.0]{^{9}Be Target}");
+	if(IS_BE_TARGET) lat.DrawLatexNDC(0.138,0.122,"#scale[1.5]{^{9}Be Target}");
+	else             lat.DrawLatexNDC(0.138,0.122,"#scale[1.5]{^{4}He Target}");
 	
 	TGraphErrors *gCSclone = (TGraphErrors*)gCS->Clone("gCSclone");
 	gCSclone->SetMarkerSize(1.0);
 	
 	TLegend *leg = new TLegend(0.595, 0.645, 0.935, 0.835);
 	leg->AddEntry(gCSclone, "Data" , "PE");
-	//leg->AddEntry(f_nist_clone, "Theory (NIST)" , "l");
+	leg->AddEntry(f_nist_clone, "Theory (NIST)" , "l");
 	leg->AddEntry(f_theory_clone, "Theory (PrimEx)" , "l");
 	leg->SetBorderSize(0);
 	leg->Draw();
@@ -243,7 +262,7 @@ void plot_cs(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	f_dev_theory->SetLineColor(kRed);
 	f_dev_theory->SetLineStyle(9);
 	f_dev_theory->SetLineWidth(2);
-	f_dev_nist->SetLineColor(kBlack);
+	f_dev_nist->SetLineColor(kRed);
 	f_dev_nist->SetLineStyle(1);
 	f_dev_nist->SetLineWidth(2);
 	
@@ -335,7 +354,7 @@ void plot_fit_fractions(vector<int> tagh_counter_vec, vector<int> tagm_counter_v
 		loc_gFitFracExp->SetTitle("");
 		
 		TCanvas *loc_cFitFrac = new TCanvas(Form("loc_cFitFrac_%s",loc_template.Data()), 
-			Form("%s Fraction (fit)", loc_template.Data()), 1200, 500);
+			Form("%s Fraction (fit)", loc_template.Data()), 700, 500);
 		loc_cFitFrac->SetTickx(); loc_cFitFrac->SetTicky();
 		loc_gFitFrac->Draw("AP");
 		loc_gFitFracExp->Draw("P same");
@@ -403,8 +422,9 @@ void plot_chi2(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	gChi2->GetYaxis()->SetTitleOffset(0.9);
 	gChi2->GetYaxis()->CenterTitle(true);
 	gChi2->GetXaxis()->SetRangeUser(5.6, 11.8);
+	gChi2->GetYaxis()->SetRangeUser(0.0,  2.0);
 	
-	TCanvas *cChi2 = new TCanvas("cChi2", "Chi2 of Fit", 1200, 500);
+	TCanvas *cChi2 = new TCanvas("cChi2", "Chi2 of Fit", 700, 500);
 	cChi2->SetTickx(); cChi2->SetTicky();
 	gChi2->Draw("AP");
 	
@@ -440,7 +460,7 @@ void plot_chi2(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	gPullStdev->GetYaxis()->CenterTitle(true);
 	gPullStdev->GetXaxis()->SetRangeUser(5.6, 11.8);
 	
-	TCanvas *cPull = new TCanvas("cPull", "Pull of Fit", 1200, 1000);
+	TCanvas *cPull = new TCanvas("cPull", "Pull of Fit", 700, 800);
 	cPull->Divide(1,2);
 	TPad *pPullMean = (TPad*)cPull->cd(1);
 	pPullMean->SetTickx(); pPullMean->SetTicky();

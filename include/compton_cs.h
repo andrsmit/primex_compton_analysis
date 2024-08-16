@@ -4,6 +4,9 @@
 #define N_TAGH_COUNTERS 274
 #define N_TAGM_COUNTERS 102
 
+double tagh_flux_unc[274], tagm_flux_unc[102];
+
+
 // Useful variable switches:
 
 int  PHASE_VAL    = 1;
@@ -33,11 +36,15 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 bool FIT_EMPTY   = false;
 bool FIT_TRIPLET = false;
 
+bool FIT_USING_BE_EMPTY = true;
+
 bool DEBUG_FITS     = false;
 bool DRAW_FITS_TAGH = false;
 bool DRAW_FITS_TAGM = false;
 bool SAVE_FITS_TAGH = false;
 bool SAVE_FITS_TAGM = false;
+
+double DELTA_K_FIT_SIGMA = 0.;
 
 TCanvas *canvas_fit;
 TPad *canvas_fit_lin, *canvas_fit_log;
@@ -160,6 +167,7 @@ void get_pair_cs();
 double n_e = 0.0;
 double n_Z = 0.0;
 double n_A = 0.0;
+double target_thickness = 0.0;
 
 double mb = 1.e-27;
 

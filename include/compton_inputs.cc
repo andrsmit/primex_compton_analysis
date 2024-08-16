@@ -154,10 +154,11 @@ int get_theory_calc() {
 		} else {
 			
 			double aa, bb, cc, dd, ee;
-			double loc_cs = 0.;
-			
+			double loc_cs    = 0.;
+			double loc_cs_LO = 0.;
 			ifstream locInf(fname);
 			locInf >> aa >> bb >> cc >> dd >> ee;
+			loc_cs_LO = cc;
 			locInf >> aa >> bb >> cc >> dd >> ee;
 			loc_cs += cc;
 			locInf >> aa >> bb >> cc >> dd >> ee;
@@ -165,6 +166,7 @@ int get_theory_calc() {
 			locInf.close();
 			
 			gen_enVec.push_back(0.5*(aa+bb));
+			//gen_csVec.push_back((loc_cs-loc_cs_LO)/loc_cs_LO);
 			gen_csVec.push_back(loc_cs);
 			n_cs_files++;
 		}
@@ -177,10 +179,12 @@ int get_theory_calc() {
 		} else {
 			
 			double aa, bb, cc, dd, ee;
-			double loc_cs = 0.;
+			double loc_cs    = 0.;
+			double loc_cs_LO = 0.;
 			
 			ifstream locInf(fname);
 			locInf >> aa >> bb >> cc >> dd >> ee;
+			loc_cs_LO = cc;
 			locInf >> aa >> bb >> cc >> dd >> ee;
 			loc_cs += cc;
 			locInf >> aa >> bb >> cc >> dd >> ee;
@@ -188,6 +192,7 @@ int get_theory_calc() {
 			locInf.close();
 			
 			gen_enVec.push_back(0.5*(aa+bb));
+			//gen_csVec.push_back((loc_cs-loc_cs_LO)/loc_cs_LO);
 			gen_csVec.push_back(loc_cs);
 			n_cs_files++;
 		}
@@ -378,11 +383,14 @@ void get_target_parameters()
 		
 		// PrimEx-eta Be-9 Target:
 		
-		n_Z   = 4.0;
-		n_A   = 9.0;
-		f_abs = 0.981;
+		n_Z              = 4.0;
+		n_A              = 9.0;
+		f_abs            = 0.9808;
+		target_thickness = 1.77546;
 		
-		double target_thickness = 1.77546;
+		double target_mass      = 16.65;
+		double target_area      = TMath::Pi()*pow(0.5*2.54,2.0);
+		
 		double avo_num          = 6.02214076e+23;
 		
 		double frac_be2c = 1.e-2 * 0.021;
@@ -401,14 +409,6 @@ void get_target_parameters()
 		double ne_mn     = 25.;
 		double ne_be     =  4.;
 		
-		double density_be2c = 1.90;
-		double density_fe   = 7.874;
-		double density_al   = 2.70;
-		double density_si   = 2.329;
-		double density_mg   = 1.738;
-		double density_mn   = 7.26;
-		double density_be   = 1.848;
-		
 		double weight_be2c  = 30.035;
 		double weight_fe    = 55.84;
 		double weight_al    = 26.981538;
@@ -417,6 +417,15 @@ void get_target_parameters()
 		double weight_mn    = 54.938;
 		double weight_be    = 9.012183;
 		
+		/*
+		double density_be2c = 1.90;
+		double density_fe   = 7.874;
+		double density_al   = 2.70;
+		double density_si   = 2.329;
+		double density_mg   = 1.738;
+		double density_mn   = 7.26;
+		double density_be   = 1.848;
+		
 		ne_be2c *= (density_be2c * target_thickness * (1./weight_be2c) * avo_num);
 		ne_fe   *= (density_fe   * target_thickness * (1./weight_fe  ) * avo_num);
 		ne_al   *= (density_al   * target_thickness * (1./weight_al  ) * avo_num);
@@ -424,28 +433,31 @@ void get_target_parameters()
 		ne_mg   *= (density_mg   * target_thickness * (1./weight_mg  ) * avo_num);
 		ne_mn   *= (density_mn   * target_thickness * (1./weight_mn  ) * avo_num);
 		ne_be   *= (density_be   * target_thickness * (1./weight_be  ) * avo_num);
+		*/
 		
-		n_e   = frac_be2c * ne_be2c
-			+ frac_fe   * ne_fe
-			+ frac_al   * ne_al
-			+ frac_si   * ne_si
-			+ frac_mg   * ne_mg
-			+ frac_mn   * ne_mn
-			+ frac_be   * ne_be;
+		ne_be   *= (target_mass * frac_be   * (1./weight_be)   * avo_num * (1./target_area));
+		ne_be2c *= (target_mass * frac_be2c * (1./weight_be2c) * avo_num * (1./target_area));
+		ne_fe   *= (target_mass * frac_fe   * (1./weight_fe  ) * avo_num * (1./target_area));
+		ne_al   *= (target_mass * frac_al   * (1./weight_al  ) * avo_num * (1./target_area));
+		ne_si   *= (target_mass * frac_si   * (1./weight_si  ) * avo_num * (1./target_area));
+		ne_mg   *= (target_mass * frac_mg   * (1./weight_mg  ) * avo_num * (1./target_area));
+		ne_mn   *= (target_mass * frac_mn   * (1./weight_mn  ) * avo_num * (1./target_area));
+		
+		n_e = ne_be + ne_be2c + ne_fe + ne_al + ne_si + ne_mg + ne_mn;
 		
 	} else {
 		
 		// PrimEx-eta He-4 Target:
 		
-		n_Z   = 2.0;
-		n_A   = 4.0;
-		//f_abs = 0.9908;
-		f_abs = 0.9856;
-		n_e   = 1.0816e+24; // p = 0.1217 g/cm3, t = 29.535cm
+		n_Z              = 2.0;
+		n_A              = 4.0;
+		f_abs            = 0.9853;
+		target_thickness = 29.535;
+		n_e              = 1.0816e+24; // p = 0.1217 g/cm3, t = 29.535cm
 		
 		// correction for cold residual gas:
 		
-		//n_e *= 0.9817;
+		n_e *= 0.9817;
 	}
 	
 	return;

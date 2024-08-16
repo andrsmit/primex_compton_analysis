@@ -1,3 +1,6 @@
+#ifndef _FITYIELD_
+#define _FITYIELD_
+
 #include "compton_cs.h"
 #include "get_phase1_energy_bin.cc"
 
@@ -25,8 +28,15 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	double min_fit_x = h1->GetBinCenter(h1->FindFirstBinAbove()+5);
 	double max_fit_x = h1->GetBinCenter(h1->FindLastBinAbove()-5);
 	
-	double loc_deltaK_mu  = -1.05827e-01 + 8.60222e-02*eb - 1.84818e-02*pow(eb,2.0) + 8.04656e-04*pow(eb,3.0);
-	double loc_deltaK_sig = -1.38713e-01 + 1.98660e-01*eb - 1.88848e-02*pow(eb,2.0) + 7.97340e-04*pow(eb,3.0);
+	double loc_deltaK_mu  =  4.11025e-01 - 8.98612e-02*eb + 1.90051e-03*pow(eb,2.0);
+	double loc_deltaK_sig =  5.05212e-01 - 4.77652e-02*eb + 1.25422e-02*pow(eb,2.0) - 4.75279e-04*pow(eb,3.0);
+	
+	if(DELTA_K_FIT_SIGMA > 0.) {
+		double loc_min_fit_x = loc_deltaK_mu - DELTA_K_FIT_SIGMA*loc_deltaK_sig;
+		double loc_max_fit_x = loc_deltaK_mu + DELTA_K_FIT_SIGMA*loc_deltaK_sig;
+		if(loc_min_fit_x > min_fit_x) min_fit_x = loc_min_fit_x;
+		if(loc_max_fit_x < max_fit_x) max_fit_x = loc_max_fit_x;
+	}
 	
 	h1->GetXaxis()->SetRangeUser(min_fit_x,max_fit_x);
 	h1->SetLineColor(kBlack);
@@ -55,19 +65,64 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	
 	// How many bins to combine for the e+e- simulation:
 	
-	int n_bins_combine      = 10; 
+	int n_bins_combine = 3;
+	if(tag_sys==1) n_bins_combine = 3;
+	else if(tag_sys==0 && counter<=127) n_bins_combine = 3;
+	
 	int min_counter_pair_mc = phase1_tag_counter-n_bins_combine;
 	int max_counter_pair_mc = phase1_tag_counter+n_bins_combine;
 	
+	int loc_min_counter_tagh, loc_max_counter_tagh;
+	int loc_min_counter_tagm, loc_max_counter_tagm;
+	
 	if(phase1_tag_sys==0) {
-		if(min_counter_pair_mc<1)   min_counter_pair_mc = 1;
-		else if(min_counter_pair_mc>127 && min_counter_pair_mc<179) min_counter_pair_mc = 179;
 		
-		if(max_counter_pair_mc>221) max_counter_pair_mc = 221;
-		else if(max_counter_pair_mc>127 && max_counter_pair_mc<179) max_counter_pair_mc = 127;
+		loc_min_counter_tagh = min_counter_pair_mc, loc_max_counter_tagh = max_counter_pair_mc;
+		loc_min_counter_tagm = 0,                   loc_max_counter_tagm = 0;
+		
+		if(loc_min_counter_tagh < 1) loc_min_counter_tagh = 1;
+		else if(loc_min_counter_tagh>127 && loc_min_counter_tagh<179) {
+			loc_min_counter_tagh = 179;
+			loc_min_counter_tagm = 102 - (n_bins_combine-(phase1_tag_counter-179)) + 1;
+			loc_max_counter_tagm = 102;
+		}
+		
+		if(loc_max_counter_tagh>221) loc_max_counter_tagh = 221;
+		else if(loc_max_counter_tagh>127 && loc_max_counter_tagh<179) {
+			loc_max_counter_tagh = 127;
+			loc_max_counter_tagm = n_bins_combine - (127-phase1_tag_counter);
+			loc_min_counter_tagm = 1;
+		}
 	} else {
-		if(max_counter_pair_mc<1)   max_counter_pair_mc = 1;
-		if(max_counter_pair_mc>102) max_counter_pair_mc = 102;
+		
+		loc_min_counter_tagh = 0,                   loc_max_counter_tagh = 0;
+		loc_min_counter_tagm = min_counter_pair_mc, loc_max_counter_tagm = max_counter_pair_mc;
+		
+		if(loc_min_counter_tagm<1) {
+			loc_min_counter_tagm = 1;
+			loc_min_counter_tagh = 127 - (n_bins_combine-phase1_tag_counter);
+			loc_max_counter_tagh = 127;
+		}
+		if(loc_max_counter_tagm>102) {
+			loc_max_counter_tagm = 102;
+			loc_max_counter_tagh = 179 + (n_bins_combine-(102-phase1_tag_counter)) - 1;
+			loc_min_counter_tagh = 179;
+		}
+	}
+	
+	vector<pair<int,int>> pair_mc_counter_vec;
+	pair_mc_counter_vec.clear();
+	
+	//cout << "\n\nBins used in e+e- MC tempate:" << endl;
+	for(int ic=loc_min_counter_tagh; ic<=loc_max_counter_tagh; ic++) {
+		if(ic==0) continue;
+		//printf("  TAGH %03d\n",ic);
+		pair_mc_counter_vec.push_back({0,ic});
+	}
+	for(int ic=loc_min_counter_tagm; ic<=loc_max_counter_tagm; ic++) {
+		if(ic==0) continue;
+		//printf("  TAGM %03d\n",ic);
+		pair_mc_counter_vec.push_back({1,ic});
 	}
 	
 	//=================================================================================//
@@ -80,7 +135,6 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 		sprintf(fname, "%s/tagh_%03d.root", comp_mc_dir.Data(), counter);
 	else 
 		sprintf(fname, "%s/tagm_%03d.root", comp_mc_dir.Data(), counter);
-	
 	
 	int neighbor_counter = counter;
 	if(gSystem->AccessPathName(fname)) {
@@ -120,7 +174,8 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 		h2_compton = (TH2F*)fSim->Get(Form("%s", hname_tagh_comp.Data()));
 	else 
 		h2_compton = (TH2F*)fSim->Get(Form("%s", hname_tagm_comp.Data()));
-	TH1F *h1_compton = (TH1F*)h2_compton->ProjectionY(Form("h1_comp_%d_%d", tag_sys, counter));
+	TH1F *h1_compton = (TH1F*)h2_compton->ProjectionY(Form("h1_comp_%d_%d", tag_sys, counter), neighbor_counter-1, 
+		neighbor_counter+1);
 	
 	h1_compton->SetDirectory(0);
 	h1_compton->Rebin(rebins);
@@ -150,9 +205,9 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	
 	// histogram file:
 	if(FIT_TRIPLET) {
-		sprintf(fname, "%s/pair_rec.root",          pair_mc_dir.Data());
+		sprintf(fname, "%s/pair_rec.root", pair_mc_dir.Data());
 	} else {
-		sprintf(fname, "%s/pair_rec_combined.root", pair_mc_dir.Data());
+		sprintf(fname, "%s/pair_rec.root", pair_mc_dir.Data());
 	}
 	if(gSystem->AccessPathName(fname)) {
 		cout << "Can't access e+e- pair mc histogram file." << endl;
@@ -162,78 +217,120 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	
 	double loc_pair_gen_flux = 0.;
 	
-	if(phase1_tag_sys==0) {
+	TH2F *h2_pair_tagh = (TH2F*)fPair->Get(hname_tagh_pair.Data())->Clone("loc_h2_pair_tagh");
+	TH2F *h2_pair_tagm = (TH2F*)fPair->Get(hname_tagm_pair.Data())->Clone("loc_h2_pair_tagm");
+	
+	bool first = true;
+	for(int ic=0; ic<(int)pair_mc_counter_vec.size(); ic++) {
 		
-		TH2F *h2_pair = (TH2F*)fPair->Get(hname_tagh_pair.Data());
-		h1_pair = (TH1F*)h2_pair->ProjectionY(Form("h1_pair_%d_%d", tag_sys, counter), 
-			min_counter_pair_mc, max_counter_pair_mc);
+		int loc_tag_sys_iter = pair_mc_counter_vec[ic].first;
+		int loc_counter_iter = pair_mc_counter_vec[ic].second;
 		
-		for(int loc_counter = min_counter_pair_mc; loc_counter <= max_counter_pair_mc; loc_counter++) {
-			double loc_counter_eb   = tagh_en_phase1[loc_counter-1];
-			double loc_counter_flux = h_pair_gen_flux->GetBinContent(h_pair_gen_flux->FindBin(loc_counter_eb));
-			loc_pair_gen_flux += loc_counter_flux;
+		if(first) {
+			if(loc_tag_sys_iter==0) {
+				h1_pair = (TH1F*)h2_pair_tagh->ProjectionY(Form("h1_pair_%d_%d", tag_sys, counter), 
+					loc_counter_iter, loc_counter_iter);
+			} else {
+				h1_pair = (TH1F*)h2_pair_tagm->ProjectionY(Form("h1_pair_%d_%d", tag_sys, counter), 
+					loc_counter_iter, loc_counter_iter);
+			}
+			first = false;
 		}
-	} else {
-		
-		TH2F *h2_pair = (TH2F*)fPair->Get(hname_tagm_pair.Data());
-		h1_pair = (TH1F*)h2_pair->ProjectionY(Form("h1_pair_%d_%d", tag_sys, counter), 
-			min_counter_pair_mc, max_counter_pair_mc);
-		
-		for(int loc_counter = min_counter_pair_mc; loc_counter <= max_counter_pair_mc; loc_counter++) {
-			double loc_counter_eb   = tagm_en_phase1[loc_counter-1];
-			double loc_counter_flux = h_pair_gen_flux->GetBinContent(h_pair_gen_flux->FindBin(loc_counter_eb));
-			loc_pair_gen_flux += loc_counter_flux;
+		else {
+			if(loc_tag_sys_iter==0) {
+				h1_pair->Add((TH1F*)h2_pair_tagh->ProjectionY(Form("h1_pair_%d_%d_%d", tag_sys, counter, ic), 
+					loc_counter_iter, loc_counter_iter));
+			} else {
+				h1_pair->Add((TH1F*)h2_pair_tagm->ProjectionY(Form("h1_pair_%d_%d_%d", tag_sys, counter, ic), 
+					loc_counter_iter, loc_counter_iter));
+			}
 		}
+		
+		double loc_counter_eb = loc_tag_sys_iter==0 ? tagh_en_phase1[loc_counter_iter-1] : tagm_en_phase1[loc_counter_iter-1];
+		loc_pair_gen_flux    += h_pair_gen_flux->GetBinContent(h_pair_gen_flux->FindBin(loc_counter_eb));
 	}
 	h1_pair->SetDirectory(0);
 	
 	fPair->Close();
 	fPairFlux->Close();
 	
-	double loc_pair_cs   = f_pair_cs->Eval(eb) + f_triplet_cs->Eval(eb);
-	double loc_pair_flux = loc_pair_gen_flux / ((n_e/n_Z) * mb * loc_pair_cs);
+	double loc_pair_lumi_ratio = (loc_flux * (n_e/n_Z) * mb * (f_pair_cs->Eval(eb)+f_triplet_cs->Eval(eb))) 
+		/ (loc_pair_gen_flux);
 	
-	h1_pair->Scale(loc_flux/loc_pair_flux);
+	h1_pair->Scale(loc_pair_lumi_ratio);
 	h1_pair->Rebin(rebins);
-	
-	mc_hists["pair"] = {0.0, h1_pair};
 	
 	//=================================================================================//
 	// (optionally) Get the Triplet MC Histogram:
 	
+	TH1F *h1_triplet;
+	
+	sprintf(fname, "%s/triplet_rec.root", pair_mc_dir.Data());
+	if(gSystem->AccessPathName(fname)) {
+		cout << "Can't access e+e- triplet mc histogram file." << endl;
+		return 0;
+	}
+	TFile *fTriplet = new TFile(fname, "READ");
+	
+	TH2F *h2_triplet_tagh = (TH2F*)fTriplet->Get(hname_tagh_pair.Data())->Clone("loc_h2_triplet_tagh");
+	TH2F *h2_triplet_tagm = (TH2F*)fTriplet->Get(hname_tagm_pair.Data())->Clone("loc_h2_triplet_tagm");
+	
+	first = true;
+	for(int ic=0; ic<(int)pair_mc_counter_vec.size(); ic++) {
+		
+		int loc_tag_sys_iter = pair_mc_counter_vec[ic].first;
+		int loc_counter_iter = pair_mc_counter_vec[ic].second;
+		
+		if(first) {
+			if(loc_tag_sys_iter==0) {
+				h1_triplet = (TH1F*)h2_triplet_tagh->ProjectionY(Form("h1_triplet_%d_%d", tag_sys, counter), 
+					loc_counter_iter, loc_counter_iter);
+			} else {
+				h1_triplet = (TH1F*)h2_triplet_tagm->ProjectionY(Form("h1_triplet_%d_%d", tag_sys, counter), 
+					loc_counter_iter, loc_counter_iter);
+			}
+			first   = false;
+		}
+		else {
+			if(loc_tag_sys_iter==0) {
+				h1_triplet->Add((TH1F*)h2_triplet_tagh->ProjectionY(Form("h1_triplet_%d_%d_%d", tag_sys, counter, ic), 
+					loc_counter_iter, loc_counter_iter));
+			} else {
+				h1_triplet->Add((TH1F*)h2_triplet_tagm->ProjectionY(Form("h1_triplet_%d_%d_%d", tag_sys, counter, ic), 
+					loc_counter_iter, loc_counter_iter));
+			}
+		}
+	}
+	h1_triplet->SetDirectory(0);
+	
+	fTriplet->Close();
+	
+	double loc_triplet_lumi_ratio = (loc_flux * (n_e/n_Z) * mb * (f_pair_cs->Eval(eb)+f_triplet_cs->Eval(eb))) 
+		/ (loc_pair_gen_flux);
+	
+	h1_triplet->Scale(loc_triplet_lumi_ratio);
+	h1_triplet->Rebin(rebins);
+	//h1_triplet->Scale(1.0/1.5);
+	
 	if(FIT_TRIPLET) {
-		
-		TH1F *h1_triplet;
-		
-		sprintf(fname, "%s/triplet_rec.root", pair_mc_dir.Data());
-		if(gSystem->AccessPathName(fname)) {
-			cout << "Can't access e+e- triplet mc histogram file." << endl;
-			return 0;
-		}
-		TFile *fTriplet = new TFile(fname, "READ");
-		
-		if(phase1_tag_sys==0) {
-			TH2F *h2_triplet = (TH2F*)fTriplet->Get(hname_tagh_pair.Data());
-			h1_triplet = (TH1F*)h2_triplet->ProjectionY(Form("h1_triplet_%d_%d", tag_sys, counter), 
-				min_counter_pair_mc, max_counter_pair_mc);
-		} else {
-			TH2F *h2_triplet = (TH2F*)fTriplet->Get(hname_tagm_pair.Data());
-			h1_triplet = (TH1F*)h2_triplet->ProjectionY(Form("h1_triplet_%d_%d", tag_sys, counter), 
-				min_counter_pair_mc, max_counter_pair_mc);
-		}
-		h1_triplet->SetDirectory(0);
-		
-		h1_triplet->Scale(loc_flux/loc_pair_flux);
-		h1_triplet->Rebin(rebins);
-		
 		mc_hists["triplet"] = {0.0, h1_triplet};
 	}
+	else {
+		h1_pair->Add(h1_triplet);
+	}
+	
+	//h1_pair->Scale(0.7);
+	mc_hists["pair"] = {0.0, h1_pair};
 	
 	//=================================================================================//
 	// (optionally) add the empty target distribution to the fit templates:
 	
-	if(FIT_EMPTY) mc_hists["empty"] = {0.0, h1_empty};
-	else h1->Add(h1_empty, -1.0);
+	if(FIT_EMPTY) {
+		mc_hists["empty"] = {0.0, h1_empty};
+	}
+	else {
+		h1->Add(h1_empty, -1.0);
+	}
 	
 	//=================================================================================//
 	
@@ -246,6 +343,10 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	
 	int n_mc_hists = (int)mc_hists.size();
 	map<TString, pair<double, TH1F*>>::iterator mc_hist_it;
+	
+	TH1F *h1_exclude = (TH1F*)h1_fit->Clone(Form("h1_exclude_%d_%d",tag_sys,counter));
+	h1_exclude->Reset();
+	
 	for(mc_hist_it = mc_hists.begin(); mc_hist_it != mc_hists.end(); mc_hist_it++) {
 		mc_hist_it->second.second->GetXaxis()->SetTitle("E_{Comp} - E_{#gamma} [GeV]");
 		mc_hist_it->second.second->GetXaxis()->SetTitle("E_{Comp} - E_{#gamma} [GeV]");
@@ -263,7 +364,12 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 		mc_hist_it->second.second->SetLineWidth(2);
 		
 		for(int ib=1; ib<=mc_hist_it->second.second->GetXaxis()->GetNbins(); ib++) {
-			if(mc_hist_it->second.second->GetBinContent(ib)<0.) mc_hist_it->second.second->SetBinContent(ib, 0.);
+			if(mc_hist_it->second.second->GetBinContent(ib)<=0.) {
+				mc_hist_it->second.second->SetBinContent(ib, 0.);
+			}
+			if(mc_hist_it->second.second->GetBinContent(ib)<=2.) {
+				h1_exclude->SetBinContent(ib, h1_exclude->GetBinContent(ib)+1.0);
+			}
 		}
 		
 		mc_hist_it->second.second->GetXaxis()->SetRangeUser(min_fit_x, max_fit_x);
@@ -276,16 +382,21 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	
 	if(DEBUG_FITS) {
 		if(c_debug==NULL) {
-			c_debug = new TCanvas("c_debug", "Fit Debug", 800, 800);
+			c_debug = new TCanvas("c_debug", "Fit Debug", 700, 500);
 			c_debug->SetTickx(); c_debug->SetTicky();
 		}
 		
 		c_debug->cd();
 		h1->Draw("PE");
+		h1->GetYaxis()->SetTitle(Form("counts / %d MeV",n_mev));
+		h1->GetYaxis()->SetTitleSize(0.045);
+		h1->GetYaxis()->SetTitleOffset(0.9);
+		h1->GetXaxis()->SetTitle("#DeltaK = E_{Comp}#left(#theta_{1},#theta_{2}#right) - #left(E_{#gamma}+m_{e}#right) [GeV]");
 		
 		TH1F *h1_debug = (TH1F*)h1->Clone("h1_debug");
 		h1_debug->SetLineColor(kRed);
 		h1_debug->SetLineWidth(2);
+		h1_debug->SetMarkerColor(kRed);
 		
 		for(mc_hist_it = mc_hists.begin(); mc_hist_it != mc_hists.end(); mc_hist_it++) {
 			mc_hist_it->second.second->Draw("same hist");
@@ -293,6 +404,14 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 		}
 		h1_debug->Add(h1,-1.0);
 		h1_debug->Draw("same hist");
+		
+		TLegend *leg = new TLegend(0.671, 0.700, 0.977, 0.900);
+		leg->AddEntry(h1, "Data", "PE");
+		leg->AddEntry(mc_hists.find("empty")->second.second, "Empty Target", "PE");
+		leg->AddEntry(mc_hists.find("compton")->second.second, "Compton MC", "PE");
+		leg->AddEntry(mc_hists.find("pair")->second.second, "Pair MC", "PE");
+		leg->AddEntry(h1_debug, "Empty + Compton MC + Pair MC", "PE");
+		leg->Draw();
 		
 		c_debug->Update();
 	}
@@ -302,14 +421,14 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	
 	// If the fraction of pairs is low enough, don't bother with fit:
 	
-	if(mc_hists["pair"].first < 0.01) {
+	if(mc_hists["pair"].first < 0.03) {
 		
 		double fitted_compton_frac = 1.0;
 		for(mc_hist_it = mc_hists.begin(); mc_hist_it != mc_hists.end(); mc_hist_it++) {
-			fitted_compton_frac -= mc_hist_it->second.first;
+			if(mc_hist_it->first != "compton") fitted_compton_frac -= mc_hist_it->second.first;
 		}
 		yield  = n_total_exp * fitted_compton_frac;
-		yield *= (loc_yield1/loc_yield2);
+		yield *= (loc_yield2/loc_yield1);
 		yieldE = sqrt(yield);
 		
 		chi2 = 1.0;
@@ -321,23 +440,47 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	TObjArray *mc = new TObjArray(n_mc_hists);
 	
 	// store the index of each mc template added to the TObjArray in a map with the same keys:
+	
+	double loc_comp_frac_start = 1.0;
+	
 	map<TString, int> mc_index;
 	int loc_index = 0;
 	for(mc_hist_it = mc_hists.begin(); mc_hist_it != mc_hists.end(); mc_hist_it++) {
 		mc->Add(mc_hist_it->second.second);
 		mc_index[mc_hist_it->first] = loc_index;
 		loc_index++;
+		
+		if(mc_hist_it->first != "compton") 
+			loc_comp_frac_start -= mc_hist_it->second.first;
 	}
+	//loc_comp_frac_start = mc_hists["compton"].first;
 	
 	TFractionFitter *fit = new TFractionFitter(h1_fit, mc);
 	fit->SetRangeX(h1_fit->FindBin(min_fit_x), h1_fit->FindBin(max_fit_x));
 	
-	for(int ihist=0; ihist<n_mc_hists; ihist++) fit->Constrain(ihist, 0.0, 1.0);
+	// exclude bins with zero counts:
+	for(int ib=1; ib<=h1_exclude->GetXaxis()->GetNbins(); ib++) {
+		if(((int)h1_exclude->GetBinContent(ib))>=n_mc_hists) fit->ExcludeBin(ib);
+	}
 	
+	ROOT::Fit::Fitter* fitter = fit->GetFitter();
+	
+	double loc_comp_frac_min = loc_comp_frac_start - (1.0-loc_comp_frac_start);
+	
+	fitter->Config().ParSettings(mc_index["compton"]).Set("p_comp", mc_hists["compton"].first, 1.0e-2, 0.0, 1.0);
+	fitter->Config().ParSettings(mc_index["pair"]).Set("p_pair", 0.7*mc_hists["pair"].first, 1.0e-2, 0.0, 1.0);
+	//fitter->Config().ParSettings(mc_index["pair"]).Set("p_pair", 0.1, 1.0e-2, 0.0, 1.0);
+	
+	if(FIT_EMPTY) {
+		double empty_constraint = IS_BE_TARGET ? 0.05 : 0.5;
+		if(tag_sys==0) empty_constraint = 1.e-2*sqrt(2.0)*tagh_flux_unc[counter-1];
+		else           empty_constraint = 1.e-2*sqrt(2.0)*tagm_flux_unc[counter-1];
+		fitter->Config().ParSettings(mc_index["empty"]).Set("p_empty", mc_hists["empty"].first, 0.01*mc_hists["empty"].first, 
+			(1.0-empty_constraint)*mc_hists["empty"].first, (1.0+empty_constraint)*mc_hists["empty"].first);
+	}
 	if(FIT_TRIPLET) {
-		int triplet_fit_index = mc_index["triplet"];
-		double loc_frac = mc_hists["triplet"].first;
-		fit->Constrain(triplet_fit_index, 0.90*loc_frac, 1.10*loc_frac);
+		fitter->Config().ParSettings(mc_index["triplet"]).Set(
+			"p_triplet", 0.65*mc_hists["triplet"].first, 1.0e-2, 0.0, 1.5*mc_hists["triplet"].first);
 	}
 	
 	Int_t fit_status = fit->Fit();
@@ -365,6 +508,10 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 			return 0;
 		}
 		
+		unsigned int loc_color = 0;
+		map<TString, unsigned int>::iterator color_it = hist_color_map.find(mc_hist_it->first);
+		if(color_it != hist_color_map.end()) loc_color = color_it->second;
+		
 		double loc_frac, loc_fracE;
 		fit->GetResult(index_it->second, loc_frac, loc_fracE);
 		
@@ -372,6 +519,23 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 			fitted_compton_frac  -= loc_frac;
 			fitted_compton_fracE += pow(loc_fracE,2.0);
 		}
+		
+		TH1F *loc_FitResult = (TH1F*)mc_hist_it->second.second->Clone(
+			Form("FitResult_%s_%d_%d", loc_template.Data(), tag_sys, counter));
+		loc_FitResult->Scale(loc_frac*Ndata/loc_FitResult->Integral());
+		loc_FitResult->SetLineColor(loc_color+2);
+		loc_FitResult->SetFillColor(loc_color-9);
+		loc_FitResult->SetFillStyle(3001);
+		FitResultAll->Add(loc_FitResult);
+		
+		FitResults.push_back({loc_template,loc_FitResult});
+		
+		// calculate the fraction only between +/-5sigma:
+		double loc_min_fit_x = loc_deltaK_mu - 5.0*loc_deltaK_sig;
+		double loc_max_fit_x = loc_deltaK_mu + 5.0*loc_deltaK_sig;
+		
+		loc_frac = loc_FitResult->Integral(loc_FitResult->FindBin(loc_min_fit_x), loc_FitResult->FindBin(loc_max_fit_x)) 
+			/ h1_fit->Integral(h1_fit->FindBin(loc_min_fit_x), h1_fit->FindBin(loc_max_fit_x));
 		
 		double loc_frac_exp = mc_hist_it->second.first;
 		
@@ -383,45 +547,44 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 			tagm_fit_fraction[loc_template][counter-1]     = {loc_frac, loc_fracE};
 			tagm_fit_fraction_exp[loc_template][counter-1] = {loc_frac_exp, 0.0};
 		}
-		
-		unsigned int loc_color = 0;
-		map<TString, unsigned int>::iterator color_it = hist_color_map.find(mc_hist_it->first);
-		if(color_it != hist_color_map.end()) loc_color = color_it->second;
-		
-		// Get individual fit result for this MC template:
-		/*
-		TH1F *loc_mc_fit = (TH1F*)->GetMCPrediction(index_it->second);
-		loc_mc_fit->GetXaxiS()->SetRangeUser(min_fit_x, max_fit_x);
-		loc_mc_fit->Scale(loc_frac*Ndata/loc_mc_fit->Integral(loc_mc_fit->FindBin(min_fit_x),
-			loc_mc-fit->FindBin(max_fit_x)));
-		loc_mc_fit->SetLineColor(loc_color);
-		loc_mc_fit->SetMarkerColor(loc_color);
-		loc_mc_fit->SetFillColor(loc_color);
-		loc_mc_fit->SetFillStyle(3004);
-		loc_mc_fit->SetLineWidth(2);
-		loc_mc_fit->SetMarkerStyle(8);
-		loc_mc_fit->SetMarkerSize(0.6);
-		*/
-		
-		TH1F *loc_FitResult = (TH1F*)mc_hist_it->second.second->Clone(
-			Form("FitResult_%s_%d_%d", loc_template.Data(), tag_sys, counter));
-		loc_FitResult->Scale(loc_frac*Ndata/loc_FitResult->Integral());
-		loc_FitResult->SetLineColor(loc_color+2);
-		loc_FitResult->SetFillColor(loc_color-9);
-		loc_FitResult->SetFillStyle(3001);
-		FitResultAll->Add(loc_FitResult);
-		
-		FitResults.push_back({loc_template,loc_FitResult});
 	}
 	fitted_compton_fracE = sqrt(fitted_compton_fracE);
 	
 	h1->GetXaxis()->SetRangeUser(-8.0,8.0);
 	
 	yield   = n_total_exp * fitted_compton_frac;
-	yieldE  = sqrt(pow(sqrt(n_total_exp)*fitted_compton_frac,2.0) + pow(n_total_exp*fitted_compton_fracE,2.0));
+	yield  *= (loc_yield2/loc_yield1);
 	
-	yield  /= (loc_yield1/loc_yield2);
-	yieldE /= (loc_yield1/loc_yield2);
+	// to get the statistical uncertainty, use Eq.6.5 from analysis note (summed over all bins):
+	
+	double loc_data_yield1 = h1->Integral(h1->FindBin(min_fit_x), h1->FindBin(max_fit_x));
+	
+	h1_compton->Scale(loc_data_yield1*fitted_compton_frac / loc_yield1);
+	yieldE = 0.;
+	for(int ibin=h1->FindBin(min_fit_x); ibin<=h1->FindBin(max_fit_x); ibin++) {
+	//for(int ibin=1; ibin<=h1->GetXaxis()->GetNbins(); ibin++) {
+		double loc_compton_frac = 0.;
+		if(h1_compton->GetBinContent(ibin) > 0. && h1->GetBinContent(ibin) > 0.) {
+			loc_compton_frac = 1.0;
+			if(h1_compton->GetBinContent(ibin) < h1->GetBinContent(ibin)) {
+				loc_compton_frac = h1_compton->GetBinContent(ibin)/h1->GetBinContent(ibin);
+			}
+		}
+		double loc_stat_unc = pow(h1->GetBinError(ibin),2.0) * loc_compton_frac;
+		if(tag_sys==0 && counter==31) printf("  deltaK = %.3f: Ndata = %f, unc_data = %f, loc_stat_unc = %f\n", h1->GetXaxis()->GetBinCenter(ibin), h1->GetBinContent(ibin), h1->GetBinError(ibin), sqrt(loc_stat_unc));
+		yieldE += loc_stat_unc;
+	}
+	yieldE = sqrt(yieldE);
+	
+	
+	
+	
+	
+	//yieldE  = sqrt(pow(sqrt(n_total_exp)*fitted_compton_frac,2.0) + pow(n_total_exp*fitted_compton_fracE,2.0));
+	//yieldE /= (loc_yield1/loc_yield2);
+	
+	//yieldE  = sqrt(yield);
+	//yieldE /= (loc_yield1/loc_yield2);
 	
 	chi2 = fit->GetChisquare() / fit->GetNDF();
 	
@@ -431,13 +594,15 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	chi2 = 0.;
 	double n_bins = 0.;
 	for(int ib=h1->FindBin(min_fit_x); ib<=h1_fit->FindBin(max_fit_x); ib++) {
+		double loc_x           = h1_fit->GetBinCenter(ib);
 		double loc_data_counts = h1_fit->GetBinContent(ib);
-		double loc_fit_counts  = fit_result->GetBinContent(fit_result->FindBin(h1_fit->GetBinCenter(ib)));
-		if(loc_fit_counts <= 0.) continue;
-		chi2 += pow(loc_data_counts-loc_fit_counts, 2.0) / loc_fit_counts;
+		double loc_fit_counts  = FitResultAll->GetBinContent(FitResultAll->FindBin(loc_x));
+		//double loc_fit_counts  = fit_result->GetBinContent(fit_result->FindBin(h1_fit->GetBinCenter(ib)));
+		if(loc_data_counts <= 0.) continue;
+		chi2 += pow(loc_data_counts-loc_fit_counts, 2.0) / loc_data_counts;
 		n_bins += 1.0;
 	}
-	chi2 /= (n_bins/2);
+	chi2 /= (n_bins-n_mc_hists);
 	
 	//-----------------------------------------------------//
 	// Get the pull distribution:
@@ -447,6 +612,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	double  mean_pull = 0., n_pull = 0.;
 	double stdev_pull = 0.;
 	
+	chi2 = 0.; n_bins = 0.;
 	for(int ibin=1; ibin<=h1_pull->GetXaxis()->GetNbins(); ibin++) {
 		double loc_x     = h1_fit->GetBinCenter(ibin);
 		double loc_count = h1_fit->GetBinContent(ibin);
@@ -463,13 +629,19 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 		
 		double loc_pull = (loc_count-loc_fit) / loc_stat_unc;
 		
-		mean_pull += loc_pull;
-		n_pull    += 1.0;
+		if(loc_x>=min_fit_x && loc_x<=max_fit_x) {
+			chi2   += pow((loc_count-loc_fit)/loc_stat_unc,2.0);
+			n_bins += 1.0;
+			
+			mean_pull += loc_pull;
+			n_pull    += 1.0;
+		}
 		
 		h1_pull->SetBinContent(ibin, loc_pull);
 		h1_pull->SetBinError(ibin, 1.0);
 	}
 	mean_pull /= n_pull;
+	chi2 /= (n_bins-n_mc_hists);
 	
 	for(int ibin=1; ibin<=h1_pull->GetXaxis()->GetNbins(); ibin++) {
 		double loc_x     = h1_fit->GetBinCenter(ibin);
@@ -486,8 +658,9 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 		if(loc_stat_unc <= 1.) loc_stat_unc = 1.0;
 		
 		double loc_pull = (loc_count-loc_fit) / loc_stat_unc;
-		
-		stdev_pull += pow(loc_pull-mean_pull, 2.0);
+		if(loc_x>=min_fit_x && loc_x<=max_fit_x) {
+			stdev_pull += pow(loc_pull-mean_pull, 2.0);
+		}
 	}
 	stdev_pull = sqrt(stdev_pull/(n_pull-1.0));
 	
@@ -539,7 +712,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 	h1_pull->GetXaxis()->SetTitle("#DeltaK = E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]");
 	h1_pull->SetTitle("");
 	
-	if(loc_DRAW_FITS) {
+	if(loc_DRAW_FITS && tag_sys==0 && counter==195) {
 		
 		/*
 		TH1F *h1_lin = (TH1F*)h1->Clone(Form("h1_lin_%d_%d", tag_sys, counter));
@@ -574,10 +747,19 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 		h_pair_fit->Draw("same hist");
 		h1->Draw("PE same");
 		*/
+		h1_pull->GetXaxis()->SetTitle(
+			"#DeltaK = E_{Comp}#left(#theta_{1},#theta_{2}#right) - #left(E_{#gamma}+m_{e}#right) [GeV]");
+		dataInput->GetXaxis()->SetRangeUser(min_fit_x, max_fit_x);
+		dataInput->SetMinimum(0.);
+		dataInput->SetMaximum(1.2*dataInput->GetMaximum());
+		dataInput->SetTitle("");
+		dataInput->GetXaxis()->SetLabelOffset(0.015);
+		dataInput->GetYaxis()->SetTitle(Form("counts / %d MeV", (int)n_mev));
 		
 		canvas_draw_top->cd();
 		FitResultAll->Draw("hist");
-		dataInput->Draw("PE1same");
+		dataInput->Draw("PE1");
+		FitResultAll->Draw("same hist");
 		
 		TLegend *leg1 = new TLegend(0.132,0.650,0.501,0.883);
 		char text[200];
@@ -593,8 +775,12 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 		
 		for(int imc=0; imc<(int)FitResults.size(); imc++) {
 			FitResults[imc].second->Draw("same hist");
-			sprintf(text, "%s = %.2f(%%)", 
-				FitResults[imc].first.Data(), 1.e2*FitResults[imc].second->Integral()/fit_result->Integral());
+			TString leg_name = "Background";
+			if(FitResults[imc].first=="compton") leg_name = "Signal";
+			
+			//sprintf(text, "%s = %.2f(%%)", 
+				//FitResults[imc].first.Data(), 1.e2*FitResults[imc].second->Integral()/fit_result->Integral());
+			sprintf(text, "%s", leg_name.Data());
 			leg1->AddEntry(FitResults[imc].second, text, "f");
 		}
 		
@@ -604,6 +790,11 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 		lat_new.SetTextColor(kRed-6);
 		lat_new.SetTextFont(52);
 		lat_new.DrawLatexNDC(0.73, 0.85, Form("#scale[1.0]{E_{#gamma} = %.2f GeV}", eb));
+		
+		TLatex lat_new2;
+		lat_new2.SetTextColor(kBlack);
+		lat_new2.SetTextFont(52);
+		//lat_new2.DrawLatexNDC(0.63, 0.725, Form("#scale[1.0]{#chi^{2}/d.o.f. = %.2f}", chi2));
 		
 		TLine *l0 = new TLine(min_fit_x,  0.0, max_fit_x,  0.0);
 		TLine *l1 = new TLine(min_fit_x, -2.0, max_fit_x, -2.0);
@@ -623,6 +814,28 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, TH1F *h1_empty, double &yield,
 		
 		lat_new.DrawLatexNDC(0.115, 0.375, Form("#scale[1.5]{Mean of Pull Distribution: %.2f}", mean_pull));
 		lat_new.DrawLatexNDC(0.115, 0.275, Form("#scale[1.5]{Std Dev. of Pull Distribution: %.2f}", stdev_pull));
+		
+		
+		TCanvas *c_test = new TCanvas("c_test","test",700,500);
+		c_test->SetTickx(); c_test->SetTicky();
+		c_test->SetLeftMargin(0.13); c_test->SetRightMargin(0.07);
+		c_test->SetBottomMargin(0.13); c_test->SetTopMargin(0.07);
+		
+		dataInput->GetXaxis()->CenterTitle(true);
+		dataInput->GetYaxis()->SetTitleSize(0.05);
+		dataInput->GetYaxis()->SetTitleOffset(1.0);
+		
+		dataInput->Draw("PE1");
+		FitResultAll->Draw("same hist");
+		leg1->Draw();
+		for(int imc=0; imc<(int)FitResults.size(); imc++) {
+			FitResults[imc].second->Draw("same hist");
+		}
+		lat_new.DrawLatexNDC(0.73, 0.85, Form("#scale[1.0]{E_{#gamma} = %.2f GeV}", eb));
+		
+		//if(tag_sys==1) {
+		//	canvas_draw->SaveAs(Form("yield_fit_%s_%03d.pdf", tag_sys_char, counter));
+		//}
 	}
 	
 	//h_vertex->Delete();
@@ -773,3 +986,5 @@ int get_neighbor(int tag_sys, int counter, int sim_case) {
 	
 	return trial_counter;
 }
+
+#endif

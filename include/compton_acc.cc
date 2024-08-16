@@ -19,6 +19,19 @@ void get_compton_acc() {
 		double loc_eb = tagh_en[tagh_counter-1];
 		if(loc_eb<6.0) continue;
 		
+		double min_fit_x = -8.0;
+		double max_fit_x =  8.0;
+		
+		double loc_deltaK_mu  =  4.11025e-01 - 8.98612e-02*loc_eb + 1.90051e-03*pow(loc_eb,2.0);
+		double loc_deltaK_sig =  5.05212e-01 - 4.77652e-02*loc_eb + 1.25422e-02*pow(loc_eb,2.0) - 4.75279e-04*pow(loc_eb,3.0);
+		
+		if(DELTA_K_FIT_SIGMA > 0.) {
+			double loc_min_fit_x = loc_deltaK_mu - DELTA_K_FIT_SIGMA*loc_deltaK_sig;
+			double loc_max_fit_x = loc_deltaK_mu + DELTA_K_FIT_SIGMA*loc_deltaK_sig;
+			//if(loc_min_fit_x > min_fit_x) min_fit_x = loc_min_fit_x;
+			//if(loc_max_fit_x < max_fit_x) max_fit_x = loc_max_fit_x;
+		}
+		
 		//-----------------------------------------------------//
 		
 		TFile *fSim = new TFile(fname, "READ");
@@ -39,7 +52,7 @@ void get_compton_acc() {
 		
 		//-----------------------------------------------------//
 		
-		TH1F *h1 = (TH1F*)h2_tagh->ProjectionY("h1_tagh", tagh_counter-1, tagh_counter+1);
+		TH1F *h1 = (TH1F*)h2_tagh->ProjectionY("h1_tagh", tagh_counter-1, tagh_counter);
 		//h1->Add((TH1F*)h2_tagm->ProjectionY("h1_tagm"));
 		
 		//if(!(PHASE_VAL==1 && !IS_BE_TARGET))
@@ -62,7 +75,7 @@ void get_compton_acc() {
 			}
 		}
 		
-		double n_rec = h1->Integral(h1->FindBin(-8.0), h1->FindBin(8.0));
+		double n_rec = h1->Integral(h1->FindBin(min_fit_x), h1->FindBin(max_fit_x));
 		
 		double loc_acc  = n_rec / n_gen;
 		double loc_accE = sqrt(n_gen*loc_acc*(1.-loc_acc)) / n_gen;
@@ -90,6 +103,19 @@ void get_compton_acc() {
 		
 		double loc_eb = tagm_en[tagm_counter-1];
 		if(loc_eb<6.0) continue;
+		
+		double min_fit_x = -8.0;
+		double max_fit_x =  8.0;
+		
+		double loc_deltaK_mu  =  4.11025e-01 - 8.98612e-02*loc_eb + 1.90051e-03*pow(loc_eb,2.0);
+		double loc_deltaK_sig =  5.05212e-01 - 4.77652e-02*loc_eb + 1.25422e-02*pow(loc_eb,2.0) - 4.75279e-04*pow(loc_eb,3.0);
+		
+		if(DELTA_K_FIT_SIGMA > 0.) {
+			double loc_min_fit_x = loc_deltaK_mu - DELTA_K_FIT_SIGMA*loc_deltaK_sig;
+			double loc_max_fit_x = loc_deltaK_mu + DELTA_K_FIT_SIGMA*loc_deltaK_sig;
+			if(loc_min_fit_x > min_fit_x) min_fit_x = loc_min_fit_x;
+			if(loc_max_fit_x < max_fit_x) max_fit_x = loc_max_fit_x;
+		}
 		
 		//-----------------------------------------------------//
 		
@@ -134,7 +160,7 @@ void get_compton_acc() {
 			}
 		}
 		
-		double n_rec = h1->Integral(h1->FindBin(-8.0), h1->FindBin(8.0));
+		double n_rec = h1->Integral(h1->FindBin(min_fit_x), h1->FindBin(max_fit_x));
 		
 		double loc_acc  = n_rec / n_gen;
 		double loc_accE = sqrt(n_gen*loc_acc*(1.-loc_acc)) / n_gen;

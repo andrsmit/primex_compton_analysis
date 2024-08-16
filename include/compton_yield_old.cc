@@ -1,17 +1,10 @@
 #include "compton_cs.h"
 #include "fit_yield.cc"
-#include "fit_yield_rebins.cc"
 
 void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_vec) {
 	
 	tagh_counter_vec.clear();
 	tagm_counter_vec.clear();
-	
-	double loc_MIN_BEAM_ENERGY =  6.5;
-	double loc_MAX_BEAM_ENERGY = 11.1;
-	
-	//double loc_MIN_BEAM_ENERGY =  6.5;
-	//double loc_MAX_BEAM_ENERGY =  7.8;
 	
 	for(int tagh_counter=1; tagh_counter<=N_TAGH_COUNTERS; tagh_counter++) {
 		tagh_yield[tagh_counter-1]  = 0.;
@@ -52,86 +45,19 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 	TH1F *h1_tagm[N_TAGM_COUNTERS], *h1e_tagm[N_TAGM_COUNTERS];
 	
 	for(int tagh_counter=1; tagh_counter<=274; tagh_counter++) {
-		
-		double eb             = tagh_en[tagh_counter-1];
-		double loc_flux       = tagh_flux[tagh_counter-1];
-		double loc_flux_empty = tagh_flux_empty[tagh_counter-1];
-		
-		if(eb<loc_MIN_BEAM_ENERGY || eb>loc_MAX_BEAM_ENERGY) continue;
-		
-		int phase1_tag_sys     = 0;
-		int phase1_tag_counter = tagh_counter;
-		
-		if(!IS_BE_TARGET && FIT_USING_BE_EMPTY==true) {
-			get_phase1_energy_bin(eb, phase1_tag_counter, phase1_tag_sys);
-		}
-		
-		cout << "\n\n";
-		cout << "TAGH counter: " << tagh_counter << endl;
-		cout << "Phase 1 counter: " << phase1_tag_counter << " (tag_sys=" << phase1_tag_sys << ")" << endl;
-		cout << "\n\n";
-		
-		if(phase1_tag_sys==0) {
-			loc_flux_empty = tagh_flux_empty[phase1_tag_counter-1];
-		} else if(phase1_tag_sys==1) {
-			loc_flux_empty = tagm_flux_empty[phase1_tag_counter-1];
-		} else {
-			continue;
-		}
-		
-		if(loc_flux <= 0. || loc_flux_empty <= 0.) continue;
-		if(phase1_tag_sys==1 && phase1_tag_counter==21) continue;
-		
 		h1_tagh[tagh_counter-1]  = (TH1F*)h2_tagh->ProjectionY(Form("h1_tagh_%03d",
 			tagh_counter),tagh_counter,tagh_counter);
+		h1e_tagh[tagh_counter-1] = (TH1F*)h2e_tagh->ProjectionY(Form("h1e_tagh_%03d",
+			tagh_counter),tagh_counter,tagh_counter);
 		h1_tagh[tagh_counter-1]->SetDirectory(0);
-		
-		if(phase1_tag_sys==0) {
-			h1e_tagh[tagh_counter-1] = (TH1F*)h2e_tagh->ProjectionY(Form("h1e_tagh_%03d", 
-				tagh_counter), phase1_tag_counter, phase1_tag_counter);
-		} else {
-			h1e_tagh[tagh_counter-1] = (TH1F*)h2e_tagm->ProjectionY(Form("h1e_tagh_%03d", 
-				tagh_counter), phase1_tag_counter, phase1_tag_counter);
-		}
-		h1e_tagh[tagh_counter-1]->Scale(loc_flux/loc_flux_empty);
 		h1e_tagh[tagh_counter-1]->SetDirectory(0);
 	}
-	
 	for(int tagm_counter=1; tagm_counter<=102; tagm_counter++) {
-		
-		double eb             = tagm_en[tagm_counter-1];
-		double loc_flux       = tagm_flux[tagm_counter-1];
-		double loc_flux_empty = tagm_flux_empty[tagm_counter-1];
-		
-		int phase1_tag_sys     = 1;
-		int phase1_tag_counter = tagm_counter;
-		
-		if(!IS_BE_TARGET && FIT_USING_BE_EMPTY==true) {
-			get_phase1_energy_bin(eb, phase1_tag_counter, phase1_tag_sys);
-		}
-		
-		if(phase1_tag_sys==0) {
-			loc_flux_empty = tagh_flux_empty[phase1_tag_counter-1];
-		} else if(phase1_tag_sys==1) {
-			loc_flux_empty = tagm_flux_empty[phase1_tag_counter-1];
-		} else {
-			continue;
-		}
-		
-		if(loc_flux <= 0. || loc_flux_empty <= 0.) continue;
-		
 		h1_tagm[tagm_counter-1]  = (TH1F*)h2_tagm->ProjectionY(Form("h1_tagm_%03d",
 			tagm_counter),tagm_counter,tagm_counter);
+		h1e_tagm[tagm_counter-1] = (TH1F*)h2e_tagm->ProjectionY(Form("h1e_tagm_%03d",
+			tagm_counter),tagm_counter,tagm_counter);
 		h1_tagm[tagm_counter-1]->SetDirectory(0);
-		
-		if(phase1_tag_sys==0) {
-			h1e_tagm[tagm_counter-1] = (TH1F*)h2e_tagh->ProjectionY(Form("h1e_tagm_%03d", 
-				tagm_counter), phase1_tag_counter, phase1_tag_counter);
-		} else {
-			h1e_tagm[tagm_counter-1] = (TH1F*)h2e_tagm->ProjectionY(Form("h1e_tagm_%03d", 
-				tagm_counter), phase1_tag_counter, phase1_tag_counter);
-		}
-		h1e_tagm[tagm_counter-1]->Scale(loc_flux/loc_flux_empty);
 		h1e_tagm[tagm_counter-1]->SetDirectory(0);
 	}
 	
@@ -187,7 +113,7 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 	
 	//------------------------------------------------------------------------------------------//
 	
-	for(int tagh_counter = 1; tagh_counter <= 221; tagh_counter++) {
+	for(int tagh_counter = 20; tagh_counter <= 221; tagh_counter++) {
 		
 		int bad_val = 0;
 		for(int ic = 0; ic < bad_counters_tagh.size(); ic++) {
@@ -195,25 +121,15 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		}
 		if(bad_val) continue;
 		
-		double eb              = tagh_en[tagh_counter-1];
-		double loc_flux        = tagh_flux[tagh_counter-1];
-		double loc_flux_empty  = tagh_flux_empty[tagh_counter-1];
+		double eb             = tagh_en[tagh_counter-1];
+		double loc_flux       = tagh_flux[tagh_counter-1];
+		double loc_flux_empty = tagh_flux_empty[tagh_counter-1];
+		double loc_fluxE      = tagh_fluxE[tagh_counter-1];
 		
-		if(eb<loc_MIN_BEAM_ENERGY || eb>loc_MAX_BEAM_ENERGY) continue;
-		
-		int phase1_tag_sys     = 0;
-		int phase1_tag_counter = tagh_counter;
-		
-		if(!IS_BE_TARGET) {
-			get_phase1_energy_bin(eb, phase1_tag_counter, phase1_tag_sys);
-		}
-		
-		if(phase1_tag_sys==0) {
-			loc_flux_empty = tagh_flux_empty[phase1_tag_counter-1];
-		} else if(phase1_tag_sys==1) {
-			loc_flux_empty = tagm_flux_empty[phase1_tag_counter-1];
-		} else {
-			continue;
+		if(tagh_counter>178) {
+			rebins   =  5;
+			bin_size = (16.0/1000.0)*(double)rebins;
+			n_mev    = bin_size * 1.e3;
 		}
 		
 		// Skip bins that have no flux:
@@ -238,6 +154,7 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		h1_tagh[tagh_counter-1]->SetLineWidth(2);
 		
 		h1e_tagh[tagh_counter-1]->Rebin(rebins);
+		h1e_tagh[tagh_counter-1]->Scale(loc_flux/loc_flux_empty);
 		
 		cout << endl;
 		cout << "==================================" << endl;
@@ -246,9 +163,6 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		double loc_yield = 0., loc_yieldE = 0., loc_chi2 = 0.;
 		int fit_val = fit_yield(0, tagh_counter, h1_tagh[tagh_counter-1], h1e_tagh[tagh_counter-1], 
 			loc_yield, loc_yieldE, loc_chi2);
-		
-		cout << "Done." << endl;
-		cout << "==================================" << endl;
 		
 		if(fit_val <= 0) continue;
 		
@@ -263,7 +177,11 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		tagh_counter_vec.push_back(tagh_counter);
 	}
 	
-	for(int tagm_counter = 5; tagm_counter <= 96; tagm_counter++) {
+	rebins   =  5;
+	bin_size = (16.0/1000.0)*(double)rebins;
+	n_mev    = bin_size * 1.e3;
+	
+	for(int tagm_counter = 10; tagm_counter <= 102; tagm_counter++) {
 		
 		int bad_val = 0;
 		for(int ic = 0; ic < bad_counters_tagm.size(); ic++) {
@@ -271,24 +189,12 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		}
 		if(bad_val) continue;
 		
-		double eb              = tagm_en[tagm_counter-1];
-		double loc_flux        = tagm_flux[tagm_counter-1];
-		double loc_flux_empty  = tagm_flux_empty[tagm_counter-1];
+		double eb             = tagm_en[tagm_counter-1];
+		double loc_flux       = tagm_flux[tagm_counter-1];
+		double loc_flux_empty = tagm_flux_empty[tagm_counter-1];
+		double loc_fluxE      = tagm_fluxE[tagm_counter-1];
 		
-		int phase1_tag_sys     = 1;
-		int phase1_tag_counter = tagm_counter;
-		
-		if(!IS_BE_TARGET) {
-			get_phase1_energy_bin(eb, phase1_tag_counter, phase1_tag_sys);
-		}
-		
-		if(phase1_tag_sys==0) {
-			loc_flux_empty = tagh_flux_empty[phase1_tag_counter-1];
-		} else if(phase1_tag_sys==1) {
-			loc_flux_empty = tagm_flux_empty[phase1_tag_counter-1];
-		} else {
-			continue;
-		}
+		if(eb<6.180) continue;
 		
 		// Skip bins that have no flux:
 		
@@ -312,6 +218,7 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		h1_tagm[tagm_counter-1]->SetLineWidth(2);
 		
 		h1e_tagm[tagm_counter-1]->Rebin(rebins);
+		h1e_tagm[tagm_counter-1]->Scale(loc_flux/loc_flux_empty);
 		
 		cout << endl;
 		cout << "==================================" << endl;
@@ -323,8 +230,8 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		
 		if(fit_val <= 0) continue;
 		
-		tagm_yield[tagm_counter-1]         = loc_yield;
-		tagm_yieldE[tagm_counter-1]        = loc_yieldE;
+		tagm_yield[tagm_counter-1]  = loc_yield;
+		tagm_yieldE[tagm_counter-1] = loc_yieldE;
 		tagm_yieldfit_chi2[tagm_counter-1] = loc_chi2;
 		
 		if(SAVE_FITS_TAGM && DRAW_FITS_TAGM) {
