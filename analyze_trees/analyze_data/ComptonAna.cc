@@ -518,7 +518,7 @@ int ComptonAna::loadCutParameters() {
 	} else {
 		loc_cut_runNumber = 61866;
 	}
-	sprintf(cut_dir, "/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/cuts/Run%06d/200nA", 
+	sprintf(cut_dir, "/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/cuts/phase%d/Run%06d/200nA", 
 		loc_cut_runNumber);
 	
 	char buf[256];
@@ -671,10 +671,29 @@ int ComptonAna::loadCutParameters() {
 	return 0;
 }
 
+int ComptonAna::getPrimexPhase(int run_number) {
+	
+	int loc_phase = 0;
+	if(run_number<60000) {
+		return 0;
+	} else if(run_number >=  60000 && run_number <=  69999) {
+		return 1;
+	} else if(run_number >=  80000 && run_number <=  89999) {
+		return 2;
+	} else if(run_number >= 110000 && run_number <= 119999) {
+		return 3;
+	} else {
+		return 0;
+	}
+}
+
 void ComptonAna::setRunNumber(int runNum) { 
 	
 	m_runNumber = runNum;
+	m_phase_val = getPrimexPhase(runNum);
+	
 	setGeometry();
+	
 	int load_val = loadCutParameters();
 	if(load_val != 0) {
 		cout << "\n\n\n" << endl;
@@ -687,16 +706,21 @@ void ComptonAna::setRunNumber(int runNum) {
 
 void ComptonAna::setGeometry() {
 	
-	if(m_runNumber>60000 && m_runNumber<69999) {
-		
-		m_phase_val = 1;
+	if(m_phase_val==1) {
 		
 		if(m_runNumber<61355) {
+			
+			// Beryllium Target runs:
+			
 			m_target_length  = 1.7755;
 			m_target_density = 1.848;
 			m_target_atten   = 0.01172;
 			m_vertex.SetZ(64.935);
+			
 		} else {
+			
+			// Helium Target runs:
+			
 			m_target_length  = 29.535;
 			m_target_density = 0.1217;
 			m_target_atten   = 0.00821;

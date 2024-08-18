@@ -45,14 +45,9 @@ int main(int argc, char **argv) {
 	}
 	printUsage(genSettings, 1);
 	
-	// Directory where ROOT Trees are stored:
-	sprintf(rootTree_pathName, 
-		"/work/halld/home/andrsmit/primex_compton_analysis/data/rootTrees/phase1", 
-		genSettings.run_number);
-	
 	// Directory where output ROOT files will be stored:
 	sprintf(rootFile_pathName, 
-		"/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/analyze_data/rootFiles/systematics", 
+		"/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/analyze_data/rootFiles/systematics", 
 		genSettings.run_number);
 	
 	// Initialize histograms to be filled:
@@ -83,8 +78,12 @@ int main(int argc, char **argv) {
 		
 		for(int loc_run = genSettings.min_run; loc_run <= genSettings.max_run; loc_run++) {
 			
+			// set rootTree path according to phase:
+			sprintf(rootTree_pathName, "/work/halld/home/andrsmit/primex_compton_analysis/data/rootTrees/phase%d/%06d", 
+				locAna.getPrimexPhase(loc_run), loc_run);
+			
 			// check if root tree directory exists for this runnumber. If not, skip it:
-			if(gSystem->AccessPathName(Form("%s/%06d", rootTree_pathName, loc_run))) continue;
+			if(gSystem->AccessPathName(rootTree_pathName)) continue;
 			
 			// check if output file already exists for this runnumber:
 			TString output_fname = Form("%s/%d.root", rootFile_pathName, loc_run);
@@ -99,7 +98,7 @@ int main(int argc, char **argv) {
 			for(int loc_ext = 0; loc_ext < 250; loc_ext++) {
 				
 				// check if file exists:
-				TString input_fname = Form("%s/%06d/%06d_%03d.root", rootTree_pathName, loc_run, loc_run, loc_ext);
+				TString input_fname = Form("%s/%06d_%03d.root", rootTree_pathName, loc_run, loc_ext);
 				if(gSystem->AccessPathName(input_fname.Data())) continue;
 				
 				cout << "  processing ext " << loc_ext << endl;
