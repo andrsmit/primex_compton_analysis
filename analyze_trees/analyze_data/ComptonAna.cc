@@ -512,14 +512,23 @@ int ComptonAna::cut_deltaK_two(double deltaK, double eb, double n_sigma_left, do
 int ComptonAna::loadCutParameters() {
 	
 	char cut_dir[256];
-	int loc_cut_runNumber = 0;
-	if(m_runNumber<61355) {
+	int loc_cut_runNumber = m_runNumber;
+	if(m_phase_val==1) {
+		if(m_runNumber<61355) {
+			loc_cut_runNumber = 61321;
+		} else {
+			loc_cut_runNumber = 61866;
+		}
+	} else if(m_phase_val==2) {
+		loc_cut_runNumber = 61321;
+	} else if(m_phase_val==3) {
 		loc_cut_runNumber = 61321;
 	} else {
-		loc_cut_runNumber = 61866;
+		loc_cut_runNumber = 61321;
 	}
+	
 	sprintf(cut_dir, "/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/cuts/phase%d/Run%06d/200nA", 
-		loc_cut_runNumber);
+		m_phase_val, loc_cut_runNumber);
 	
 	char buf[256];
 	ifstream loc_inf;
