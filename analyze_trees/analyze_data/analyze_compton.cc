@@ -78,15 +78,17 @@ int main(int argc, char **argv) {
 		
 		for(int loc_run = genSettings.min_run; loc_run <= genSettings.max_run; loc_run++) {
 			
+			int loc_phase = locAna.getPrimexPhase(loc_run);
+			
 			// set rootTree path according to phase:
 			sprintf(rootTree_pathName, "/work/halld/home/andrsmit/primex_compton_analysis/data/rootTrees/phase%d/%06d", 
-				locAna.getPrimexPhase(loc_run), loc_run);
+				loc_phase, loc_run);
 			
 			// check if root tree directory exists for this runnumber. If not, skip it:
 			if(gSystem->AccessPathName(rootTree_pathName)) continue;
 			
 			// check if output file already exists for this runnumber:
-			TString output_fname = Form("%s/%d.root", rootFile_pathName, loc_run);
+			TString output_fname = Form("%s/phase%d/%d.root", rootFile_pathName, loc_phase, loc_run);
 			if(!gSystem->AccessPathName(output_fname.Data())) continue;
 			
 			locAna.setRunNumber(loc_run);
