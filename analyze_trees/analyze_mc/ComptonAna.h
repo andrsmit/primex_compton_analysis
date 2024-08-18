@@ -274,6 +274,8 @@ class ComptonAna {
 		ComptonAna();
 		~ComptonAna(){};
 		
+		int getPrimexPhase(int run_number);
+		
 		// default analysis:
 		void initHistograms();
 		void runAnalysis(TString infname);

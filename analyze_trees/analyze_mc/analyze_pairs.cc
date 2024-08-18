@@ -45,28 +45,29 @@ int main(int argc, char **argv) {
 	}
 	printUsage(genSettings, 1);
 	
-	// Directory where ROOT Trees are stored:
-	sprintf(rootTree_pathName, 
-		"/work/halld/home/andrsmit/primex_compton_analysis/bhgen_test/recRootTrees/Run%06d/trees", 
-		genSettings.run_number);
-	
-	// Directory where output ROOT files will be stored:
-	sprintf(rootFile_pathName, 
-		"/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/pair", 
-		genSettings.run_number);
+	char loc_path[256] = "/work/halld/home/andrsmit/primex_compton_analysis";
 	
 	// Construct analysis object:
 	
 	ComptonAna locAna;
 	
-	locAna.m_SHIFT_DISTRIBUTIONS = 0;
-	locAna.m_SMEAR_DISTRIBUTIONS = 0;
+	locAna.m_SHIFT_DISTRIBUTIONS = 1;
+	locAna.m_SMEAR_DISTRIBUTIONS = 1;
 	
 	locAna.setRunNumber(genSettings.run_number);
 	
 	// Initialize histograms to be filled:
 	
 	locAna.initHistograms();
+	
+	int  loc_phase = locAna.getPrimexPhase(genSettings.run_number);
+	
+	// Directory where ROOT Trees are stored:
+	sprintf(rootTree_pathName, "%s/bhgen_test/recRootTrees/Run%06d/trees", loc_path, genSettings.run_number);
+	
+	// Directory where output ROOT files will be stored:
+	sprintf(rootFile_pathName, 
+		"%s/analyze_trees/analyze_mc/rootFiles/phase%d/Run%06d/pair", loc_path, loc_phase, genSettings.run_number);
 	
 	//
 	// Check if an input filename was specificed at runtime. 

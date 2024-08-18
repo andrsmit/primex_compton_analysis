@@ -912,7 +912,8 @@ double ComptonAna::smear_deltaK_two(double deltaK, double eb) {
 int ComptonAna::loadCutParameters() {
 	
 	char cut_dir[256];
-	sprintf(cut_dir, "/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/cuts/Run%06d/200nA", m_runNumber);
+	sprintf(cut_dir, "/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/cuts/phase%d/Run%06d/200nA", 
+		m_phase_val, m_runNumber);
 	
 	char buf[256];
 	ifstream loc_inf;
@@ -1070,10 +1071,29 @@ int ComptonAna::loadCutParameters() {
 	return 0;
 }
 
+int ComptonAna::getPrimexPhase(int run_number) {
+	
+	int loc_phase = 0;
+	if(run_number<60000) {
+		return 0;
+	} else if(run_number >=  60000 && run_number <=  69999) {
+		return 1;
+	} else if(run_number >=  80000 && run_number <=  89999) {
+		return 2;
+	} else if(run_number >= 110000 && run_number <= 119999) {
+		return 3;
+	} else {
+		return 0;
+	}
+}
+
 void ComptonAna::setRunNumber(int runNum) { 
 	
 	m_runNumber = runNum;
+	m_phase_val = getPrimexPhase(runNum);
+	
 	setGeometry();
+	
 	int load_val = loadCutParameters();
 	if(load_val != 0) {
 		cout << "\n\n\n" << endl;

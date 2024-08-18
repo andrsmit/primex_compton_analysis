@@ -55,35 +55,6 @@ int main(int argc, char **argv) {
 	
 	char loc_path[256] = "/work/halld/home/andrsmit/primex_compton_analysis";
 	
-	if(genSettings.beam_current==0) {
-		
-		// Directory where ROOT Trees are stored:
-		
-		sprintf(rootTree_pathName, 
-			"%s/compton_mc/phase1/default_geometry/Run%06d/recRootTrees_noBkgd", 
-			loc_path, genSettings.run_number);
-		
-		// Directory where output ROOT files will be stored:
-		
-		sprintf(rootFile_pathName, 
-			"%s/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/compton/noBkgd_systematics", 
-			loc_path, genSettings.run_number);
-		
-	} else {
-		
-		// Directory where ROOT Trees are stored:
-		
-		sprintf(rootTree_pathName, 
-			"%s/compton_mc/phase1/default_geometry/Run%06d/recRootTrees_%03dnA", 
-			loc_path, genSettings.run_number, genSettings.beam_current);
-		
-		// Directory where output ROOT files will be stored:
-		
-		sprintf(rootFile_pathName, 
-			"%s/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/compton/%03dnA_systematics", 
-			loc_path, genSettings.run_number, genSettings.beam_current);
-	}
-	
 	// Construct analysis object:
 	
 	ComptonAna locAna;
@@ -96,6 +67,37 @@ int main(int argc, char **argv) {
 	// Initialize histograms to be filled:
 	
 	locAna.initHistograms_systematics();
+	
+	int loc_phase = locAna.getPrimexPhase(genSettings.run_number);
+	
+	if(genSettings.beam_current==0) {
+		
+		// Directory where ROOT Trees are stored:
+		
+		sprintf(rootTree_pathName, 
+			"%s/compton_mc/phase%d/default_geometry/Run%06d/recRootTrees_noBkgd", 
+			loc_path, loc_phase, genSettings.run_number);
+		
+		// Directory where output ROOT files will be stored:
+		
+		sprintf(rootFile_pathName, 
+			"%s/analyze_trees/analyze_mc/rootFiles/phase%d/Run%06d/compton/noBkgd_systematics", 
+			loc_path, loc_phase, genSettings.run_number);
+		
+	} else {
+		
+		// Directory where ROOT Trees are stored:
+		
+		sprintf(rootTree_pathName, 
+			"%s/compton_mc/phase%d/default_geometry/Run%06d/recRootTrees_%03dnA", 
+			loc_path, loc_phase, genSettings.run_number, genSettings.beam_current);
+		
+		// Directory where output ROOT files will be stored:
+		
+		sprintf(rootFile_pathName, 
+			"%s/analyze_trees/analyze_mc/rootFiles/phase%d/Run%06d/compton/%03dnA_systematics", 
+			loc_path, loc_phase, genSettings.run_number, genSettings.beam_current);
+	}
 	
 	//
 	// Check if an input filename was specificed at runtime. 
