@@ -163,6 +163,24 @@ class JEventProcessor_compton_analysis_TOF_new:public jana::JEventProcessor{
 		TH1F *h_extra_ccal_shower_elasticity_corr_cut;
 		TH2F *h_extra_ccal_shower_xy_cut;
 		
+		TH1F *h_extra_ccal_shower_energy_e;
+		TH1F *h_extra_ccal_shower_distance_e;
+		TH1F *h_extra_ccal_shower_deltaPhi_e;
+		TH1F *h_extra_ccal_shower_deltaPhi_fcal_e;
+		TH1F *h_extra_ccal_shower_elasticity_e;
+		TH1F *h_extra_ccal_shower_elasticity_new_e;
+		TH1F *h_extra_ccal_shower_elasticity_corr_e;
+		TH2F *h_extra_ccal_shower_xy_e;
+		
+		TH1F *h_extra_ccal_shower_energy_e_cut;
+		TH1F *h_extra_ccal_shower_distance_e_cut;
+		TH1F *h_extra_ccal_shower_deltaPhi_e_cut;
+		TH1F *h_extra_ccal_shower_deltaPhi_fcal_e_cut;
+		TH1F *h_extra_ccal_shower_elasticity_e_cut;
+		TH1F *h_extra_ccal_shower_elasticity_new_e_cut;
+		TH1F *h_extra_ccal_shower_elasticity_corr_e_cut;
+		TH2F *h_extra_ccal_shower_xy_e_cut;
+		
 		//----------      Cuts      ---------//
 		
 		int    m_USE_REACTION_WEIGHT;

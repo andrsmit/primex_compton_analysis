@@ -2,6 +2,9 @@
 TF1 *f_acc;
 TCanvas *canvas_acc;
 
+TF1 *f_acc1, *f_acc2, *f_acc3, *f_acc4, *f_acc5;
+
+
 bool CALC_ACC_FROM_FIT;
 
 void get_compton_acc() {
@@ -20,6 +23,8 @@ void get_compton_acc() {
 		
 		double loc_eb = tagh_en[tagh_counter-1];
 		if(loc_eb<6.0) continue;
+		if(7.08<loc_eb && loc_eb<7.10) continue;
+		if(loc_eb>11.3) continue;
 		
 		TFile *fSim = new TFile(fname, "READ");
 		
@@ -49,7 +54,8 @@ void get_compton_acc() {
 		fSim->Close();
 		
 		TH1F *h1 = (TH1F*)h2_tagh->ProjectionY(Form("h1_sim_tagh_tagh_%d",tagh_counter));
-		h1->Add((TH1F*)h2_tagm->ProjectionY(Form("h1_sim_tagh_tagm_%d",tagh_counter)));
+		if(!(PHASE_VAL==1 && !IS_BE_TARGET))
+			h1->Add((TH1F*)h2_tagm->ProjectionY(Form("h1_sim_tagh_tagm_%d",tagh_counter)));
 		if(h1->Integral() < 1.e1) continue;
 		
 		h1->Rebin(rebins);
@@ -114,8 +120,9 @@ void get_compton_acc() {
 		
 		fSim->Close();
 		
-		TH1F *h1 = (TH1F*)h2_tagh->ProjectionY(Form("h1_sim_tagm_tagh_%d",tagm_counter));
-		h1->Add((TH1F*)h2_tagm->ProjectionY(Form("h1_sim_tagm_tagm_%d",tagm_counter)));
+		TH1F *h1 = (TH1F*)h2_tagm->ProjectionY(Form("h1_sim_tagm_tagm_%d",tagm_counter));
+		if(!(PHASE_VAL==1 && !IS_BE_TARGET))
+			h1->Add((TH1F*)h2_tagh->ProjectionY(Form("h1_sim_tagm_tagh_%d",tagm_counter)));
 		if(h1->Integral() < 1.e1) continue;
 		
 		h1->Rebin(rebins);
@@ -216,13 +223,16 @@ void get_compton_acc() {
 	
 	//f_acc = new TF1("f_acc", "[0] + [1]*x + [2]*x^2 + [3]*x^3 + [4]*x^4 + [5]*x^5", 5.0, 11.7);
 	f_acc = new TF1("f_acc", "pol5", 5.0, 11.7);
+	for(int ipar=0; ipar<6; ipar++) {
+		f_acc->SetParName(ipar, Form("p_{%d}", ipar));
+	}
 	f_acc->SetLineColor(kRed);
-	gAcc->Fit("f_acc", "R0");
+	gAcc->Fit("f_acc", "R0ME");
 	f_acc->SetRange(5.0, 12.0);
 	
 	if(DRAW_ACCEPTANCE) {
 		
-		canvas_acc = new TCanvas("canvas_acc", "canvas_acc", 1000, 600);
+		canvas_acc = new TCanvas("canvas_acc", "canvas_acc", 800, 800);
 		canvas_acc->SetTickx(); canvas_acc->SetTicky();
 		canvas_acc->cd();
 		
@@ -234,9 +244,14 @@ void get_compton_acc() {
 		gAcc->SetTitle("");
 		gAcc->GetYaxis()->SetRangeUser(0.02,0.14);
 		TLatex acc_lat;
-		acc_lat.DrawLatexNDC(0.7,0.80,"^{9}Be Target");
+		acc_lat.DrawLatexNDC(0.12,0.15,"^{9}Be Target");
 		
 		canvas_acc->Update();
+		
+		TLatex lat_form;
+		lat_form.SetTextFont(52);
+		lat_form.DrawLatexNDC(0.4, 0.8, "f_{acc}#left(E_{#gamma}#right) = #sum_{i=0}^{5}#left(p_{i}E_{#gamma}^{i}#right)");
+		
 	}
 	
 	return;

@@ -23,6 +23,7 @@ void plot_rf_dt() {
 	h_ccal->GetXaxis()->SetRangeUser(-10.0,10.0);
 	h_ccal->SetTitle("");
 	h_ccal->GetYaxis()->SetMaxDigits(2);
+	h_ccal->Scale(1.e-1);
 	
 	TCanvas *c_ccal = new TCanvas("c_ccal", "ccal", 600, 500);
 	c_ccal->SetTopMargin(0.07);
@@ -95,6 +96,8 @@ void plot_rf_dt() {
 	h_beam->GetXaxis()->SetRangeUser(-10.0,10.0);
 	h_beam->SetTitle("");
 	h_beam->GetYaxis()->SetMaxDigits(2);
+	h_beam->GetYaxis()->SetDecimals();
+	h_beam->Scale(1.e-1);
 	
 	TCanvas *c_beam = new TCanvas("c_beam", "beam", 600, 500);
 	c_beam->SetTopMargin(0.07);
@@ -128,6 +131,7 @@ void plot_rf_dt() {
 	h_beam_cut->GetXaxis()->SetRangeUser(-10.0,10.0);
 	h_beam_cut->SetTitle("");
 	h_beam_cut->GetYaxis()->SetMaxDigits(2);
+	h_beam_cut->GetYaxis()->SetDecimals();
 	
 	TCanvas *c_beam_cut = new TCanvas("c_beam_cut", "beam (cut)", 600, 500);
 	c_beam_cut->SetTopMargin(0.07);

@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 	
 	// Directory where ROOT Trees are stored:
 	
-	sprintf(rootTree_pathName, "%s/data/rootTrees/phaseIII/temp", loc_pathname);
+	sprintf(rootTree_pathName, "%s/data/rootTrees/phaseIII", loc_pathname);
 	
 	// Directory where output ROOT files will be stored:
 	
@@ -239,8 +239,10 @@ int main(int argc, char **argv) {
 		
 		//----------------------------------------------------------//
 		
-		m_beamX = 0.146;
-		m_beamY = 0.017;
+		//m_beamX = 0.146;
+		//m_beamY = 0.017;
+		m_beamX = 0.151;
+		m_beamY = 0.012;
 		if(run_group < 8) m_beamZ = 64.935;
 		else 							m_beamZ = 65.0;
 		
@@ -302,6 +304,18 @@ void compton_analysis(int run)
 		double y1 = fcal_y[ic];
 		double z1 = fcal_z[ic];
 		
+		/*
+		Update FCAL position:
+		old beam position: (0.146, 0.017)
+		new beam position: (0.151, 0.012)
+		
+		old CCAL position: (0.135, 0.135)
+		new CCAL position: (0.184, 0.110)
+		*/
+		
+		//x1 = x1 - (0.151-0.146);
+		//y1 = y1 - (0.012-0.017);
+		
 		double fcal_face_x = m_beamX + (x1 * (m_fcalZ - m_beamZ)/z1) - m_fcalX;
 		double fcal_face_y = m_beamY + (y1 * (m_fcalZ - m_beamZ)/z1) - m_fcalY;
 		
@@ -313,6 +327,9 @@ void compton_analysis(int run)
 		double x2 = ccal_x[ic];
 		double y2 = ccal_y[ic];
 		double z2 = ccal_z[ic];
+		
+		//x2 = x2 - (0.151-0.146) + (0.184-0.135);
+		//y2 = y2 - (0.012-0.017) + (0.110-0.135);
 		
 		double ccal_face_x = m_beamX + (x2 * (m_ccalZ - m_beamZ)/z2) - m_ccalX;
 		double ccal_face_y = m_beamY + (y2 * (m_ccalZ - m_beamZ)/z2) - m_ccalY;
@@ -406,7 +423,7 @@ void compton_analysis(int run)
 		if(bunch_val[ic]) {
 			if(fabs(tb[ic]-rfTime) < 2.004) fill_weight =  1.0;
 		} else {
-			fill_weight = -0.25;
+			fill_weight = -0.1;
 		}
 		
 		//-----   Compton Cuts   -----//
@@ -1054,38 +1071,38 @@ void write_histograms(char *name) {
 	TDirectory *dir_ccalT = new TDirectoryFile("ccalT", "ccalT");
 	dir_ccalT->cd();
 	for(int ihist=0; ihist<10; ihist++) {
-		h_deltaK_tagh_ccalT[ihist]->Reset();
-		h_deltaK_tagm_ccalT[ihist]->Reset();
-		h_deltaK_tagh_cut_ccalT[ihist]->Reset();
-		h_deltaK_tagm_cut_ccalT[ihist]->Reset();
+		h_deltaK_tagh_ccalT[ihist]->Write();
+		h_deltaK_tagm_ccalT[ihist]->Write();
+		h_deltaK_tagh_cut_ccalT[ihist]->Write();
+		h_deltaK_tagm_cut_ccalT[ihist]->Write();
 	}
 	dir_ccalT->cd("../");
 	
 	TDirectory *dir_sigE = new TDirectoryFile("DeltaE", "DeltaE");
 	dir_sigE->cd();
 	for(int ihist=0; ihist<16; ihist++) {
-		h_deltaK_tagh_sigE[ihist]->Reset();
-		h_deltaK_tagm_sigE[ihist]->Reset();
-		h_deltaK_tagh_cut_sigE[ihist]->Reset();
-		h_deltaK_tagm_cut_sigE[ihist]->Reset();
+		h_deltaK_tagh_sigE[ihist]->Write();
+		h_deltaK_tagm_sigE[ihist]->Write();
+		h_deltaK_tagh_cut_sigE[ihist]->Write();
+		h_deltaK_tagm_cut_sigE[ihist]->Write();
 	}
 	dir_sigE->cd("../");
 	
 	TDirectory *dir_sigPhi = new TDirectoryFile("DeltaPhi", "DeltaPhi");
 	dir_sigPhi->cd();
 	for(int ihist=0; ihist<16; ihist++) {
-		h_deltaK_tagh_sigPhi[ihist]->Reset();
-		h_deltaK_tagm_sigPhi[ihist]->Reset();
-		h_deltaK_tagh_cut_sigPhi[ihist]->Reset();
-		h_deltaK_tagm_cut_sigPhi[ihist]->Reset();
+		h_deltaK_tagh_sigPhi[ihist]->Write();
+		h_deltaK_tagm_sigPhi[ihist]->Write();
+		h_deltaK_tagh_cut_sigPhi[ihist]->Write();
+		h_deltaK_tagm_cut_sigPhi[ihist]->Write();
 	}
 	dir_sigPhi->cd("../");
 	
 	TDirectory *dir_sigK = new TDirectoryFile("DeltaK", "DeltaK");
 	dir_sigK->cd();
 	for(int ihist=0; ihist<16; ihist++) {
-		h_deltaK_tagh_sigK[ihist]->Reset();
-		h_deltaK_tagm_sigK[ihist]->Reset();
+		h_deltaK_tagh_sigK[ihist]->Write();
+		h_deltaK_tagm_sigK[ihist]->Write();
 	}
 	dir_sigK->cd("../");
 	
@@ -1436,67 +1453,36 @@ void init_histograms()
 void load_constants(int group, bool is_first) 
 {
 	
-	if(group < 3) { // Be FIELD OFF
+	if(group < 4) { // Be FIELD OFF
 		
-		deltaE_mu_p0    = -2.85756e-01;
-		deltaE_mu_p1    =  8.91005e-02;
-		deltaE_mu_p2    = -8.73318e-03;
-		deltaE_mu_p3    =  2.45143e-04;
+		deltaE_mu_p0    = -1.16581e-01;
+		deltaE_mu_p1    =  3.40885e-02;
+		deltaE_mu_p2    = -2.77050e-03;
+		deltaE_mu_p3    =  2.09654e-05;
 		//---------------------------//
-		deltaE_sig_p0   =  1.81080e-02;
-		deltaE_sig_p1   =  1.38460e-02;
-		deltaE_sig_p2   =  5.76009e-02;
+		deltaE_sig_p0   =  1.65687e-02;
+		deltaE_sig_p1   =  2.65247e-02;
+		deltaE_sig_p2   =  4.38584e-02;
 		
-		deltaPhi_mu_p0  =  1.80011e+02;
-		deltaPhi_mu_p1  = -8.18407e-03;
+		deltaPhi_mu_p0  =  1.79825e+02;
+		deltaPhi_mu_p1  = -1.10610e-02;
 		deltaPhi_mu_p2  =  0.;
 		deltaPhi_mu_p3  =  0.;
 		//---------------------------// 
-		deltaPhi_sig_p0 =  1.22089e+01;
-		deltaPhi_sig_p1 = -1.81467e+00;
-		deltaPhi_sig_p2 =  1.72870e-01;
-		deltaPhi_sig_p3 = -5.55077e-03;
+		deltaPhi_sig_p0 =  1.33099e+01;
+		deltaPhi_sig_p1 = -2.14366e+00;
+		deltaPhi_sig_p2 =  2.06214e-01;
+		deltaPhi_sig_p3 = -6.71967e-03;
 		
-		deltaK_mu_p0    =  3.22415e-01;
-		deltaK_mu_p1    = -8.24914e-02;
-		deltaK_mu_p2    =  4.25586e-03;
-		deltaK_mu_p3    = -1.88916e-04;
+		deltaK_mu_p0    =  2.09726e-01;
+		deltaK_mu_p1    = -4.71020e-02;
+		deltaK_mu_p2    =  3.81198e-04;
+		deltaK_mu_p3    = -4.82342e-05;
 		//---------------------------// 
-		deltaK_sig_p0   =  5.70095e-01;
-		deltaK_sig_p1   = -4.93059e-02;
-		deltaK_sig_p2   =  1.19542e-02;
-		deltaK_sig_p3   = -4.17058e-04;
-		
-	} else if(group < 4) { // Be-Empty FIELD OFF
-		
-		deltaE_mu_p0    = -6.60845e-01;
-		deltaE_mu_p1    =  2.56921e-01;
-		deltaE_mu_p2    = -2.55507e-02;
-		deltaE_mu_p3    =  8.94288e-04;
-		//---------------------------//
-		deltaE_sig_p0   =  1.67980e-02;
-		deltaE_sig_p1   =  3.37356e-02;
-		deltaE_sig_p2   =  8.58059e-02;
-		
-		deltaPhi_mu_p0  =  1.80011e+02;
-		deltaPhi_mu_p1  = -8.18407e-03;
-		deltaPhi_mu_p2  =  0.;
-		deltaPhi_mu_p3  =  0.;
-		//---------------------------// 
-		deltaPhi_sig_p0 =  1.22089e+01;
-		deltaPhi_sig_p1 = -1.81467e+00;
-		deltaPhi_sig_p2 =  1.72870e-01;
-		deltaPhi_sig_p3 = -5.55077e-03;
-		
-		deltaK_mu_p0    =  3.22415e-01;
-		deltaK_mu_p1    = -8.24914e-02;
-		deltaK_mu_p2    =  4.25586e-03;
-		deltaK_mu_p3    = -1.88916e-04;
-		//---------------------------// 
-		deltaK_sig_p0   =  5.70095e-01;
-		deltaK_sig_p1   = -4.93059e-02;
-		deltaK_sig_p2   =  1.19542e-02;
-		deltaK_sig_p3   = -4.17058e-04;
+		deltaK_sig_p0   =  5.19636e-01;
+		deltaK_sig_p1   = -3.35925e-02;
+		deltaK_sig_p2   =  1.03144e-02;
+		deltaK_sig_p3   = -3.63616e-04;
 		
 	} else if(group < 8) { // Be FIELD ON (stand-in values, need to update)
 		

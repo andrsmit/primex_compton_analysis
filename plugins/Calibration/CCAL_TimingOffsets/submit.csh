@@ -52,7 +52,7 @@ set run = 61321
 	
 	# Make sure the output directory exists for this run number:
 	
-	set loc_outdir = $outdir/rootFiles/$runnumber
+	set loc_outdir = $outdir/rootFiles/${runnumber}_v2_corrected
 	if( ! -d $loc_outdir ) then
 		echo "Output directory: $loc_outdir does not exist."
 		continue
@@ -106,7 +106,7 @@ set run = 61321
 			
 			if($submit_runs == "go") then
 				set command = "swif2 add-job -workflow ${workflow}"
-				set command = "$command -name ccal_hit_tw_${runnumber}_${ext}"
+				set command = "$command -name ccal_hit_tw_v2_corrected_${runnumber}_${ext}"
 				set command = "$command -account ${account} -partition ${partition}"
 				set command = "$command -cores ${cores} -ram ${ram} -time ${time} -disk ${disk}"
 				set command = "$command -constraint ${constraint}"

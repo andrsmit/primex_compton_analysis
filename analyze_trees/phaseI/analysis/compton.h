@@ -27,11 +27,10 @@ const double c   = 29.9792; // [cm/ns]
 const double pi  = 3.1415926535;
 const double m_e = 0.510998928e-3;
 
-const double m_fcalX =   0.617;
-const double m_fcalY =  -0.002;
+double m_fcalX = 0.617, m_fcalY = -0.002;
 const double m_fcalZ = 624.906;
 
-double m_ccalX = 0.083, m_ccalY = 0.148;
+double m_ccalX = 0.083, m_ccalY =  0.148;
 const double m_ccalZ = 1279.376;
 
 double m_beamX, m_beamY, m_beamZ;
@@ -57,6 +56,7 @@ void compton_analysis(int run);
 
 TH1F *h_fcal_rf_dt, *h_ccal_rf_dt, *h_beam_rf_dt, *h_beam_rf_dt_cut;
 TH1F *h_n_cands;
+TH2F *h_deltaE_tagh_main, *h_deltaE_tagh_acc;
 TH2F *h_deltaE_tagh,      *h_deltaE_tagm;
 TH2F *h_deltaPhi_tagh,    *h_deltaPhi_tagm;
 TH2F *h_deltaK_tagh,      *h_deltaK_tagm;

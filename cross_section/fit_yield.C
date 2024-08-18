@@ -39,7 +39,7 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	
 	int old_tag_counter = 0;
 	int old_tag_sys = 0;
-	if(PHASE_VAL==1) {
+	if(PHASE_VAL==1 && IS_BE_TARGET) {
 		old_tag_counter = counter;
 		old_tag_sys     = tag_sys;
 	} else {
@@ -99,7 +99,6 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	double comp_flux_sim = n_comp_thrown / (comp_cs * n_e * mb);
 	
 	if(n_comp_thrown < 1.e3) return 0;
-	
 	TH2F *h2;
 	
 	if(tag_sys==0) 
@@ -310,8 +309,8 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	double n_pair_mc   = h1_pair->Integral(h1_pair->FindBin(min_fit_x), h1_pair->FindBin(max_fit_x));
 	double n_trip_mc   = h1_trip->Integral(h1_trip->FindBin(min_fit_x), h1_trip->FindBin(max_fit_x));
 	
-	n_pair_mc *= (1.e3 * pair_cs / (double)h_weight_pair->GetMean());
-	n_trip_mc *= (1.e3 * trip_cs / (double)h_weight_trip->GetMean());
+	//n_pair_mc *= (1.e3 * pair_cs / (double)h_weight_pair->GetMean());
+	//n_trip_mc *= (1.e3 * trip_cs / (double)h_weight_trip->GetMean());
 	
 	double comp_frac_exp = n_comp_exp / n_total_exp;
 	double pair_frac_exp = n_pair_mc / n_total_exp;
@@ -321,6 +320,14 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 	h1_pair->Add(h1_trip);
 	
 	//-----   Perform Binned Maximum Likelihood Fit (TFractionFitter)   -----//
+	
+	if(DEBUG_FITS) {
+		c_debug->cd();
+		h1->Draw("PE");
+		h1_comp->Draw("same hist");
+		h1_pair->Draw("same hist");
+		c_debug->Update();
+	}
 	
 	TObjArray *mc = new TObjArray(2);
 	mc->Add(h1_comp);
@@ -442,6 +449,10 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		
 		fit_result->SetMaximum(fit_result->GetMaximum()*1.4);
 		
+		fit_result->GetYaxis()->SetTitle(Form("Counts / %d MeV", (int)(bin_size*1.e3)));
+		fit_result->GetYaxis()->SetTitleOffset(1.8);
+		fit_result->SetTitle("");
+		
 		canvas_draw->cd();
 		fit_result->Draw("hist");
 		//FitResultAll->Draw("hist same");
@@ -475,22 +486,33 @@ int fit_yield(int tag_sys, int counter, TH1F *h1, double &yield, double &yieldE,
 		FitResultBkgd->SetFillStyle(3004);
 		FitResultBkgd->Draw("same hist");
    	
-		TLegend *leg1 = new TLegend(0.1215,0.5659,0.4912,0.8876);
+		TLegend *leg1 = new TLegend(0.185,0.673,0.554,0.873);
 		char text[200];
 		leg1->SetFillColor(0);
 		leg1->SetShadowColor(0);
 		leg1->SetFillStyle(0);
 		leg1->SetBorderSize(0);
 		leg1->SetLineColor(0);
+		sprintf(text,"Data");
+		leg1->AddEntry(dataInput, text, "pl");
+		sprintf(text,"Combined Fit");
+		leg1->AddEntry(fit_result, text, "l");
+		/*
 		sprintf(text,"Data: %5.1f events", dataInput->Integral());
 		leg1->AddEntry(dataInput, text, "pl");
 		sprintf(text,"Fitted: %5.1f events", fit_result->Integral());
 		leg1->AddEntry(fit_result, text, "l");
+		*/
 		sprintf(text, "Signal = %.2f(%%)", 100.*FitResultSignal->Integral()/fit_result->Integral());
 		leg1->AddEntry(FitResultSignal, text, "f");
 		sprintf(text, "Bkgd = %.2f(%%)", 100.*FitResultBkgd->Integral()/fit_result->Integral());
 		leg1->AddEntry(FitResultBkgd, text, "f");
 		leg1->Draw();
+		
+		TLatex lat_new;
+		lat_new.SetTextColor(kRed-6);
+		lat_new.SetTextFont(52);
+		lat_new.DrawLatexNDC(0.63, 0.83, Form("#scale[1.0]{E_{#gamma} = %.2f GeV}", eb));
 		
 		canvas1->Update();
 		canvas_draw->Update();
@@ -512,8 +534,8 @@ int get_neighbor(int tag_sys, int counter, int sim_case) {
 	
 	if(tag_sys==0) {
 		
-		if(counter>219) return 0;
-		else if(counter>127&&counter<179) return 0;
+		//if(counter>219) return 0;
+		if(counter>127&&counter<179) return 0;
 		else {
 			
 			int keep_going = 1;

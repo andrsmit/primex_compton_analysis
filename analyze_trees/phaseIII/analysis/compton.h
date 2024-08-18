@@ -31,8 +31,8 @@ const double m_fcalX =    0.408;
 const double m_fcalY =    0.027;
 const double m_fcalZ =  624.906;
 
-const double m_ccalX =    0.135;
-const double m_ccalY =    0.135;
+const double m_ccalX =    0.184;
+const double m_ccalY =    0.110;
 const double m_ccalZ = 1279.376;
 
 double m_beamX, m_beamY, m_beamZ;

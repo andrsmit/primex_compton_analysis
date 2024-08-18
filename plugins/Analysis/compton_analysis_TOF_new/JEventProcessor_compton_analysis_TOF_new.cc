@@ -56,26 +56,26 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::init(void)
 	h_n_showers          = new TH1F("n_showers", 
 		"Number of showers in FCAL and CCAL", 20, -0.5, 19.5);
 	h_n_showers_ccal     = new TH1F("n_showers_ccal", 
-		"Number of showers in FCAL", 20, -0.5, 19.5);
+		"Number of showers in CCAL", 20, -0.5, 19.5);
 	h_n_showers_fcal     = new TH1F("n_showers_fcal", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
 	h_n_showers_cut      = new TH1F("n_showers_cut", 
 		"Number of showers in FCAL and CCAL", 20, -0.5, 19.5);
 	h_n_showers_ccal_cut = new TH1F("n_showers_ccal_cut", 
-		"Number of showers in FCAL", 20, -0.5, 19.5);
+		"Number of showers in CCAL", 20, -0.5, 19.5);
 	h_n_showers_fcal_cut = new TH1F("n_showers_fcal_cut", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
 	
 	h_n_good_showers          = new TH1F("n_good_showers", 
 		"Number of showers in FCAL and CCAL", 20, -0.5, 19.5);
 	h_n_good_showers_ccal     = new TH1F("n_good_showers_ccal", 
-		"Number of showers in FCAL", 20, -0.5, 19.5);
+		"Number of showers in CCAL", 20, -0.5, 19.5);
 	h_n_good_showers_fcal     = new TH1F("n_good_showers_fcal", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
 	h_n_good_showers_cut      = new TH1F("n_good_showers_cut", 
 		"Number of showers in FCAL and CCAL", 20, -0.5, 19.5);
 	h_n_good_showers_ccal_cut = new TH1F("n_good_showers_ccal_cut", 
-		"Number of showers in FCAL", 20, -0.5, 19.5);
+		"Number of showers in CCAL", 20, -0.5, 19.5);
 	h_n_good_showers_fcal_cut = new TH1F("n_good_showers_fcal_cut", 
 		"Number of showers in FCAL", 20, -0.5, 19.5);
 	
@@ -227,6 +227,41 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::init(void)
 	h_extra_ccal_shower_elasticity_corr_cut = new TH1F("shower_elasticity_corr_cut",
 		"Corrected #DeltaE; E_{FCAL} + E_{CCAL} + E_{extra} - E_{#gamma} [GeV]", 4000, -8.0, 8.0);
 	h_extra_ccal_shower_xy_cut              = new TH2F("shower_xy_cut",
+		"Position of extra CCAL shower", 500, -12., 12., 500, -12., 12.);
+	
+	
+	h_extra_ccal_shower_energy_e          = new TH1F("shower_energy_e", 
+		"Energy of extra CCAL shower; E_{extra} [GeV]", 1000, 0., 10.);
+	h_extra_ccal_shower_distance_e        = new TH1F("shower_distance_e",
+		"Distrance from main CCAL shower; #Deltad [cm]", 100, 0., 50.);
+	h_extra_ccal_shower_deltaPhi_e        = new TH1F("shower_deltaPhi_e",
+		"#phi_{extra} - #phi_{CCAL}; [deg.]", 3600, 0., 360.);
+	h_extra_ccal_shower_deltaPhi_fcal_e   = new TH1F("shower_deltaPhi_fcal_e",
+		"#phi_{extra} - #phi_{FCAL}; [deg.]", 3600, 0., 360.);
+	h_extra_ccal_shower_elasticity_e      = new TH1F("shower_elasticity_e",
+		"#DeltaE; E_{FCAL} + E_{CCAL} - E_{#gamma} [GeV]", 4000, -8.0, 8.0);
+	h_extra_ccal_shower_elasticity_new_e  = new TH1F("shower_elasticity_new_e",
+		"#DeltaE new; E_{FCAL} + E_{extra} - E_{#gamma} [GeV]", 4000, -8.0, 8.0);
+	h_extra_ccal_shower_elasticity_corr_e = new TH1F("shower_elasticity_corr_e",
+		"Corrected #DeltaE; E_{FCAL} + E_{CCAL} + E_{extra} - E_{#gamma} [GeV]", 4000, -8.0, 8.0);
+	h_extra_ccal_shower_xy_e              = new TH2F("shower_xy_e",
+		"Position of extra CCAL shower", 500, -12., 12., 500, -12., 12.);
+	
+	h_extra_ccal_shower_energy_e_cut          = new TH1F("shower_energy_e_cut", 
+		"Energy of extra CCAL shower; E_{extra} [GeV]", 1000, 0., 10.);
+	h_extra_ccal_shower_distance_e_cut        = new TH1F("shower_distance_e_cut",
+		"Distrance from main CCAL shower; #Deltad [cm]", 100, 0., 50.);
+	h_extra_ccal_shower_deltaPhi_e_cut        = new TH1F("shower_deltaPhi_e_cut",
+		"#phi_{extra} - #phi_{CCAL}; [deg.]", 3600, 0., 360.);
+	h_extra_ccal_shower_deltaPhi_fcal_e_cut   = new TH1F("shower_deltaPhi_fcal_e_cut",
+		"#phi_{extra} - #phi_{FCAL}; [deg.]", 3600, 0., 360.);
+	h_extra_ccal_shower_elasticity_e_cut      = new TH1F("shower_elasticity_e_cut",
+		"#DeltaE; E_{FCAL} + E_{CCAL} - E_{#gamma} [GeV]", 4000, -8.0, 8.0);
+	h_extra_ccal_shower_elasticity_new_e_cut  = new TH1F("shower_elasticity_new_e_cut",
+		"#DeltaE new; E_{FCAL} + E_{extra} - E_{#gamma} [GeV]", 4000, -8.0, 8.0);
+	h_extra_ccal_shower_elasticity_corr_e_cut = new TH1F("shower_elasticity_corr_e_cut",
+		"Corrected #DeltaE; E_{FCAL} + E_{CCAL} + E_{extra} - E_{#gamma} [GeV]", 4000, -8.0, 8.0);
+	h_extra_ccal_shower_xy_e_cut              = new TH2F("shower_xy_e_cut",
 		"Position of extra CCAL shower", 500, -12., 12., 500, -12., 12.);
 	
 	dir_extra_ccal->cd("../");
@@ -865,7 +900,7 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::evnt(JEventLoop *eventLoop, u
 						if((fabs(loc_t-locRFTime) >= CCAL_RF_time_cut)) continue;
 						
 						double loc_e = (*loc_show)->E;
-						if(loc_e==e1) continue;
+						if(loc_e==e2) continue;
 						
 						// project shower to same z-position:
 						
@@ -899,6 +934,38 @@ jerror_t JEventProcessor_compton_analysis_TOF_new::evnt(JEventLoop *eventLoop, u
 								fill_weight);
 							h_extra_ccal_shower_xy_cut->Fill(loc_pos.X(), loc_pos.Y(), 
 								fill_weight);
+						}
+						
+						if(!tof_match) {
+							h_extra_ccal_shower_energy_e->Fill(loc_e, fill_weight);
+							h_extra_ccal_shower_distance_e->Fill(loc_dr, fill_weight);
+							h_extra_ccal_shower_deltaPhi_e->Fill(loc_deltaPhi, fill_weight);
+							h_extra_ccal_shower_deltaPhi_fcal_e->Fill(loc_deltaPhi_fcal, 
+								fill_weight);
+							h_extra_ccal_shower_elasticity_e->Fill(deltaE, fill_weight);
+							h_extra_ccal_shower_elasticity_new_e->Fill(deltaE+loc_e-e2, 
+								fill_weight);
+							h_extra_ccal_shower_elasticity_corr_e->Fill(deltaE+loc_e, 
+								fill_weight);
+							h_extra_ccal_shower_xy_e->Fill(loc_pos.X(), loc_pos.Y(), 
+								fill_weight);
+							
+							if(e_cut && k_cut && phi_cut) {
+								
+								h_extra_ccal_shower_energy_e_cut->Fill(loc_e, fill_weight);
+								h_extra_ccal_shower_distance_e_cut->Fill(loc_dr, fill_weight);
+								h_extra_ccal_shower_deltaPhi_e_cut->Fill(loc_deltaPhi, 
+									fill_weight);
+								h_extra_ccal_shower_deltaPhi_fcal_e_cut->Fill(loc_deltaPhi_fcal, 
+									fill_weight);
+								h_extra_ccal_shower_elasticity_e_cut->Fill(deltaE, fill_weight);
+								h_extra_ccal_shower_elasticity_new_e_cut->Fill(deltaE+loc_e-e2, 
+									fill_weight);
+								h_extra_ccal_shower_elasticity_corr_e_cut->Fill(deltaE+loc_e, 
+									fill_weight);
+								h_extra_ccal_shower_xy_e_cut->Fill(loc_pos.X(), loc_pos.Y(), 
+									fill_weight);
+							}
 						}
 					}
 				}

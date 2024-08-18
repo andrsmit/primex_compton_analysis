@@ -1,5 +1,5 @@
 
-#include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.h"
+#include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.cc"
 
 //----------   Function Declarations   ----------//
 
@@ -84,7 +84,7 @@ void compare_deltaE(int loc_cut_index=0)
 	get_theory_calc();
 	
 	cut_index = loc_cut_index;
-	hist_name = "deltaE/deltaE";
+	hist_name = "deltaK/deltaK";
 	
 	//------------------------------------------------//
 	// Get histograms from data:
@@ -94,7 +94,7 @@ void compare_deltaE(int loc_cut_index=0)
 	//------------------------------------------------//
 	// Get e+e- distributions (scaled to realistic flux):
 	
-	TString pair_mc_hist_fname = Form("%s/analyze_trees/phase1/analyze_mc/rootFiles/Run061321/pair/smeared/pair_rec.root", 
+	TString pair_mc_hist_fname = Form("%s/analyze_trees/phase1/analyze_mc/rootFiles/Run061321/pair/pair_rec_combined.root", 
 		loc_pathname);
 	TString pair_mc_flux_fname = Form("%s/bhgen_test/recRootTrees/Run061321/sum.root", loc_pathname);
 	if(get_pair_mc_hists(pair_mc_hist_fname, pair_mc_flux_fname)) return;
@@ -173,7 +173,6 @@ void compare_deltaE(int loc_cut_index=0)
 	h_compton->Rebin(rebins);
 	
 	h_compton->Scale(0.98);
-	h_pair->Scale(0.7);
 	
 	TH1F *h_sum = (TH1F*)h_compton->Clone("h_sum");
 	h_sum->Add(h_pair);
@@ -219,11 +218,13 @@ void compare_deltaE(int loc_cut_index=0)
 	h_data->GetXaxis()->SetRangeUser(-6.0,2.0);
 	h_data->Draw("hist");
 	h_compton->Draw("same hist");
+	h_pair->Draw("same hist");
 	
-	TLegend *leg = new TLegend(0.1643, 0.6817, 0.4940, 0.8015);
+	TLegend *leg = new TLegend(0.1643, 0.6218, 0.4940, 0.8015);
 	leg->SetBorderSize(0);
 	leg->AddEntry(h_data, "Data", "PE");
 	leg->AddEntry(h_compton, "Compton MC", "l");
+	leg->AddEntry(h_pair, "e^{+}e^{-} MC", "l");
 	leg->Draw();
 	
 	TLatex lat_new;
@@ -338,9 +339,9 @@ int get_pair_mc_hists(TString hist_fname, TString flux_fname) {
 	}
 	
 	h2_tagh_pair = new TH2F("h2_tagh_pair", "#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]",
-		274, 0.5, 274.5, 2000, -8.0, 8.0);
+		274, 0.5, 274.5, 1000, -8.0, 8.0);
 	h2_tagm_pair = new TH2F("h2_tagm_pair", "#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]",
-		102, 0.5, 102.5, 2000, -8.0, 8.0);
+		102, 0.5, 102.5, 1000, -8.0, 8.0);
 	
 	TFile *f_pair = new TFile(hist_fname, "READ");
 	TH2F *loc_h2_tagh_pair = (TH2F*)f_pair->Get(Form("%s_tagh_%d",hist_name.Data(),cut_index))->Clone("h2_tagh_pair");
@@ -414,9 +415,9 @@ int get_pair_mc_hists(TString hist_fname, TString flux_fname) {
 int get_compton_mc_hists() {
 	
 	h2_tagh_compton = new TH2F("h2_tagh_compton", "#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]",
-		274, 0.5, 274.5, 2000, -8.0, 8.0);
+		274, 0.5, 274.5, 1000, -8.0, 8.0);
 	h2_tagm_compton = new TH2F("h2_tagm_compton", "#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]",
-		102, 0.5, 102.5, 2000, -8.0, 8.0);
+		102, 0.5, 102.5, 1000, -8.0, 8.0);
 	
 	char loc_fname[256];
 	

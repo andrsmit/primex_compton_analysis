@@ -14,6 +14,7 @@ set jf_fname  = $6
 
 source /group/halld/Software/build_scripts/gluex_env_boot_jlab.csh
 gxenv /home/andrsmit/version.xml
+#gxenv /work/halld/home/andrsmit/primex_compton_analysis/compton_mc/phase1/default_geometry/Run061321/test/version.xml
 
 setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
 setenv JANA_CALIB_URL mysql://ccdb_user@hallddb-farm.jlab.org/ccdb

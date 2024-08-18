@@ -6,7 +6,13 @@ int  BEAM_CURRENT;
 
 bool DRAW_THEORY,    DRAW_ACCEPTANCE;
 bool DRAW_FITS_TAGH, DRAW_FITS_TAGM;
+bool SAVE_FITS_TAGH, SAVE_FITS_TAGM;
 bool USE_F_ACC;
+bool DEBUG_FITS;
+
+bool USE_NIST_CALCULATION = true;
+
+TCanvas *c_debug;
 
 char TARGET_STR[256], FIELD_STR[256];
 
@@ -52,6 +58,9 @@ TString hname_tagh, hname_tagm;
 
 double  tagh_yield[274],  tagm_yield[102];
 double tagh_yieldE[274], tagm_yieldE[102];
+
+double  tagh_cs[274],  tagm_cs[102];
+double tagh_csE[274], tagm_csE[102];
 
 /*********************************************/
 // fitting:

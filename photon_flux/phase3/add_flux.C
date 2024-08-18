@@ -31,10 +31,9 @@ void add_flux()
 	
 	char outfile_tagh[256], outfile_tagm[256];
 	
-	sprintf(outfile_tagh, "Be_200nA_FIELDOFF_flux_tagh.txt");
-	sprintf(outfile_tagm, "Be_200nA_FIELDOFF_flux_tagm.txt");
-	vector<int> run_list = {110600, 110601, 110602, 110603, 110605, 110606, 110607, 110608, 
-	110609, 110610, 110615};
+	sprintf(outfile_tagh, "Be_empty_FIELDOFF_flux_tagh.txt");
+	sprintf(outfile_tagm, "Be_empty_FIELDOFF_flux_tagm.txt");
+	vector<int> run_list = {110477, 110479, 110481, 110482};
 	
 	double tagh_flux[274], tagh_fluxE[274];
 	double tagm_flux[102], tagm_fluxE[102];

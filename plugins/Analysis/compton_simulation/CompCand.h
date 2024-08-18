@@ -23,6 +23,7 @@ typedef struct {
 	double y2;
 	double z2;
 	
+	int ccal_nblocks;
 	int ring;
 	int pair_cut;
 	int phi_slice;

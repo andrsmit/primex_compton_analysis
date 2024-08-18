@@ -12,7 +12,7 @@ foreach list ($run_lists)
 		echo " "
 		echo "$run"
 		python ${prog} -b ${run} -e ${run}
-		mv ${run}_flux.root rootFiles_new/
+		mv ${run}_flux.root rootFiles/
 		mv ${run}_tagh_ps_acc_cor.txt txtFiles/
 		mv ${run}_tagm_ps_acc_cor.txt txtFiles/
 	end

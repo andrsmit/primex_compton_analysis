@@ -3,7 +3,7 @@
 
 void set_cuts() {
 	
-	FCAL_ENERGY_CUT  = 0.50;
+	FCAL_ENERGY_CUT  = 0.35;
 	CCAL_ENERGY_CUT  = 3.00;
 	
 	FCAL_RF_TIME_CUT = 3.0;
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 	vector<int> He_empty_runs = {
 	61852, 61854, 61855, 61856, 61857, 61858, 61859, 61860, 61861, 61862, 61863};
 	vector<int> He_200nA_runs = {
-	61866, 61867, 61868, 61874, 61875, 61876, 61877, 61878, 61889, 61880, 61881, 61882, 
+	61866, 61867, 61868, 61874, 61875, 61876, 61877, 61878, 61879, 61880, 61881, 61882, 
 	61883, 61884, 61885, 61887, 61888, 61889, 61890, 61891, 61892, 61893, 61894, 61895, 
 	61905, 61906, 61908, 61909, 61910};
 	vector<int> He_100nA_runs = {
@@ -147,16 +147,38 @@ int main(int argc, char **argv) {
 			m_ccalY = 0.119;
 		}
 		
+		if(run_group > 2) {
+			// corrections to alignment from Simon's updated beam spot:
+			
+			m_fcalX =  0.455;
+			m_fcalY = -0.032;
+			
+			m_ccalX = -0.082;
+			if(irun<61483) m_ccalY = 0.061;
+			else           m_ccalY = 0.051;
+			
+			if(irun<61483) {
+				m_beamX =  0.027;
+				m_beamY = -0.128;
+			} else if(irun<61774) {
+				m_beamX =  0.001;
+				m_beamY = -0.077;
+			} else {
+				m_beamX =  0.038;
+				m_beamY = -0.095;
+			}
+		}
+		
 		cout << "Processing run " << irun << endl;
 		
 		load_constants(run_group, first_evt);
 		first_evt = false;
 		
-		for(int iext = 0; iext < 100; iext++ ) {
+		for(int iext = 0; iext < 100; iext++) {
 			
 			char buf[256];
 			sprintf(buf,"%s/%d/%d_%03d.root", rootTree_pathName, irun, irun, iext);
-			if( gSystem->AccessPathName(buf) ) continue;
+			if(gSystem->AccessPathName(buf)) continue;
 			
 			cout << "  ext " << iext << endl;
 			
@@ -249,10 +271,10 @@ void compton_analysis(int run)
 		if(!fcal_t_cut || !ccal_t_cut)   continue;
 		
 		// FCAL square cut to remove dead channels:
-		/*
+		
 		if((-32. < fcal_face_y && fcal_face_y < -20.) && 
 			(-8. < fcal_face_x && fcal_face_x < 4.)) continue;
-		*/
+		
 		
 		//--------------------------------------------//
 		
@@ -261,14 +283,16 @@ void compton_analysis(int run)
 			
 			if(run > 61910 && run < 61947) {
 				if(fabs(tb[ic]-rfTime+2.0) < 2.004) fill_weight =  1.0;
-			} else if( run==61952 ) {
+			} else if(run==61952) {
 				if(fabs(tb[ic]-rfTime+2.0) < 2.004) fill_weight =  1.0;
 			} else {
 				if(fabs(tb[ic]-rfTime+0.0) < 2.004) fill_weight =  1.0;
+				else if(fabs(tb[ic]-rfTime) < 6.012) fill_weight = -0.5;
 			}
 			
-		}  else 
-			fill_weight = -0.25;
+		} else {
+			fill_weight = 0.0;
+		}
 		
 		if(run>61910 && run < 61947) {
 			h_beam_rf_dt->Fill(tb[ic]-rfTime+2.0);
@@ -277,6 +301,8 @@ void compton_analysis(int run)
 		} else {
 			h_beam_rf_dt->Fill(tb[ic]-rfTime);
 		}
+		
+		if(fill_weight==0.) continue;
 		
 		//-----   Compton Cuts   -----//
 		
@@ -316,6 +342,11 @@ void compton_analysis(int run)
 		if(tag_sys[ic]==0) {
 			
 			h_deltaE_tagh->Fill(tag_counter[ic], deltaE[ic], fill_weight);
+			if(fill_weight>0.) {
+				h_deltaE_tagh_main->Fill(tag_counter[ic], deltaE[ic], fill_weight);
+			} else {
+				h_deltaE_tagh_acc->Fill(tag_counter[ic], deltaE[ic], fill_weight);
+			}
 			if(e_cut) {
 				h_deltaPhi_tagh->Fill(tag_counter[ic], deltaPhi[ic], fill_weight);
 				if(p_cut) {
@@ -448,6 +479,9 @@ void reset_histograms() {
 	
 	h_n_cands->Reset();
 	
+	h_deltaE_tagh_main->Reset();
+	h_deltaE_tagh_acc->Reset();
+	
 	h_deltaE_tagh->Reset();
 	h_deltaPhi_tagh->Reset();
 	h_deltaK_tagh->Reset();
@@ -488,6 +522,9 @@ void write_histograms(char *name) {
 	
 	h_n_cands->Write();
 	
+	h_deltaE_tagh_main->Write();
+	h_deltaE_tagh_acc->Write();
+	
 	h_deltaE_tagh->Write();
 	h_deltaPhi_tagh->Write();
 	h_deltaK_tagh->Write();
@@ -527,6 +564,13 @@ void init_histograms()
 	h_beam_rf_dt_cut = new TH1F("beam_rf_dt_cut", "t_{FCAL} - t_{RF}; [ns]", 2000, -100., 100.);
 	
 	h_n_cands = new TH1F("n_cands", "Number of Compton Candidates per Event", 15, -0.5, 14.5);
+	
+	h_deltaE_tagh_main = new TH2F("deltaE_tagh_main",   
+		"#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]", 
+		274, 0.5, 274.5, 2000, -4.0, 4.0);
+	h_deltaE_tagh_acc  = new TH2F("deltaE_tagh_acc",   
+		"#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]", 
+		274, 0.5, 274.5, 2000, -4.0, 4.0);
 	
 	h_deltaE_tagh = new TH2F("deltaE_tagh",   
 		"#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]", 
@@ -655,48 +699,51 @@ void load_constants(int group, bool is_first)
 		deltaK2_sig_p2  =  1.61255e-02;
 		deltaK2_sig_p3  = -5.93363e-04;
 		
-	} else if(group < 5) { // He 200nA
+	//} else if(group < 5) { // He 200nA
+	} else { // He 200nA
 		
-		deltaE_mu_p0    =  4.10435e-01;
-		deltaE_mu_p1    = -4.20598e-02;
-		deltaE_mu_p2    = -6.19015e-04;
-		deltaE_mu_p3    =  0.;
+		deltaE_mu_p0    =  4.07223e-02;
+		deltaE_mu_p1    = -1.78574e-02;
+		deltaE_mu_p2    =  1.71081e-03;
+		deltaE_mu_p3    = -5.38583e-05;
 		//---------------------------//
-		deltaE_sig_p0   =  1.26554e-02;
-		deltaE_sig_p1   =  4.28404e-02;
-		deltaE_sig_p2   =  0.;
+		deltaE_sig_p0   =  1.08608e-02;
+		deltaE_sig_p1   =  4.32721e-02;
+		deltaE_sig_p2   =  4.73705e-08;
 		
-		deltaPhi_mu_p0  =  1.79777e+02;
-		deltaPhi_mu_p1  = -7.73534e-03;
+		deltaPhi_mu_p0  =  1.79797e+02;
+		deltaPhi_mu_p1  = -9.76515e-03;
 		deltaPhi_mu_p2  =  0.;
 		deltaPhi_mu_p3  =  0.;
-		//---------------------------// 
-		deltaPhi_sig_p0 =  1.11023e+01;
-		deltaPhi_sig_p1 = -1.58498e+00;
-		deltaPhi_sig_p2 =  1.53958e-01;
-		deltaPhi_sig_p3 = -5.09573e-03;
+		//---------------------------//
+		deltaPhi_sig_p0 =  1.21151e+01;
+		deltaPhi_sig_p1 = -1.84430e+00;
+		deltaPhi_sig_p2 =  1.75617e-01;
+		deltaPhi_sig_p3 = -5.68551e-03;
 		
-		deltaK_mu_p0    = -4.23755e-02;
-		deltaK_mu_p1    =  5.52975e-02;
-		deltaK_mu_p2    = -9.11057e-03;
-		deltaK_mu_p3    =  3.35119e-04;
+		deltaK_mu_p0    = -1.35516e-02;
+		deltaK_mu_p1    =  1.83806e-02;
+		deltaK_mu_p2    = -4.03904e-03;
+		deltaK_mu_p3    =  1.54466e-04;
 		//---------------------------// 
-		deltaK_sig_p0   = -3.52834e-02;
-		deltaK_sig_p1   =  4.58032e-02;
-		deltaK_sig_p2   = -2.87025e-03;
-		deltaK_sig_p3   =  1.05750e-04;
+		deltaK_sig_p0   = -6.63872e-02;
+		deltaK_sig_p1   =  5.36909e-02;
+		deltaK_sig_p2   = -3.35098e-03;
+		deltaK_sig_p3   =  1.07868e-04;
 		
-		deltaK2_mu_p0   = -1.74619e-01;
-		deltaK2_mu_p1   =  1.01328e-01;
-		deltaK2_mu_p2   = -1.84593e-02;
-		deltaK2_mu_p3   =  7.13390e-04;
+		deltaK2_mu_p0   = -5.93615e-01;
+		deltaK2_mu_p1   =  2.57995e-01;
+		deltaK2_mu_p2   = -3.70844e-02;
+		deltaK2_mu_p3   =  1.44465e-03;
 		//---------------------------// 
-		deltaK2_sig_p0  =  3.88777e-01;
-		deltaK2_sig_p1  =  2.50588e-02;
-		deltaK2_sig_p2  =  2.20573e-03;
-		deltaK2_sig_p3  = -2.76677e-05;
+		deltaK2_sig_p0  =  3.80560e-01;
+		deltaK2_sig_p1  =  2.15649e-02;
+		deltaK2_sig_p2  =  3.03526e-03;
+		deltaK2_sig_p3  = -4.06248e-05;
 		
-	} else if(group < 6) { // He 100nA
+	}
+	/*
+	 else if(group < 6) { // He 100nA
 		
 		deltaE_mu_p0    =  4.10435e-01;
 		deltaE_mu_p1    = -4.20598e-02;
@@ -783,6 +830,7 @@ void load_constants(int group, bool is_first)
 		cout << "\n\n\nInvalid run group specified.\n\n" << endl;
 		exit(-1);
 	}
+	*/
 	
 	if(is_first) {
 		f_deltaE_mu    = new TF1("f_deltaE_mu",    "pol3", 5.0, 12.0);

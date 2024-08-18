@@ -30,23 +30,57 @@ echo "Environment variables set... Now running hd_root..."
 #****************************************************************#
 # Analyze simulation with random background:
 
-if ( -f $writeDir/recRootTrees/${tag_sys}_${tag_counter}.root ) then
+if ( -f $writeDir/recRootTrees_new/${tag_sys}_${tag_counter}.root ) then
 	echo "Output ROOT file already exists - nothing else to do."
 else
-	echo "cp $writeDir/recHddmFiles/${tag_sys}_${tag_counter}.hddm output.hddm"
-	cp $writeDir/recHddmFiles/${tag_sys}_${tag_counter}.hddm output.hddm
 	
-	echo "$bin -PPLUGINS=${plugin_name} -PNTHREADS=4 ${plugin_opts} output.hddm"
-	$bin -PPLUGINS=${plugin_name} -PNTHREADS=4 ${plugin_opts} output.hddm
+	if ( -f $writeDir/recHddmFiles_new/${tag_sys}_${tag_counter}.hddm ) then
+		
+		echo "cp $writeDir/recHddmFiles_new/${tag_sys}_${tag_counter}.hddm output.hddm"
+		cp $writeDir/recHddmFiles_new/${tag_sys}_${tag_counter}.hddm output.hddm
+		
+		echo "$bin -PPLUGINS=${plugin_name} ${plugin_opts} output.hddm"
+		$bin -PPLUGINS=${plugin_name} ${plugin_opts} output.hddm
+		
+		echo "mv primex_compton.root ${writeDir}/recRootTrees_new/${tag_sys}_${tag_counter}.root"
+		mv primex_compton.root ${writeDir}/recRootTrees_new/${tag_sys}_${tag_counter}.root
+		
+		#echo "mv hd_root.root ${writeDir}/${output_subdir}/${tag_sys}_${tag_counter}.root"
+		#mv hd_root.root ${writeDir}/${output_subdir}/${tag_sys}_${tag_counter}.root
+		
+		echo "rm hd_root.root"
+		rm hd_root.root
+		
+		echo "rm output.hddm"
+		rm output.hddm
+		
+	endif
 	
-	echo "mv primex_compton.root ${writeDir}/recRootTrees/${tag_sys}_${tag_counter}.root"
-	mv primex_compton.root ${writeDir}/recRootTrees/${tag_sys}_${tag_counter}.root
+	#--------------------------------------------------------------#
+	# Now do the same for the hddm files without random background:
 	
-	#echo "mv hd_root.root ${writeDir}/${output_subdir}/${tag_sys}_${tag_counter}.root"
-	#mv hd_root.root ${writeDir}/${output_subdir}/${tag_sys}_${tag_counter}.root
+	#if ( -f $writeDir/recHddmFiles_noBkgd/${tag_sys}_${tag_counter}.hddm ) then
+	#	
+	#	echo "cp $writeDir/recHddmFiles_noBkgd/${tag_sys}_${tag_counter}.hddm output.hddm"
+	#	cp $writeDir/recHddmFiles_noBkgd/${tag_sys}_${tag_counter}.hddm output.hddm
+	#	
+	#	echo "$bin -PPLUGINS=${plugin_name} ${plugin_opts} output.hddm"
+	#	$bin -PPLUGINS=${plugin_name} ${plugin_opts} output.hddm
+	#	
+	#	echo "mv primex_compton.root ${writeDir}/recRootTrees_noBkgd/${tag_sys}_${tag_counter}.root"
+	#	mv primex_compton.root ${writeDir}/recRootTrees_noBkgd/${tag_sys}_${tag_counter}.root
+	#	
+	#	#echo "mv hd_root.root ${writeDir}/${output_subdir}/${tag_sys}_${tag_counter}.root"
+	#	#mv hd_root.root ${writeDir}/${output_subdir}/${tag_sys}_${tag_counter}.root
+	#	
+	#	echo "rm hd_root.root"
+	#	rm hd_root.root
+	#	
+	#	echo "rm output.hddm"
+	#	rm output.hddm
+	#	
+	#endif
 	
-	echo "rm output.hddm"
-	rm output.hddm
 endif
 
 #****************************************************************#

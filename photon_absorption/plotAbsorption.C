@@ -9,11 +9,11 @@ void plotAbsorption()
 	// Get the photon attenuation coefficient as a function of the beam energy:
 	
 	vector<double> photon_energy_vec, mu_atten_vec;
-	ifstream inf( "Be_atten.dat" );
-	double a, b;
-	while( inf >> a >> b ) {
+	ifstream inf( "Be_pair_cs.dat" );
+	double a, b, c;
+	while( inf >> a >> b >> c ) {
 		photon_energy_vec.push_back(a);
-		mu_atten_vec.push_back(b);
+		mu_atten_vec.push_back(b / (1.660540*9.012182));
 	}
 	inf.close();
 	
@@ -58,16 +58,16 @@ void plotAbsorption()
 	
 	TRandom3 *rand = new TRandom3(0);
 	
-	vector<double> eGamVec, absVec;
+	vector<double> eGamVec, absVec, absEVec;
 	
-	for( int ie = 0; ie < 60; ie++ ) {
+	for( int ie = 0; ie < 25; ie++ ) {
 	
-	double eGam = 6.0 + 0.1 * (double)(ie);
+	double eGam = 6.0 + 0.2 * (double)(ie);
 	
 	double abs_counter = 0.;
 	double total_counter = 0.;
 	
-	for( int ievt = 0; ievt < 1.e7; ievt++ ) {
+	for( int ievt = 0; ievt < 1.e8; ievt++ ) {
 		
 		double locTargetWidth = TargetWidth * rand->Uniform();
 		double val            = fAtten->Eval(eGam) * TargetDensity * locTargetWidth;
@@ -87,8 +87,12 @@ void plotAbsorption()
 	
 	double absorption_factor = 1.0  -  (abs_counter/total_counter);
 	
+	double n_acc = abs_counter/total_counter;
+	double loc_unc = sqrt(total_counter*n_acc*(1.-n_acc))/total_counter;
+	
 	eGamVec.push_back(eGam);
 	absVec.push_back(absorption_factor);
+	absEVec.push_back(loc_unc);
 	
 	cout << "E_gamma = " << eGam << ", Absorption factor: " << absorption_factor << endl;
 	
@@ -98,16 +102,20 @@ void plotAbsorption()
 	n_ens = (int)eGamVec.size();
 	
 	double *eGam = new double[n_ens];
+	double *zero = new double[n_ens];
 	double *abs  = new double[n_ens];
+	double *absE = new double[n_ens];
 	
 	for( int i=0; i<n_ens; i++ ) {
 		
 		eGam[i] = eGamVec[i];
 		abs[i]  = absVec[i];
+		zero[i] = 0.;
+		absE[i] = absEVec[i];
 		
 	}
 	
-	TGraph *graph = new TGraph( n_ens, eGam, abs );
+	TGraphErrors *graph = new TGraphErrors( n_ens, eGam, abs, zero, absE );
 	graph->SetTitle( "Be Target Photon Beam Absorption Correction Factor" );
 	graph->GetXaxis()->SetTitle( "E_{#gamma} [GeV]" );
 	graph->GetYaxis()->SetTitle( "f_{abs}" );

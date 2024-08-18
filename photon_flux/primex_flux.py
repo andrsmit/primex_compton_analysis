@@ -40,10 +40,10 @@ def loadCCDBContextList(runPeriod, restVer):
     return rows
 
 def PSAcceptance(x, par):
-
+    
     min = par[1]
     max = par[2]
-
+    
     if x[0] > 2*min and x[0] < min + max:
         return par[0]*(1-2*min/x[0])
     elif x[0] >= min + max:
@@ -94,7 +94,7 @@ def main():
                                                                 run_number, VARIATION)
     
     photon_endpoint = photon_endpoint_assignment.constant_set.data_table
-    photon_endpoint_calib = photon_endpoint_assignment.constant_set.data_table
+    photon_endpoint_calib = photon_endpoint_calib_assignment.constant_set.data_table
     
     tagh_tagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagh_tagged", 
                                                            run_number, VARIATION)
@@ -168,7 +168,7 @@ def main():
         htagm_flux_cor.SetBinError(int(tagm_tagged_flux[jj][0]),float(tagm_tagged_flux[jj][2])*ps_scale/ps_acc)
         
         data_file_tagm.write("%4d  %10.3f  %10.3f \n" %(int(tagm_tagged_flux[jj][0]),float(tagm_tagged_flux[jj][1])*ps_scale/ps_acc,float(tagm_tagged_flux[jj][2])*ps_scale/ps_acc))
-    
+        
     
     froot_out = TFile(OUTPUT_FILE_ROOT, "recreate")
     

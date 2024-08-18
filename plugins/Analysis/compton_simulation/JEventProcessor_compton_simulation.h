@@ -108,6 +108,7 @@ class JEventProcessor_compton_simulation:public jana::JEventProcessor{
 		TH1F *h_tagh_flux, *h_tagm_flux;
 		TH1F *h_beam_energy;
 		TH1F *h_double_compton;
+		TH1F *h_ccal_nblocks;
 		
 		TH2F *h_vertex_xy;
 		TH1F *h_vertex;
@@ -138,7 +139,7 @@ class JEventProcessor_compton_simulation:public jana::JEventProcessor{
 		TH2F *h_deltaK_tagh_cut_main,    *h_deltaK_tagm_cut_main;
 		TH2F *h_deltaK_tagh_cut_acc,     *h_deltaK_tagm_cut_acc;
 		
-		TH2F *h_deltaE_vs_deltaK;
+		TH2F *h_deltaE_vs_deltaK, *h_deltaE_vs_deltaK_smeared;
 		
 		TH2F *h_fcal_xy, *h_ccal_xy;
 		

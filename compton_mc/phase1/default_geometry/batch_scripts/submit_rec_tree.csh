@@ -5,26 +5,26 @@ set script = ${outdir}/batch_scripts/rec_compton_tree.csh
 set ij     = 0
 
 set plugin_name   = "compton_tree"
-set plugin_opts   = "-PCCAL:DO_NONLINEAR_CORRECTION=0"
+set plugin_opts   = "-PNTHREADS=4"
 set output_subdir = "recRootFiles"
 
 set submit_runs = go
 
 #=========================#
-#Job Resources:
+# Job Resources:
 
 set workflow   = compton_mc_tof_veto
 set account    = halld
 set partition  = production
-set ram        = 14GB
+set ram        = 8GB
 set cores      = 4
-set time       = 240min
+set time       = 60min
 set disk       = 7GB
 set constraint = el9
 
 #=========================#
 
-set run_list = {"61321","61866"}
+set run_list = {"61321"}
 set tag_list = {"tagh","tagm"}
 
 foreach rnb ($run_list)
@@ -66,7 +66,7 @@ foreach rnb ($run_list)
 			#***********************************************************#
 			# submit jobs:
 			
-			set loc_jobname = compton_rec_rnb-${run_number}_${tag_sys}_${tag_counter}
+			set loc_jobname = compton_rec_tree_new_rnb-${run_number}_${tag_sys}_${tag_counter}
 			
 			set jf = ${outdir}/jsub/${loc_jobname}.jsub
 			
@@ -77,12 +77,12 @@ foreach rnb ($run_list)
 			endif
 			
 			# skip counters which have already been processed:
-			if ( -f ${writedir}/recRootTrees/${tag_sys}_${tag_counter}.root ) then
+			if ( -f ${writedir}/recRootTrees_new/${tag_sys}_${tag_counter}.root ) then
 				set counter = `expr $counter + 1`
 				continue
 			endif
 			
-			if ( -f ${writedir}/recHddmFiles/${tag_sys}_${tag_counter}.hddm ) then
+			if ( -f ${writedir}/recHddmFiles_new/${tag_sys}_${tag_counter}.hddm ) then
 				
 				echo "${tag_sys}_${tag_counter}"
 				

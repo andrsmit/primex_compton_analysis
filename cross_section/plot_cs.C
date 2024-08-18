@@ -12,6 +12,15 @@ void plot_cs(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 	double *cs_deviation      = new double[n_bins];
 	double *cs_deviation_err  = new double[n_bins];
 	
+	for(int tagh_counter=1; tagh_counter<=274; tagh_counter++) {
+		tagh_cs[tagh_counter-1]  = 0.;
+		tagh_csE[tagh_counter-1] = 0.;
+	}
+	for(int tagm_counter=1; tagm_counter<=102; tagm_counter++) {
+		tagm_cs[tagm_counter-1]  = 0.;
+		tagm_csE[tagm_counter-1] = 0.;
+	}
+	
 	for(int ib=0; ib<n_bins; ib++) {
 		double loc_eb = 0.;
 		double loc_cs = 0., loc_cs_err = 0.;
@@ -19,10 +28,14 @@ void plot_cs(vector<int> tagh_counter_vec, vector<int> tagm_counter_vec) {
 			int counter  = tagh_counter_vec[ib];
 			loc_eb = tagh_en[counter-1];
 			calc_cs(0, counter, loc_cs, loc_cs_err);
+			tagh_cs[counter-1]  = loc_cs;
+			tagh_csE[counter-1] = loc_cs_err;
 		} else {
 			int counter  = tagm_counter_vec[ib-n_bins1];
 			loc_eb = tagm_en[counter-1];
 			calc_cs(1, counter, loc_cs, loc_cs_err);
+			tagm_cs[counter-1]  = loc_cs;
+			tagm_csE[counter-1] = loc_cs_err;
 		}
 		beam_energy[ib]       = loc_eb;
 		zeros[ib]             = 0.;

@@ -75,6 +75,8 @@ jerror_t JEventProcessor_compton_simulation::init(void)
 	h_n_ccal_fcal_cut = new TH1F("n_ccal_fcal_cut", 
 		"Is there a shower in both CCAL+FCAL", 2, -0.5, 1.5);
 	
+	h_ccal_nblocks = new TH1F("ccal_nblocks", "Number of hits in CCAL Cluster", 51, -0.5, 50.5);
+	
 	h_ccalE     = new TH2F("ccalE", "Energy of CCAL Shower; E_{Beam} [GeV]; E_{CCAL} [GeV]", 
 		120, 0., 12., 1200, 0., 12.);
 	h_fcalE     = new TH2F("fcalE", "Energy of FCAL Shower; E_{Beam} [GeV]; E_{FCAL} [GeV]", 
@@ -86,9 +88,13 @@ jerror_t JEventProcessor_compton_simulation::init(void)
 	
 	//--------------------------------------------------------------------//
 	
-	h_deltaE_vs_deltaK = new TH2F("deltaE_vs_deltaK", 
-	"#DeltaE vs. #DeltaK; E_{Compton} - E_{#gamma} [GeV]; E_{1} + E_{2} - E_{#gamma} [GeV]", 
-	500, -8.0, 8.0, 500, -4.0, 4.0);
+	h_deltaE_vs_deltaK         = new TH2F("deltaE_vs_deltaK", 
+		"#DeltaE vs. #DeltaK; E_{Compton} - E_{#gamma} [GeV]; E_{1} + E_{2} - E_{#gamma} [GeV]", 
+		500, -8.0, 8.0, 500, -4.0, 4.0);
+	h_deltaE_vs_deltaK_smeared = new TH2F("deltaE_vs_deltaK_smeared", 
+		"#DeltaE vs. #DeltaK; E_{Compton} - E_{#gamma} [GeV]; E_{1} + E_{2} - E_{#gamma} [GeV]", 
+		500, -8.0, 8.0, 500, -4.0, 4.0);
+	
 	/*
 	h_deltaR_tagh = new TH2F("deltaR_tagh", 
 		"Cluster Separation; TAGH Counter; #DeltaR [cm]", 274, 0.5, 274.5, 2000, 0., 100.);
@@ -224,6 +230,27 @@ jerror_t JEventProcessor_compton_simulation::brun(JEventLoop *eventLoop, int32_t
 			m_atten          = 0.00821;
 		}
 		
+		// (2/4/2024): Correction to alignment after Simon updated beam spot with new CDC alignment:
+		
+		m_fcalX_new =  0.455;
+		m_fcalY_new = -0.032;
+		
+		m_ccalX_new = -0.082;
+		if(runnumber<61483) m_ccalY_new = 0.061;
+		else                m_ccalY_new = 0.051;
+		
+		if(runnumber<61483) {
+			m_beamX =  0.027;
+			m_beamY = -0.128;
+		} else if(runnumber<61774) {
+			m_beamX =  0.001;
+			m_beamY = -0.077;
+		} else {
+			m_beamX =  0.038;
+			m_beamY = -0.095;
+		}
+		
+		/*
 		m_fcalX_new =  0.617;
 		m_fcalY_new = -0.002;
 		
@@ -245,6 +272,7 @@ jerror_t JEventProcessor_compton_simulation::brun(JEventLoop *eventLoop, int32_t
 			m_beamX =  0.202;
 			m_beamY = -0.042;
 		}
+		*/
 	} else if(runnumber>80000 && runnumber<89999) {
 		
 		phase_val = 2;
@@ -286,14 +314,20 @@ jerror_t JEventProcessor_compton_simulation::brun(JEventLoop *eventLoop, int32_t
 			m_target_density = 0.1217;
 			m_atten          = 0.00821;
 		}
-		
+		/*
 		m_fcalX_new = 0.408;
 		m_fcalY_new = 0.027;
 		m_ccalX_new = 0.135;
 		m_ccalY_new = 0.135;
-		
 		m_beamX     = 0.146;
 		m_beamY     = 0.017;
+		*/
+		m_fcalX_new = 0.408;
+		m_fcalY_new = 0.027;
+		m_ccalX_new = 0.184;
+		m_ccalY_new = 0.110;
+		m_beamX     = 0.151;
+		m_beamY     = 0.012;
 	}
 	
 	fcal_correction.SetXYZ(m_fcalX_new-m_fcalX, m_fcalY_new-m_fcalY, 0.);
@@ -486,7 +520,7 @@ jerror_t JEventProcessor_compton_simulation::evnt(JEventLoop *eventLoop, uint64_
 	
 	vector<ComptonCandidate_t> candidates;
 	
-	for(vector< const DFCALShower* >::const_iterator show1 = good_fcal_showers.begin(); 
+	for(vector<const DFCALShower*>::const_iterator show1 = good_fcal_showers.begin(); 
 		show1 != good_fcal_showers.end(); show1++) {
 		
 		double e1     = (*show1)->getEnergy();
@@ -526,8 +560,8 @@ jerror_t JEventProcessor_compton_simulation::evnt(JEventLoop *eventLoop, uint64_
 				
 				if(fabs(brfdt) < 2.004)
 					bunch_val = 1;
-				else if((-(2.004 + 5.*4.008)<=brfdt && brfdt<=-(2.004 + 3.*4.008))
-					||((2.004 + 3.*4.008)<=brfdt && brfdt<=(2.004 + 5.*4.008)))
+				else if((-(2.004 + 10.*4.008)<=brfdt && brfdt<=-(2.004 + 5.*4.008))
+					||((2.004 + 5.*4.008)<=brfdt && brfdt<=(2.004 + 10.*4.008)))
 					bunch_val = 0;
 				else 
 					continue;
@@ -565,6 +599,7 @@ jerror_t JEventProcessor_compton_simulation::evnt(JEventLoop *eventLoop, uint64_
 				loc_Cand.deltaT       = deltaT;
 				loc_Cand.deltaE       = deltaE;
 				loc_Cand.deltaK       = deltaK;
+				loc_Cand.ccal_nblocks = (*show2)->dime;
 				
 				loc_Cand.vz           = vertex_z;
 				
@@ -691,6 +726,8 @@ void JEventProcessor_compton_simulation::fill_histograms(
 		double x2 = loc_Cand.x2;
 		double y2 = loc_Cand.y2;
 		
+		int ccal_nblocks = loc_Cand.ccal_nblocks;
+		
 		double event_weight = loc_Cand.event_weight;
 		
 		//--------------     Cuts      --------------//
@@ -771,13 +808,14 @@ void JEventProcessor_compton_simulation::fill_histograms(
 		
 		double fill_weight;
 		if(bunch_val) fill_weight =  1.0;
-		else          fill_weight = -0.25;
+		else          fill_weight = -0.1;
 		
 		if(m_USE_REACTION_WEIGHT) {
 			fill_weight *= event_weight;
 		}
 		
 		h_deltaE_vs_deltaK->Fill(deltaK, deltaE, fill_weight);
+		h_deltaE_vs_deltaK_smeared->Fill(deltaK_smeared, deltaE_smeared, fill_weight);
 		
 		if(tag_sys==0) {
 			h_deltaE_tagh->Fill(tag_counter, deltaE, fill_weight);
@@ -844,6 +882,8 @@ void JEventProcessor_compton_simulation::fill_histograms(
 		if(e_cut && p_cut && k_cut) {
 			h_fcal_xy->Fill(x1, y1);
 			h_ccal_xy->Fill(x2, y2);
+			
+			h_ccal_nblocks->Fill(ccal_nblocks);
 		}
 	}
 	
@@ -889,36 +929,36 @@ void JEventProcessor_compton_simulation::set_cuts(int32_t runnumber)
 		
 	} else if(runnumber>60000 && runnumber<69999) {
 		
-		// Phase I, He Target (stand-in values, adjust later)
+		// Phase I, He Target
 		
-		deltaE_mu_p0_mc      = -1.69536e-02;  deltaE_mu_p0_data    =  8.33517e-03;
-		deltaE_mu_p1_mc      = -1.51864e-02;  deltaE_mu_p1_data    =  2.09025e-03;
-		deltaE_mu_p2_mc      =  1.18343e-03;  deltaE_mu_p2_data    = -1.09342e-04;
-		deltaE_mu_p3_mc      =  0.;           deltaE_mu_p3_data    =  0.;
+		deltaE_mu_p0_mc      = -4.70073e-02;  deltaE_mu_p0_data    =  4.07223e-02;
+		deltaE_mu_p1_mc      = -9.47891e-03;  deltaE_mu_p1_data    = -1.78574e-02;
+		deltaE_mu_p2_mc      =  9.16184e-04;  deltaE_mu_p2_data    =  1.71081e-03;
+		deltaE_mu_p3_mc      =  0.;           deltaE_mu_p3_data    = -5.38583e-05;
 		
-		deltaE_sig_p0_mc     =  8.49000e-03;  deltaE_sig_p0_data   =  8.37004e-03;
-		deltaE_sig_p1_mc     =  4.06306e-02;  deltaE_sig_p1_data   =  4.56259e-02;
-		deltaE_sig_p2_mc     =  0.;           deltaE_sig_p2_data   =  0.;
+		deltaE_sig_p0_mc     =  1.03019e-02;  deltaE_sig_p0_data   =  1.08608e-02;
+		deltaE_sig_p1_mc     =  3.88701e-02;  deltaE_sig_p1_data   =  4.32721e-02;
+		deltaE_sig_p2_mc     =  4.92845e-09;  deltaE_sig_p2_data   =  4.73705e-08;
 		//----------------------------------------------------------------------//
-		deltaPhi_mu_p0_mc    =  1.80231e+02;  deltaPhi_mu_p0_data  =  1.79943e+02;
-		deltaPhi_mu_p1_mc    = -1.53158e-01;  deltaPhi_mu_p1_data  = -2.11766e-02;
-		deltaPhi_mu_p2_mc    =  1.47909e-02;  deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_mc    = -5.69442e-04;  deltaPhi_mu_p3_data  =  0.;
+		deltaPhi_mu_p0_mc    =  1.79371e+02;  deltaPhi_mu_p0_data  =  1.79797e+02;
+		deltaPhi_mu_p1_mc    =  1.58594e-01;  deltaPhi_mu_p1_data  = -9.76515e-03;
+		deltaPhi_mu_p2_mc    = -2.13751e-02;  deltaPhi_mu_p2_data  =  0.;
+		deltaPhi_mu_p3_mc    =  8.09262e-04;  deltaPhi_mu_p3_data  =  0.;
 		
-		deltaPhi_sig_p0_mc   =  8.94978e+00;  deltaPhi_sig_p0_data =  1.20139e+01;
-		deltaPhi_sig_p1_mc   = -8.13230e-01;  deltaPhi_sig_p1_data = -1.75486e+00;
-		deltaPhi_sig_p2_mc   =  7.04521e-02;  deltaPhi_sig_p2_data =  1.67515e-01;
-		deltaPhi_sig_p3_mc   = -2.13704e-03;  deltaPhi_sig_p3_data = -5.48316e-03;
+		deltaPhi_sig_p0_mc   =  1.12974e+01;  deltaPhi_sig_p0_data =  1.21151e+01;
+		deltaPhi_sig_p1_mc   = -1.68146e+00;  deltaPhi_sig_p1_data = -1.84430e+00;
+		deltaPhi_sig_p2_mc   =  1.68430e-01;  deltaPhi_sig_p2_data =  1.75617e-01;
+		deltaPhi_sig_p3_mc   = -5.74504e-03;  deltaPhi_sig_p3_data = -5.68551e-03;
 		//----------------------------------------------------------------------//
-		deltaK_mu_p0_mc      =  2.55352e-01;  deltaK_mu_p0_data    = -9.36095e-02;
-		deltaK_mu_p1_mc      = -7.43055e-02;  deltaK_mu_p1_data    =  5.48923e-02;
-		deltaK_mu_p2_mc      =  3.58192e-03;  deltaK_mu_p2_data    = -1.19844e-02;
-		deltaK_mu_p3_mc      = -1.44681e-04;  deltaK_mu_p3_data    =  4.38188e-04;
+		deltaK_mu_p0_mc      = -4.86844e-02;  deltaK_mu_p0_data    = -5.93615e-01;
+		deltaK_mu_p1_mc      =  4.65378e-02;  deltaK_mu_p1_data    =  2.57995e-01;
+		deltaK_mu_p2_mc      = -1.09603e-02;  deltaK_mu_p2_data    = -3.70844e-02;
+		deltaK_mu_p3_mc      =  4.23499e-04;  deltaK_mu_p3_data    =  1.44465e-03;
 		
-		deltaK_sig_p0_mc     =  8.56721e-01;  deltaK_sig_p0_data   =  6.68283e-01;
-		deltaK_sig_p1_mc     = -1.61018e-01;  deltaK_sig_p1_data   = -8.45642e-02;
-		deltaK_sig_p2_mc     =  2.48317e-02;  deltaK_sig_p2_data   =  1.61255e-02;
-		deltaK_sig_p3_mc     = -9.24893e-04;  deltaK_sig_p3_data   = -5.93363e-04;
+		deltaK_sig_p0_mc     =  3.18796e-01;  deltaK_sig_p0_data   =  3.80560e-01;
+		deltaK_sig_p1_mc     =  2.79811e-02;  deltaK_sig_p1_data   =  2.15649e-02;
+		deltaK_sig_p2_mc     =  3.01475e-03;  deltaK_sig_p2_data   =  3.03526e-03;
+		deltaK_sig_p3_mc     = -7.64643e-05;  deltaK_sig_p3_data   = -4.06248e-05;
 		
 	} else if(runnumber>80000 && runnumber<81400) {
 		
@@ -1056,34 +1096,34 @@ void JEventProcessor_compton_simulation::set_cuts(int32_t runnumber)
 		
 		// Phase III, Be Target, Field OFF
 		
-		deltaE_mu_p0_mc      = -4.85724e-02;  deltaE_mu_p0_data    = -2.85756e-01;
-		deltaE_mu_p1_mc      = -6.69318e-03;  deltaE_mu_p1_data    =  8.91005e-02;
-		deltaE_mu_p2_mc      =  8.18727e-04;  deltaE_mu_p2_data    = -8.73318e-03;
-		deltaE_mu_p3_mc      =  0.; 			    deltaE_mu_p3_data    =  2.45143e-04;
+		deltaE_mu_p0_mc      = -2.47457e-02;  deltaE_mu_p0_data    = -1.16581e-01;
+		deltaE_mu_p1_mc      = -1.32566e-02;  deltaE_mu_p1_data    =  3.40885e-02;
+		deltaE_mu_p2_mc      =  1.20307e-03;  deltaE_mu_p2_data    = -2.77050e-03;
+		deltaE_mu_p3_mc      =  0.; 			    deltaE_mu_p3_data    =  2.09654e-05;
 		
-		deltaE_sig_p0_mc     =  9.25478e-03;  deltaE_sig_p0_data   =  1.81080e-02;
-		deltaE_sig_p1_mc     =  3.95553e-02;  deltaE_sig_p1_data   =  1.38460e-02;
-		deltaE_sig_p2_mc     =  7.63579e-08;  deltaE_sig_p2_data   =  5.76009e-02;
+		deltaE_sig_p0_mc     =  9.09206e-03;  deltaE_sig_p0_data   =  1.65687e-02;
+		deltaE_sig_p1_mc     =  3.99628e-02;  deltaE_sig_p1_data   =  2.65247e-02;
+		deltaE_sig_p2_mc     =  2.94773e-08;  deltaE_sig_p2_data   =  4.38584e-02;
 		//----------------------------------------------------------------------//
-		deltaPhi_mu_p0_mc    =  1.79431e+02;  deltaPhi_mu_p0_data  =  1.80011e+02;
-		deltaPhi_mu_p1_mc    =  1.10701e-01;  deltaPhi_mu_p1_data  = -8.18407e-03;
-		deltaPhi_mu_p2_mc    = -1.31671e-02;  deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_mc    =  4.13213e-04;  deltaPhi_mu_p3_data  =  0.;
+		deltaPhi_mu_p0_mc    =  1.79914e+02;  deltaPhi_mu_p0_data  =  1.79825e+02;
+		deltaPhi_mu_p1_mc    = -5.75977e-02;  deltaPhi_mu_p1_data  = -1.10610e-02;
+		deltaPhi_mu_p2_mc    =  6.32321e-03;  deltaPhi_mu_p2_data  =  0.;
+		deltaPhi_mu_p3_mc    = -3.34789e-04;  deltaPhi_mu_p3_data  =  0.;
 		
-		deltaPhi_sig_p0_mc   =  1.24358e+01;  deltaPhi_sig_p0_data =  1.22089e+01;
-		deltaPhi_sig_p1_mc   = -1.92471e+00;  deltaPhi_sig_p1_data = -1.81467e+00;
-		deltaPhi_sig_p2_mc   =  1.86377e-01;  deltaPhi_sig_p2_data =  1.72870e-01;
-		deltaPhi_sig_p3_mc   = -6.17908e-03;  deltaPhi_sig_p3_data = -5.55077e-03;
+		deltaPhi_sig_p0_mc   =  1.11697e+01;  deltaPhi_sig_p0_data =  1.33099e+01;
+		deltaPhi_sig_p1_mc   = -1.47298e+00;  deltaPhi_sig_p1_data = -2.14366e+00;
+		deltaPhi_sig_p2_mc   =  1.33343e-01;  deltaPhi_sig_p2_data =  2.06214e-01;
+		deltaPhi_sig_p3_mc   = -4.12731e-03;  deltaPhi_sig_p3_data = -6.71967e-03;
 		//----------------------------------------------------------------------//
-		deltaK_mu_p0_mc      =  1.87111e-01;  deltaK_mu_p0_data    =  3.22415e-01;
-		deltaK_mu_p1_mc      = -5.01049e-02;  deltaK_mu_p1_data    = -8.24914e-02;
-		deltaK_mu_p2_mc      =  6.19433e-04;  deltaK_mu_p2_data    =  4.25586e-03;
-		deltaK_mu_p3_mc      = -2.58358e-05;  deltaK_mu_p3_data    = -1.88916e-04;
+		deltaK_mu_p0_mc      =  2.90606e-01;  deltaK_mu_p0_data    =  2.09726e-01;
+		deltaK_mu_p1_mc      = -8.47192e-02;  deltaK_mu_p1_data    = -4.71020e-02;
+		deltaK_mu_p2_mc      =  4.36136e-03;  deltaK_mu_p2_data    =  3.81198e-04;
+		deltaK_mu_p3_mc      = -1.58040e-04;  deltaK_mu_p3_data    = -4.82342e-05;
 		
-		deltaK_sig_p0_mc     =  7.66563e-01;  deltaK_sig_p0_data   =  5.70095e-01;
-		deltaK_sig_p1_mc     = -1.20835e-01;  deltaK_sig_p1_data   = -4.93059e-02;
-		deltaK_sig_p2_mc     =  1.93384e-02;  deltaK_sig_p2_data   =  1.19542e-02;
-		deltaK_sig_p3_mc     = -6.91971e-04;  deltaK_sig_p3_data   = -4.17058e-04;
+		deltaK_sig_p0_mc     =  8.05682e-01;  deltaK_sig_p0_data   =  5.19636e-01;
+		deltaK_sig_p1_mc     = -1.37154e-01;  deltaK_sig_p1_data   = -3.35925e-02;
+		deltaK_sig_p2_mc     =  2.14922e-02;  deltaK_sig_p2_data   =  1.03144e-02;
+		deltaK_sig_p3_mc     = -7.82710e-04;  deltaK_sig_p3_data   = -3.63616e-04;
 		
 	} else if(runnumber>110000 && runnumber<111969) {
 		

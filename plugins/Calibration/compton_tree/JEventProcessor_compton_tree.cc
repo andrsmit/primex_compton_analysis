@@ -210,6 +210,17 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 	locCommandStream << "ccdb dump ANALYSIS/accidental_scaling_factor -r " << runnumber;
 	FILE* locInputFile = gSystem->OpenPipe(locCommandStream.str().c_str(), "r");
 	if(locInputFile == NULL) {
+		
+		m_HodoscopeHiFactor    = 1.00;
+		m_HodoscopeHiFactorErr = 0.01;
+		m_HodoscopeLoFactor    = 1.00;
+		m_HodoscopeLoFactorErr = 0.01;
+		m_MicroscopeFactor     = 1.00;
+		m_MicroscopeFactorErr  = 0.01;
+		m_TAGMEnergyBoundHi    = 9.00;
+		m_TAGMEnergyBoundLo    = 8.00;
+		return NOERROR;
+		
 		cerr << "Could not load ANALYSIS/accidental_scaling_factor from CCDB !" << endl;
 		gSystem->Exit(1);        // make sure we don't fail silently
 		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
@@ -219,6 +230,16 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 	char buff[1024]; // I HATE char buffers
 	if(fgets(buff, sizeof(buff), locInputFile) == NULL)
 	{
+		m_HodoscopeHiFactor    = 1.00;
+		m_HodoscopeHiFactorErr = 0.01;
+		m_HodoscopeLoFactor    = 1.00;
+		m_HodoscopeLoFactorErr = 0.01;
+		m_MicroscopeFactor     = 1.00;
+		m_MicroscopeFactorErr  = 0.01;
+		m_TAGMEnergyBoundHi    = 9.00;
+		m_TAGMEnergyBoundLo    = 8.00;
+		return NOERROR;
+		
 		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
 		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
 		gSystem->ClosePipe(locInputFile);
@@ -230,6 +251,16 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 	//get the second line (where the # is)
 	if(fgets(buff, sizeof(buff), locInputFile) == NULL)
 	{
+		m_HodoscopeHiFactor    = 1.00;
+		m_HodoscopeHiFactorErr = 0.01;
+		m_HodoscopeLoFactor    = 1.00;
+		m_HodoscopeLoFactorErr = 0.01;
+		m_MicroscopeFactor     = 1.00;
+		m_MicroscopeFactorErr  = 0.01;
+		m_TAGMEnergyBoundHi    = 9.00;
+		m_TAGMEnergyBoundLo    = 8.00;
+		return NOERROR;
+		
 		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
 		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
 		gSystem->ClosePipe(locInputFile);
@@ -241,6 +272,16 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 	// catch some CCDB error conditions
 	if(strncmp(buff, "Cannot", 6) == 0) 
 	{
+		m_HodoscopeHiFactor    = 1.00;
+		m_HodoscopeHiFactorErr = 0.01;
+		m_HodoscopeLoFactor    = 1.00;
+		m_HodoscopeLoFactorErr = 0.01;
+		m_MicroscopeFactor     = 1.00;
+		m_MicroscopeFactorErr  = 0.01;
+		m_TAGMEnergyBoundHi    = 9.00;
+		m_TAGMEnergyBoundLo    = 8.00;
+		return NOERROR;
+		
 		// no assignment for this run
 		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
 		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
@@ -252,14 +293,14 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 	
 	istringstream locStringStream(buff);
 	
-	double locHodoscopeHiFactor = -1.0;
+	double locHodoscopeHiFactor    = -1.0;
 	double locHodoscopeHiFactorErr = -1.0;
-	double locHodoscopeLoFactor = -1.0;
+	double locHodoscopeLoFactor    = -1.0;
 	double locHodoscopeLoFactorErr = -1.0;
-	double locMicroscopeFactor = -1.0;
-	double locMicroscopeFactorErr = -1.0;
-	double locTAGMEnergyBoundHi = -1.0;
-	double locTAGMEnergyBoundLo = -1.0;
+	double locMicroscopeFactor     = -1.0;
+	double locMicroscopeFactorErr  = -1.0;
+	double locTAGMEnergyBoundHi    = -1.0;
+	double locTAGMEnergyBoundLo    = -1.0;
 	
 	//extract it
 	locStringStream >> locHodoscopeHiFactor >> locHodoscopeHiFactorErr >> locHodoscopeLoFactor
@@ -277,7 +318,7 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 	m_MicroscopeFactorErr  = locMicroscopeFactorErr;
 	m_TAGMEnergyBoundHi    = locTAGMEnergyBoundHi;
 	m_TAGMEnergyBoundLo    = locTAGMEnergyBoundLo;
-	
+	/*
 	cout << "\n\n\n\n\n";
 	cout << "==============================================================================" << endl;
 	cout << m_HodoscopeHiFactor << "; " << m_HodoscopeHiFactorErr << "; " 
@@ -286,7 +327,7 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 		<< m_TAGMEnergyBoundLo << endl;
 	cout << "==============================================================================" << endl;
 	cout << "\n\n\n\n\n";
-	
+	*/
 	return NOERROR;
 }
 
@@ -362,18 +403,18 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 	try { 
 		eventLoop->GetSingle(locRFBunch, "CalorimeterOnly");
 	} catch (...) { 
-		//if(locIsMC) {
-		//	write_events(eventnumber, 0.0, locMCThrown, locMCReaction);
-		//	dTreeInterface->Fill(dTreeFillData);
-		//}
+		if(locIsMC) {
+			write_events(eventnumber, 0.0, locMCThrown, locMCReaction);
+			dTreeInterface->Fill(dTreeFillData);
+		}
 		return NOERROR;
 	}
 	double locRFTime = locRFBunch->dTime;
 	if(locRFBunch->dNumParticleVotes < 2) {
-		//if(locIsMC) {
-		//	write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
-		//	dTreeInterface->Fill(dTreeFillData);
-		//}
+		if(locIsMC) {
+			write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
+			dTreeInterface->Fill(dTreeFillData);
+		}
 		return NOERROR;
 	}
 	
@@ -430,10 +471,10 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 			locMCThrown, locMCReaction);
 		dTreeInterface->Fill(dTreeFillData);
 	}
-	//else if(locIsMC) {
-	//	write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
-	//	dTreeInterface->Fill(dTreeFillData);
-	//}
+	else if(locIsMC) {
+		write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
+		dTreeInterface->Fill(dTreeFillData);
+	}
 	
 	return NOERROR;
 }
@@ -500,6 +541,21 @@ void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfT
 	size_t n_beam_photon = 0;
 	for(vector<const DBeamPhoton*>::const_iterator gam = beam_photons.begin();
 		gam != beam_photons.end(); gam++) {
+		
+		// 7.23.24: 
+		// Only write out beam photons in the prompt RF peak, and the sidebands used for accidental subtraction:
+		//
+		
+		double tb = (*gam)->time() - rfTime;
+		double loc_beam_cut = 4.008*1.5;
+		int bunch_val = 0;
+		if(fabs(tb) < loc_beam_cut) {
+			bunch_val = 1;
+		}
+		else if( ((6.5*4.008) < fabs(tb)) && (fabs(tb) < (11.5*4.008)) ) {
+			bunch_val = -1;
+		}
+		else continue;
 		
 		int loc_counter = (*gam)->dCounter;
 		int loc_sys = -1;

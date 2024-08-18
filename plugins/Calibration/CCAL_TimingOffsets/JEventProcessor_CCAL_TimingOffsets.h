@@ -63,7 +63,7 @@ class JEventProcessor_CCAL_TimingOffsets:public jana::JEventProcessor{
 		const double CCAL_RADIATION_LENGTH = 0.86;   // [cm]
 		const double CCAL_CRITICAL_ENERGY  = 1.1e-3; // [GeV]
 		
-		const double MIN_CCAL_ENERGY_SHOW  = 1.0;    // [GeV]
+		const double MIN_CCAL_ENERGY_SHOW  = 0.1;    // [GeV]
 		const double MIN_CCAL_ENERGY_HIT   = 0.015;   // [GeV]
 		
 		TH1F *h_nccal_hits,  *h_nccal_showerHits;

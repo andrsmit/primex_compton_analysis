@@ -1,195 +1,190 @@
 
-char   tagh_flux_fname[256],   tagm_flux_fname[256];
-char tagh_xscale_fname[256], tagm_xscale_fname[256];
-
-double    tagh_en[274],    tagm_en[102];
-double  tagh_flux[274],  tagm_flux[102];
-double tagh_fluxE[274], tagm_fluxE[102];
-
-void get_flux();
-void get_counter_energies();
-
-double endpoint_energy, endpoint_energy_calib;
-
+#include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.cc"
 
 void getBeamAbsorption()
 {
-	
 	//-----   Read in Photon Flux and Tagger Counter Energies   -----//
 	
 	const char pathName[256] = "/work/halld/home/andrsmit/primex_compton_analysis";
 	
 	// photon flux file names:
 	
-	sprintf( tagh_flux_fname, "%s/photon_flux/He_200_tagh_flux.txt", pathName );
-	sprintf( tagm_flux_fname, "%s/photon_flux/He_200_tagm_flux.txt", pathName );
+	tagh_flux_fname = Form("%s/photon_flux/phase1/Be_200nA_FIELDOFF_flux_tagh.txt", pathName);
+	tagm_flux_fname = Form("%s/photon_flux/phase1/Be_200nA_FIELDOFF_flux_tagm.txt", pathName);
 	
 	// file containing the xscales for the tagh and tagm counters:
 	
-	sprintf( tagh_xscale_fname, "%s/photon_flux/primex_tagh.txt", pathName );
-	sprintf( tagm_xscale_fname, "%s/photon_flux/primex_tagm.txt", pathName );
+	tagh_xscale_fname = Form("%s/photon_flux/phase1/primex_tagh.txt", pathName);
+	tagm_xscale_fname = Form("%s/photon_flux/phase1/primex_tagm.txt", pathName);
 	
 	endpoint_energy_calib = 11.6061;
+	endpoint_energy       = 11.608;
 	//endpoint_energy     = 11.6061; // Be 200 nA data
 	//endpoint_energy     = 11.1671; // He  50 nA data
 	//endpoint_energy     = 11.1664; // He 100 nA data
-	endpoint_energy       = 11.1666; // He 200 nA data
+	//endpoint_energy     = 11.1666; // He 200 nA data
 	
 	get_flux();
 	get_counter_energies();
+	
+	cout << tagh_en[120] << endl;
 	
 	double      tagh_fabs[274],      tagm_fabs[102];
 	double tagh_fabs_high[274], tagm_fabs_high[102];
 	double  tagh_fabs_low[274],  tagm_fabs_low[102];
 	
-	for( int i=0; i<274; i++ ) {
-		tagh_fabs[i]      = 0.;
-		tagh_fabs_high[i] = 0.;
-		tagh_fabs_low[i]  = 0.;
-	} for( int i=0; i<102; i++ ) {
-		tagm_fabs[i]      = 0.;
-		tagm_fabs_high[i] = 0.;
-		tagm_fabs_low[i]  = 0.;
+	for(int tagh_counter=1; tagh_counter<=274; tagh_counter++) {
+		tagh_fabs[tagh_counter-1]      = 0.;
+		tagh_fabs_high[tagh_counter-1] = 0.;
+		tagh_fabs_low[tagh_counter-1]  = 0.;
+	}
+	for(int tagm_counter=1; tagm_counter<=102; tagm_counter++) {
+		tagm_fabs[tagm_counter-1]      = 0.;
+		tagm_fabs_high[tagm_counter-1] = 0.;
+		tagm_fabs_low[tagm_counter-1]  = 0.;
 	}
 	
 	//---------------------------------------------------------------//
 	
+	const double b2cm2      = 1.e24;         // barn to cm^2
+	const double AvogNumber = 6.0221409e+23; // Avogadro's number [atoms/mol]
+	
 	// Be Target:
-	/*
-	const double TargetDensity = 1.85;          // g/cm^3
+	
+	TString nist_cs_fname = Form("%s/photon_absorption/Be_pair_cs.dat", pathName);
+	
+	const double TargetDensity = 1.848;         // g/cm^3
 	const double TargetWidth   = 1.77546;       // cm
 	const double atomicMass    = 9.012182;      // atomic mass of Beryllium [g/mol]
-	const double AvogNumber    = 6.0221409e+23; // Avogadro's number [atoms/mol]
-	*/
 	
+	/*
 	// He Target:
+	
+	char nist_cs_fname[256] = "He_pair_cs.dat";
 	
 	const double TargetDensity =  0.1217;        // g/cm^3
 	const double TargetWidth   = 29.5;           // cm
 	const double atomicMass    =  4.0026;        // atomic mass of Beryllium [g/mol]
-	const double AvogNumber    =  6.0221409e+23; // Avogadro's number [atoms/mol]
+	*/
 	
-	
+	//---------------------------------------------------------------//
 	
 	// Get the pair production cs from file:
 	
-	vector<double> photon_energy_vec, pair_cs_vec;
-	ifstream inf( "He_pair_cs.dat" );
-	double a, b, c;
-	while( inf >> a >> b >> c ) {
-		photon_energy_vec.push_back(a);
-		pair_cs_vec.push_back(b+c);
+	ifstream inf_nist(nist_cs_fname.Data());
+	if(!inf_nist.good()) {
+		cout << "NIST e+e- cross section data does not exist. Check filename." << endl;
+		return 1;
 	}
-	inf.close();
+	
+	vector<double> photon_energy_vec, pair_cs_vec;
+	double loc_e, loc_pair_cs, loc_triplet_cs;
+	while(inf_nist >> loc_e >> loc_pair_cs >> loc_triplet_cs) {
+		photon_energy_vec.push_back(loc_e);
+		pair_cs_vec.push_back(loc_pair_cs+loc_triplet_cs);
+		//pair_cs_vec.push_back(loc_pair_cs+loc_triplet_cs);
+	}
+	inf_nist.close();
+	
+	// Convert the e+e- cross section to an attenuation coefficient:
 	
 	int n_ens = (int)photon_energy_vec.size();
-	double *photon_energy = new double[n_ens];
-	double *pair_cs       = new double[n_ens];
-	for( int i=0; i<n_ens; i++ ) {
-		photon_energy[i] = photon_energy_vec[i] / 1.e3;
-		pair_cs[i]       = pair_cs_vec[i];
+	double *photon_energy    = new double[n_ens];
+	double *atten_coeff      = new double[n_ens];
+	double *atten_coeff_high = new double[n_ens];
+	double *atten_coeff_low  = new double[n_ens];
+	for(int i=0; i<n_ens; i++) {
+		photon_energy[i]    = photon_energy_vec[i] / 1.e3;
+		double loc_atten    = pair_cs_vec[i] / (atomicMass/AvogNumber) / b2cm2;
+		atten_coeff[i]      = loc_atten;
+		atten_coeff_high[i] = 1.05*loc_atten;
+		atten_coeff_low[i]  = 0.95*loc_atten;
 	}
 	
-	TGraph *gPairCS = new TGraph( n_ens, photon_energy, pair_cs );
-	gPairCS->SetTitle( "He Photon Attenuation Coefficient" );
-	gPairCS->GetXaxis()->SetTitle( "E_{#gamma} [GeV]" );
-	gPairCS->GetYaxis()->SetTitle( "#mu [cm^{2}/g]" );
-	gPairCS->SetMarkerColor(kBlue);
-	gPairCS->SetMarkerStyle(8);
+	TGraph *gAtten = new TGraph(n_ens, photon_energy, atten_coeff);
+	gAtten->SetTitle("Photon Attenuation Coefficient");
+	gAtten->SetMarkerColor(kBlue);
+	gAtten->SetMarkerStyle(8);
+	gAtten->GetYaxis()->SetRangeUser(0.94*gAtten->GetY()[0], 1.06*gAtten->GetY()[n_ens-1]);
+	gAtten->GetXaxis()->SetTitle("Photon Beam Energy (GeV)");
+	gAtten->GetXaxis()->SetTitleSize(0.05);
+	gAtten->GetXaxis()->SetTitleOffset(1.0);
+	gAtten->GetXaxis()->CenterTitle(true);
+	gAtten->GetYaxis()->SetTitle("#mu [cm^{2}/g]");
+	gAtten->GetYaxis()->SetTitleSize(0.05);
+	gAtten->GetYaxis()->SetTitleOffset(1.0);
+	gAtten->GetYaxis()->CenterTitle(true);
 	
-	TCanvas *canvas = new TCanvas( "canvas", "canvas", 800, 400 );
-	canvas->SetTickx(); canvas->SetTicky();
-	gPairCS->Draw("AP");
+	TF1 *fAtten = new TF1("fAtten", "pol4", 3.0, 12.0);
+	gAtten->Fit(fAtten, "R0Q");
 	
-	TF1 *fPairCS = new TF1( "fPairCS", "pol4", 3.0, 12.0 );
-	gPairCS->Fit( "fPairCS", "R0Q" );
-	fPairCS->Draw("same");
+	TGraph *gAtten_high = new TGraph(n_ens, photon_energy, atten_coeff_high);
+	gAtten_high->SetTitle("Photon Attenuation Coefficient");
+	gAtten_high->GetXaxis()->SetTitle("E_{#gamma} [GeV]");
+	gAtten_high->GetYaxis()->SetTitle("#mu [cm^{2}/g]");
+	gAtten_high->SetMarkerColor(kGreen);
+	gAtten_high->SetMarkerStyle(8);
 	
-	double *pair_cs_high  = new double[n_ens];
-	double *pair_cs_low   = new double[n_ens];
-	for( int i=0; i<n_ens; i++ ) {
-		pair_cs_high[i]  = 1.05*pair_cs_vec[i];
-		pair_cs_low[i]   = 0.95*pair_cs_vec[i];
-	}
+	TF1 *fAtten_high = new TF1("fAtten_high", "pol4", 3.0, 12.0);
+	gAtten_high->Fit(fAtten_high, "R0Q");
 	
-	TGraph *gPairCS_high = new TGraph( n_ens, photon_energy, pair_cs_high );
-	gPairCS_high->SetTitle( "He Photon Attenuation Coefficient" );
-	gPairCS_high->GetXaxis()->SetTitle( "E_{#gamma} [GeV]" );
-	gPairCS_high->GetYaxis()->SetTitle( "#mu [cm^{2}/g]" );
-	gPairCS_high->SetMarkerColor(kGreen);
-	gPairCS_high->SetMarkerStyle(8);
+	TGraph *gAtten_low = new TGraph(n_ens, photon_energy, atten_coeff_low);
+	gAtten_low->SetTitle("Photon Attenuation Coefficient");
+	gAtten_low->GetXaxis()->SetTitle("E_{#gamma} [GeV]");
+	gAtten_low->GetYaxis()->SetTitle("#mu [cm^{2}/g]");
+	gAtten_low->SetMarkerColor(kGreen);
+	gAtten_low->SetMarkerStyle(8);
 	
-	TF1 *fPairCS_high = new TF1( "fPairCS_high", "pol4", 3.0, 12.0 );
-	gPairCS_high->Fit( "fPairCS_high", "R0Q" );
+	TF1 *fAtten_low = new TF1("fAtten_low", "pol4", 3.0, 12.0);
+	gAtten_low->Fit(fAtten_low, "R0Q");
 	
-	TGraph *gPairCS_low = new TGraph( n_ens, photon_energy, pair_cs_low );
-	gPairCS_low->SetTitle( "He Photon Attenuation Coefficient" );
-	gPairCS_low->GetXaxis()->SetTitle( "E_{#gamma} [GeV]" );
-	gPairCS_low->GetYaxis()->SetTitle( "#mu [cm^{2}/g]" );
-	gPairCS_low->SetMarkerColor(kGreen);
-	gPairCS_low->SetMarkerStyle(8);
+	TCanvas *cAtten = new TCanvas("cAtten", "cAtten", 800, 400);
+	cAtten->SetTickx(); cAtten->SetTicky();
+	gAtten->Draw("AP"); fAtten->Draw("same");
+	gAtten_high->Draw("P same"); fAtten_high->Draw("same");
+	gAtten_low->Draw("P same");  fAtten_low->Draw("same");
 	
-	TF1 *fPairCS_low = new TF1( "fPairCS_low", "pol4", 3.0, 12.0 );
-	gPairCS_low->Fit( "fPairCS_low", "R0Q" );
-	
-	canvas->cd();
-	
-	gPairCS_high->Draw("P same"); fPairCS_high->Draw("same");
-	gPairCS_low->Draw("P same");  fPairCS_low->Draw("same");
-	
-	canvas->Update();
-	
+	cAtten->Update();
 	
 	//-----   Loop over TAGH Counters   -----//
 	
 	TRandom3 *rand = new TRandom3(0);
 	
-	for( int tagh_counter = 1; tagh_counter <= 274; tagh_counter++ ) 
+	for(int tagh_counter = 1; tagh_counter <= 274; tagh_counter++) 
 	{
+		double loc_eb  = tagh_en[tagh_counter-1];
 		
-		double loc_eb = tagh_en[tagh_counter-1];
-		double loc_cs = fPairCS->Eval(loc_eb);
-		
-		double n_a         = (AvogNumber/atomicMass)*TargetDensity; // [atoms/cm^3]
-		
-		double atten_coeff = n_a*loc_cs*(1.e-24) / TargetDensity; // attenuation coefficient
-		double rl          = pow( atten_coeff * TargetDensity, -1.0 );
-		
-		double rl_high = pow(n_a*fPairCS_high->Eval(loc_eb)*(1.e-24), -1.0);
-		double rl_low  = pow(n_a* fPairCS_low->Eval(loc_eb)*(1.e-24), -1.0);
+		double rl      = TargetDensity * fAtten->Eval(loc_eb);
+		double rl_high = TargetDensity * fAtten_high->Eval(loc_eb);
+		double rl_low  = TargetDensity * fAtten_low->Eval(loc_eb);
 		
 		double abs_counter = 0., total_counter = 0.;
 		double abs_counter_high = 0.;
 		double abs_counter_low  = 0.;
 		
-		for( int ievt = 0; ievt < 1.e6; ievt++ ) {
+		for(int ievt = 0; ievt < 1.e6; ievt++) {
 			
-			// for now assume Compton interaction vertex is uniformly distributed in z:
+			// Assume Compton interaction vertex is uniformly distributed in z:
 			
 			double locVertex = TargetWidth * rand->Uniform();
 			
-			double a_E      = TMath::Exp(-locVertex/rl     );
-			double a_E_high = TMath::Exp(-locVertex/rl_high);
-			double a_E_low  = TMath::Exp(-locVertex/rl_low );
+			double a_E      = TMath::Exp(-locVertex * rl     );
+			double a_E_high = TMath::Exp(-locVertex * rl_high);
+			double a_E_low  = TMath::Exp(-locVertex * rl_low );
 			
-			// 1-a_E is the probability of pair production occuring before this point
+			a_E      = (1./(locVertex*rl)) * (1.0 - a_E);
+			a_E_high = (1./(locVertex*rl)) * (1.0 - a_E_high);
+			a_E_low  = (1./(locVertex*rl)) * (1.0 - a_E_low);
+			
+			// a_E is the probability of a pair conversion occuring before this point
 			
 			double loc_rand = rand->Uniform();
 			
-			int abs_val      = 0;
-			if( loc_rand < a_E ) abs_val = 1;
-			abs_counter      += (double)abs_val;
-			
-			int abs_val_high = 0;
-			if( loc_rand < a_E_high ) abs_val_high = 1;
-			abs_counter_high += (double)abs_val_high;
-			
-			int abs_val_low  = 0;
-			if( loc_rand < a_E_low ) abs_val_low = 1;
-			abs_counter_low  += (double)abs_val_low;
+			if(loc_rand > a_E)      abs_counter      += 1.0;
+			if(loc_rand > a_E_high) abs_counter_high += 1.0;
+			if(loc_rand > a_E_low)  abs_counter_low  += 1.0;
 			
 			total_counter += 1.0;
-			
 		}
 		
 		double absorption_factor      = 1.0 - (abs_counter     /total_counter);
@@ -203,52 +198,41 @@ void getBeamAbsorption()
 		cout << "TAGH Counter " << tagh_counter << "; f_abs = " << absorption_factor << endl;
 	}
 	
-	for( int tagm_counter = 1; tagm_counter <= 102; tagm_counter++ ) 
+	for(int tagm_counter = 1; tagm_counter <= 102; tagm_counter++) 
 	{
+		double loc_eb  = tagm_en[tagm_counter-1];
 		
-		double loc_eb = tagm_en[tagm_counter-1];
-		double loc_cs = fPairCS->Eval(loc_eb);
-		
-		double n_a         = (AvogNumber/atomicMass)*TargetDensity; // [atoms/cm^3]
-		
-		double atten_coeff = n_a*loc_cs*(1.e-24) / TargetDensity; // attenuation coefficient
-		double rl          = pow( atten_coeff * TargetDensity, -1.0 );
-		
-		double rl_high = pow(n_a*fPairCS_high->Eval(loc_eb)*(1.e-24), -1.0);
-		double rl_low  = pow(n_a* fPairCS_low->Eval(loc_eb)*(1.e-24), -1.0);
+		double rl      = TargetDensity * fAtten->Eval(loc_eb);
+		double rl_high = TargetDensity * fAtten_high->Eval(loc_eb);
+		double rl_low  = TargetDensity * fAtten_low->Eval(loc_eb);
 		
 		double abs_counter = 0., total_counter = 0.;
 		double abs_counter_high = 0.;
 		double abs_counter_low  = 0.;
 		
-		for( int ievt = 0; ievt < 1.e6; ievt++ ) {
+		for(int ievt = 0; ievt < 1.e6; ievt++) {
 			
-			// for now assume Compton interaction vertex is uniformly distributed in z:
+			// Assume Compton interaction vertex is uniformly distributed in z:
 			
 			double locVertex = TargetWidth * rand->Uniform();
 			
-			double a_E      = TMath::Exp(-locVertex/rl     );
-			double a_E_high = TMath::Exp(-locVertex/rl_high);
-			double a_E_low  = TMath::Exp(-locVertex/rl_low );
+			double a_E      = TMath::Exp(-locVertex * rl     );
+			double a_E_high = TMath::Exp(-locVertex * rl_high);
+			double a_E_low  = TMath::Exp(-locVertex * rl_low );
 			
-			// a_E is the probability of pair production occuring before this point
+			a_E      = (1./(locVertex*rl)) * (1.0 - a_E);
+			a_E_high = (1./(locVertex*rl)) * (1.0 - a_E_high);
+			a_E_low  = (1./(locVertex*rl)) * (1.0 - a_E_low);
+			
+			// a_E is the probability of a pair conversion occuring before this point
 			
 			double loc_rand = rand->Uniform();
 			
-			int abs_val      = 0;
-			if( loc_rand < a_E ) abs_val = 1;
-			abs_counter      += (double)abs_val;
-			
-			int abs_val_high = 0;
-			if( loc_rand < a_E_high ) abs_val_high = 1;
-			abs_counter_high += (double)abs_val_high;
-			
-			int abs_val_low  = 0;
-			if( loc_rand < a_E_low ) abs_val_low = 1;
-			abs_counter_low  += (double)abs_val_low;
+			if(loc_rand > a_E)      abs_counter      += 1.0;
+			if(loc_rand > a_E_high) abs_counter_high += 1.0;
+			if(loc_rand > a_E_low)  abs_counter_low  += 1.0;
 			
 			total_counter += 1.0;
-			
 		}
 		
 		double absorption_factor      = 1.0 - (abs_counter     /total_counter);
@@ -346,67 +330,6 @@ void getBeamAbsorption()
 		outf_tagm << buf << "\n";
 	}
 	outf_tagm.close();
-	
-	
-	
-	return;
-}
-
-
-
-
-void get_flux() 
-{
-	
-	int a; double b, c;
-	
-	ifstream inf1( tagh_flux_fname );
-	for( int i=0; i<274; i++ ) {
-		inf1 >> a >> b >> c;
-		tagh_flux[i]  = b;
-		tagh_fluxE[i] = c;
-	}
-	inf1.close();
-	
-	ifstream inf2( tagm_flux_fname );
-	for( int i=0; i<102; i++ ) {
-		inf2 >> a >> b >> c;
-		tagm_flux[i]  = b;
-		tagm_fluxE[i] = c;
-	}
-	inf2.close();
-	
-	
-	return;
-}
-
-
-
-
-void get_counter_energies() 
-{
-	
-	int a; double b, c;
-	
-	ifstream inf1( tagh_xscale_fname );
-	for( int i=0; i<274; i++ ) {
-		inf1 >> a >> b >> c;
-		double deltaE  = endpoint_energy - endpoint_energy_calib;
-		double emin    = b * endpoint_energy_calib  +  deltaE;
-		double emax    = c * endpoint_energy_calib  +  deltaE;
-		tagh_en[i] = 0.5 * (emin + emax);
-	}
-	inf1.close();
-	
-	ifstream inf2( tagm_xscale_fname );
-	for( int i=0; i<102; i++ ) {
-		inf2 >> a >> b >> c;
-		double deltaE  = endpoint_energy - endpoint_energy_calib;
-		double emin    = b * endpoint_energy_calib  +  deltaE;
-		double emax    = c * endpoint_energy_calib  +  deltaE;
-		tagm_en[i] = 0.5 * (emin + emax);
-	}
-	inf2.close();
 	
 	
 	return;

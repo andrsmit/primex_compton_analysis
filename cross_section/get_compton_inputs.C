@@ -73,6 +73,19 @@ void get_flux()
 	}
 	inf4.close();
 	
+	/*
+	TF1 *f_flux_correction_phaseIII = new TF1("flux_correction_phaseIII", "pol1", 5., 12.);
+	f_flux_correction_phaseIII->SetParameters(0.926621, 0.0126023);
+	for(int tagh_counter=1; tagh_counter<=274; tagh_counter++) {
+		if(tagh_en[tagh_counter-1]<6.) continue;
+		tagh_flux[tagh_counter-1] /= f_flux_correction_phaseIII->Eval(tagh_en[tagh_counter-1]);
+	}
+	for(int tagm_counter=1; tagm_counter<=102; tagm_counter++) {
+		if(tagm_en[tagm_counter-1]<6.) continue;
+		tagm_flux[tagm_counter-1] /= f_flux_correction_phaseIII->Eval(tagm_en[tagm_counter-1]);
+	}
+	*/
+	
 	return;
 }
 
@@ -187,7 +200,9 @@ void get_theory_calc() {
 	f_theory->SetLineColor(kRed);
 	f_theory->SetLineStyle(2);
 	
-	g_nist->Fit("f_theory", "R0Q");
+	if(USE_NIST_CALCULATION) {
+		g_nist->Fit("f_theory", "R0Q");
+	}
 	
 	double *gen_cs_min = new double[n_cs_files];
 	double *gen_cs_max = new double[n_cs_files];
@@ -340,10 +355,10 @@ void get_target_parameters(bool IS_BE_TARGET=true)
 		// PrimEx-eta Be-9 Target:
 		
 		n_Z   = 4.0;
-		f_abs = 0.987;
+		f_abs = 0.9856;
 		
 		double target_thickness = 1.77546;
-		double avo_num          = 6.0221e+23;
+		double avo_num          = 6.02214076e+23;
 		
 		double frac_be2c = 1.e-2 * 0.021;
 		double frac_fe   = 1.e-2 * 0.105;
@@ -367,7 +382,7 @@ void get_target_parameters(bool IS_BE_TARGET=true)
 		double density_si   = 2.329;
 		double density_mg   = 1.738;
 		double density_mn   = 7.26;
-		double density_be   = 1.85;
+		double density_be   = 1.848;
 		
 		double weight_be2c  = 30.035;
 		double weight_fe    = 55.84;
@@ -398,8 +413,12 @@ void get_target_parameters(bool IS_BE_TARGET=true)
 		// PrimEx-eta He-4 Target:
 		
 		n_Z   = 2.0;
-		f_abs = 0.989;
+		f_abs = 0.9908;
 		n_e   = 1.0816e+24; // p = 0.1217 g/cm3, t = 29.535cm
+		
+		// correction for cold residual gas:
+		
+		//n_e *= 0.9817;
 		
 	}
 	

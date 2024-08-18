@@ -51,6 +51,21 @@ jerror_t JEventProcessor_compton_analysis_TOF::init(void)
 	h_reaction_weight = new TH1F("reaction_weight", 
 		"Event Reaction Weight (All Events)", 1000, 0., 1.e7);
 	
+	// invariant mass of thrown e+e- pair:
+	
+	h_mass_thrown  = new TH1F("thrown_mass", "Invariant Mass Thrown; M [GeV/c^{2}]", 2000, -1.0, 1.0);
+	
+	// thrown mass vs. reconstructed mass:
+	
+	h_rec_vs_thrown_mass     = new TH2F("rec_vs_thrown_mass", 
+		"Reconstructed vs. Thrown Invariant Mass; M_{thrown} [GeV/c^{2}]; M_{rec} [GeV/c^{2}]", 1000, -1.0, 1.0, 500, 0.0, 1.0);
+	h_rec_vs_thrown_mass_cut = new TH2F("rec_vs_thrown_mass_cut", 
+		"Reconstructed vs. Thrown Invariant Mass; M_{thrown} [GeV/c^{2}]; M_{rec} [GeV/c^{2}]", 1000, -1.0, 1.0, 500, 0.0, 1.0);
+	h_deltaE_vs_thrown_mass = new TH2F("deltaE_vs_thrown_mass", 
+		"#DeltaE vs. Thrown Invariant Mass; M_{thrown} [GeV/c^{2}]; #DeltaE [GeV]", 1000, -1.0, 1.0, 1000, -8.0, 8.0);
+	h_deltaK_vs_thrown_mass = new TH2F("deltaK_vs_thrown_mass", 
+		"#DeltaK vs. Thrown Invariant Mass; M_{thrown} [GeV/c^{2}]; #DeltaK [GeV]", 1000, -1.0, 1.0, 1000, -8.0, 8.0);
+	
 	//---------------------------------------------//
 	
 	h_n_showers          = new TH1F("n_showers", 
@@ -111,6 +126,8 @@ jerror_t JEventProcessor_compton_analysis_TOF::init(void)
 		h_deltaK_tagm[ihist] = new TH2F(Form("deltaK_tagm_%d",ihist),
 			"#DeltaK; TAGM Counter; E_{Compton} - E_{#gamma} [GeV]",
 			102, 0.5, 102.5, 4000, -8.0, 8.0);
+		h_deltaK_tagh[ihist]->Sumw2();
+		h_deltaK_tagm[ihist]->Sumw2();
 	}
 	dir_deltaK->cd("../");
 	
@@ -125,30 +142,98 @@ jerror_t JEventProcessor_compton_analysis_TOF::init(void)
 		h_deltaK_tagm_cut[ihist] = new TH2F(Form("deltaK_tagm_cut_%d",ihist),
 			"#DeltaK; TAGM Counter; E_{Compton} - E_{#gamma} [GeV]",
 			102, 0.5, 102.5, 4000, -8.0, 8.0);
+		h_deltaK_tagh_cut[ihist]->Sumw2();
+		h_deltaK_tagm_cut[ihist]->Sumw2();
 	}
 	dir_deltaK_cut->cd("../");
+	
+	TDirectory *dir_dKvdE = new TDirectoryFile("deltaK_vs_deltaE", "deltaK_vs_deltaE");
+	dir_dKvdE->cd();
+	
+	for(int ihist=0; ihist<n_cuts; ihist++) {
+		
+		h_deltaK_vs_deltaE[ihist] = new TH2F(Form("deltaK_vs_deltaE_%d",ihist),
+			"2-D Elasticity; E_{1}+E_{2} - E_{Compton} [GeV]; E_{Comp} - E_{#gamma} [GeV]",
+			500, -8.0, 8.0, 500, -8.0, 8.0);
+	}
+	dir_dKvdE->cd("../");
 	
 	TDirectory *dir_elas = new TDirectoryFile("elas_vs_deltaE", "elas_vs_deltaE");
 	dir_elas->cd();
 	
 	for(int ihist=0; ihist<n_cuts; ihist++) {
 		
-		h_elas_vs_deltaE[ihist] = new TH2F(Form("elas_vs_deltaE_cut_%d",ihist),
+		h_elas_vs_deltaE[ihist] = new TH2F(Form("elas_vs_deltaE_%d",ihist),
 			"2-D Elasticity; E_{1}+E_{2} - E_{#gamma} [GeV]; E_{1}+E_{2} - E_{Compton} [GeV]",
 			500, -8.0, 8.0, 500, -8.0, 8.0);
 	}
 	dir_elas->cd("../");
 	
-	TDirectory *dir_mgg = new TDirectoryFile("mgg_vs_deltaE", "mgg_vs_deltaE");
+	TDirectory *dir_dCdE = new TDirectoryFile("deltaCCAL_vs_deltaE", "deltaCCAL_vs_deltaE");
+	dir_dCdE->cd();
+	
+	for(int ihist=0; ihist<n_cuts; ihist++) {
+		
+		h_deltaCCAL_vs_deltaE[ihist] = new TH2F(Form("deltaCCAL_vs_deltaE_%d",ihist),
+			"2-D Elasticity; E_{1}+E_{2} - E_{#gamma} [GeV]; E_{CCAL} - E_{Comp} [GeV]",
+			500, -8.0, 8.0, 500, -8.0, 8.0);
+		h_deltaCCAL_vs_deltaK[ihist] = new TH2F(Form("deltaCCAL_vs_deltaK_%d",ihist),
+			"2-D Elasticity; E_{1}+E_{2} - E_{Comp} [GeV]; E_{CCAL} - E_{Comp} [GeV]",
+			500, -8.0, 8.0, 500, -8.0, 8.0);
+		h_deltaCCAL_vs_deltaK_cut[ihist] = new TH2F(Form("deltaCCAL_vs_deltaK_cut_%d",ihist),
+			"2-D Elasticity; E_{1}+E_{2} - E_{Comp} [GeV]; E_{CCAL} - E_{Comp} [GeV]",
+			500, -8.0, 8.0, 500, -8.0, 8.0);
+	}
+	
+	dir_dCdE->cd("../");
+	
+	TDirectory *dir_dFdE = new TDirectoryFile("deltaFCAL_vs_deltaE", "deltaFCAL_vs_deltaE");
+	dir_dFdE->cd();
+	
+	for(int ihist=0; ihist<n_cuts; ihist++) {
+		
+		h_deltaFCAL_vs_deltaE[ihist] = new TH2F(Form("deltaFCAL_vs_deltaE_%d",ihist),
+			"2-D Elasticity; E_{1}+E_{2} - E_{#gamma} [GeV]; E_{FCAL} - E_{Comp} [GeV]",
+			500, -8.0, 8.0, 500, -8.0, 8.0);
+		h_deltaFCAL_vs_deltaK[ihist] = new TH2F(Form("deltaFCAL_vs_deltaK_%d",ihist),
+			"2-D Elasticity; E_{1}+E_{2} - E_{Comp} [GeV]; E_{FCAL} - E_{Comp} [GeV]",
+			500, -8.0, 8.0, 500, -8.0, 8.0);
+		h_deltaFCAL_vs_deltaK_cut[ihist] = new TH2F(Form("deltaFCAL_vs_deltaK_cut_%d",ihist),
+			"2-D Elasticity; E_{1}+E_{2} - E_{Comp} [GeV]; E_{FCAL} - E_{Comp} [GeV]",
+			500, -8.0, 8.0, 500, -8.0, 8.0);
+	}
+	
+	dir_dFdE->cd("../");
+	
+	
+	
+	TDirectory *dir_mgg = new TDirectoryFile("mgg", "mgg");
 	dir_mgg->cd();
 	
 	for(int ihist=0; ihist<n_cuts; ihist++) {
 		
-		h_mgg_vs_deltaE[ihist] = new TH2F(Form("mgg_vs_deltaE_cut_%d",ihist),
+		h_mgg_vs_deltaE[ihist] = new TH2F(Form("mgg_vs_deltaE_%d",ihist),
+			"Invariant Mass vs. #DeltaE; E_{1}+E_{2} - E_{#gamma} [GeV]; Mass [GeV/c^{2}",
+			500, -8.0, 8.0, 250, 0., 0.5);
+		h_mgg_vs_deltaK[ihist] = new TH2F(Form("mgg_vs_deltaK_%d",ihist),
 			"Invariant Mass vs. #DeltaE; E_{1}+E_{2} - E_{#gamma} [GeV]; Mass [GeV/c^{2}",
 			500, -8.0, 8.0, 250, 0., 0.5);
 	}
 	dir_mgg->cd("../");
+	
+	TDirectory *dir_xy = new TDirectoryFile("xy", "xy");
+	dir_xy->cd();
+	
+	for(int ihist=0; ihist<n_cuts; ihist++) {
+		
+		h_ccal_xy[ihist] = new TH2F(Form("ccal_xy_%d",ihist),
+			"CCAL Shower Occupancy; x_{CCAL} [cm]; y_{CCAL} [cm]",
+			500,  -13.,  13.,  500,  -13.,  13.);
+		h_fcal_xy[ihist] = new TH2F(Form("fcal_xy_%d",ihist),
+			"FCAL Shower Occupancy; x_{FCAL} [cm]; y_{FCAL} [cm]",
+			1000, -100., 100., 1000, -100., 100.);
+	}
+	dir_xy->cd("../");
 	
 	//---------------------------------------------//
 	
@@ -454,6 +539,9 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 	int loc_is_mc = 0;
 	double loc_reaction_weight = 1.0;
 	
+	int loc_is_pair_production = 0;
+	double loc_mpm = 0.0;
+	
 	if(locMCThrown.size()) {
 		
 		loc_is_mc = 1;
@@ -479,6 +567,56 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 		
 		h_vertex_accepted->Fill(vertex_z);
 		h_vertex_xy->Fill(locMCThrown[0]->position().X(), locMCThrown[0]->position().Y());
+		
+		
+		// Check if it's e+e- pair production and construct the invariant mass:
+		vector<const DMCThrown*> positron_list, electron_list;
+		positron_list.clear();
+		electron_list.clear();
+		for(vector<const DMCThrown*>::const_iterator thrown = locMCThrown.begin(); 
+			thrown != locMCThrown.end(); thrown++) {
+			if((*thrown)->pdgtype==-11) positron_list.push_back((*thrown));
+			else if((*thrown)->pdgtype==11) electron_list.push_back((*thrown));
+		}
+		if(positron_list.size()==1 && (electron_list.size()==1 || electron_list.size()==2)) {
+			const DMCThrown *loc_pos = positron_list[0];
+			
+			// if there are two electrons, find the more energetic one:
+			const DMCThrown *loc_ele;
+			if(electron_list.size()==2) {
+				if(electron_list[0]->energy() > electron_list[1]->energy()) {
+					loc_ele = electron_list[0];
+				} else {
+					loc_ele = electron_list[1];
+				}
+			} else {
+				loc_ele = electron_list[0];
+			}
+			
+			// calculate invariant mass of thrown e+e- pair:
+			double  e1 = loc_pos->energy();
+			double px1 = loc_pos->momentum().X();
+			double py1 = loc_pos->momentum().Y();
+			double pz1 = loc_pos->momentum().Z();
+			double  e2 = loc_ele->energy();
+			double px2 = loc_ele->momentum().X();
+			double py2 = loc_ele->momentum().Y();
+			double pz2 = loc_ele->momentum().Z();
+			double mpm = pow(e1+e2,2.0) - pow(px1+px2,2.0) - pow(py1+py2,2.0) - pow(pz1+pz2,2.0);
+			if(mpm>=0.) {
+				mpm = sqrt(mpm);
+			} else {
+				mpm = sqrt(-1.*mpm);
+				mpm = -1.*mpm;
+			}
+			
+			double loc_fill_weight = 1.0;
+			if(m_USE_REACTION_WEIGHT) loc_fill_weight = loc_reaction_weight;
+			h_mass_thrown->Fill(mpm, loc_fill_weight);
+			
+			loc_is_pair_production = 1;
+			loc_mpm = mpm;
+		}
 	}
 	
 	//--------------------------------------------------------------------------------------//
@@ -740,9 +878,9 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 					if(!loc_fid_cut) {
 						cut_vals[2] = 1;
 					}
-				} 
+				}
 				if(!loc_fid_cut) cut_vals[3] = 1;
-				
+				/*
 				if(locNGoodFCALShowers==1 && locNGoodCCALShowers==1) {
 					cut_vals[4] = 1;
 					if(!tof_match) {
@@ -764,7 +902,7 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 					}
 					if(!loc_fid_cut) cut_vals[11] = 1;
 				}
-				
+				*/
 				for(int icut = 0; icut < n_cuts; icut++) {
 					
 					if(tag_sys==SYS_TAGH) {
@@ -795,11 +933,38 @@ jerror_t JEventProcessor_compton_analysis_TOF::evnt(JEventLoop *eventLoop, uint6
 						}
 					}
 					
+					double deltaKCCAL = e2 - (1. / (1./eb + (1.-cos(pos2.Theta()))/m_e));
+					double deltaKFCAL = e1 - (1. / (1./eb + (1.-cos(pos1.Theta()))/m_e));
+					
 					if(cut_vals[icut]) {
 						h_elas_vs_deltaE[icut]->Fill(deltaE_smeared, 
 							(deltaE_smeared-deltaK_smeared), fill_weight);
+						
 						h_mgg_vs_deltaE[icut]->Fill(deltaE_smeared, invmass, fill_weight);
+						h_mgg_vs_deltaK[icut]->Fill(deltaK_smeared, invmass, fill_weight);
+						
+						h_deltaK_vs_deltaE[icut]->Fill(deltaE_smeared, deltaK_smeared, fill_weight);
+						
+						h_deltaCCAL_vs_deltaE[icut]->Fill(deltaE_smeared, deltaKCCAL, fill_weight);
+						h_deltaCCAL_vs_deltaK[icut]->Fill(deltaK_smeared, deltaKCCAL, fill_weight);
+						h_deltaFCAL_vs_deltaE[icut]->Fill(deltaE_smeared, deltaKFCAL, fill_weight);
+						h_deltaFCAL_vs_deltaK[icut]->Fill(deltaK_smeared, deltaKFCAL, fill_weight);
+						
+						if(e_cut && k_cut && phi_cut) {
+							h_ccal_xy[icut]->Fill(pos2.X(), pos2.Y(), fill_weight);
+							h_fcal_xy[icut]->Fill(pos1.X(), pos1.Y(), fill_weight);
+							h_deltaCCAL_vs_deltaK_cut[icut]->Fill(deltaK_smeared, deltaKCCAL, fill_weight);
+							h_deltaFCAL_vs_deltaK_cut[icut]->Fill(deltaK_smeared, deltaKFCAL, fill_weight);
+						}
 					}
+				}
+				
+				if(loc_is_pair_production) {
+					h_rec_vs_thrown_mass->Fill(loc_mpm, invmass, fill_weight);
+					if(e_cut && k_cut && phi_cut) h_rec_vs_thrown_mass_cut->Fill(loc_mpm, invmass, fill_weight);
+					
+					h_deltaE_vs_thrown_mass->Fill(loc_mpm, deltaE_smeared, fill_weight);
+					h_deltaK_vs_thrown_mass->Fill(loc_mpm, deltaK_smeared, fill_weight);
 				}
 				
 				//if(!e_cut || !k_cut || !phi_cut) continue;

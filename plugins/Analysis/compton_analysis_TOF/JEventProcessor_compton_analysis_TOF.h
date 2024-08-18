@@ -113,12 +113,21 @@ class JEventProcessor_compton_analysis_TOF:public jana::JEventProcessor{
 		TH1F *h_vertex_accepted;
 		TH1F *h_reaction_weight;
 		
-		static const int n_cuts = 12;
+		TH1F *h_mass_thrown;
+		TH2F *h_rec_vs_thrown_mass, *h_rec_vs_thrown_mass_cut;
+		TH2F *h_deltaE_vs_thrown_mass;
+		TH2F *h_deltaK_vs_thrown_mass;
+		
+		static const int n_cuts = 4;
 		TH2F *h_deltaE_tagh[n_cuts],     *h_deltaE_tagm[n_cuts];
 		TH2F *h_deltaK_tagh[n_cuts],     *h_deltaK_tagm[n_cuts];
 		TH2F *h_deltaK_tagh_cut[n_cuts], *h_deltaK_tagm_cut[n_cuts];
 		TH2F *h_elas_vs_deltaE[n_cuts];
-		TH2F *h_mgg_vs_deltaE[n_cuts];
+		TH2F *h_deltaK_vs_deltaE[n_cuts];
+		TH2F *h_deltaCCAL_vs_deltaE[n_cuts], *h_deltaCCAL_vs_deltaK[n_cuts], *h_deltaCCAL_vs_deltaK_cut[n_cuts];
+		TH2F *h_deltaFCAL_vs_deltaE[n_cuts], *h_deltaFCAL_vs_deltaK[n_cuts], *h_deltaFCAL_vs_deltaK_cut[n_cuts];
+		TH2F *h_mgg_vs_deltaE[n_cuts], *h_mgg_vs_deltaK[n_cuts];
+		TH2F *h_ccal_xy[n_cuts], *h_fcal_xy[n_cuts];
 		
 		TH1F *h_n_showers,          *h_n_showers_ccal,          *h_n_showers_fcal;
 		TH1F *h_n_showers_cut,      *h_n_showers_ccal_cut,      *h_n_showers_fcal_cut;

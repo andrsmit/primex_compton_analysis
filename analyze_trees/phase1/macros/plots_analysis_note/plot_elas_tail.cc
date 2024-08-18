@@ -21,9 +21,10 @@ void plot_elas_tail() {
 	h_dEdK->GetYaxis()->SetTitleOffset(0.85);
 	h_dEdK->GetYaxis()->CenterTitle(true);
 	h_dEdK->SetTitle("");
+	h_dEdK->Rebin2D(2,2);
 	h_dEdK->SetMinimum(0.);
-	h_dEdK->GetXaxis()->SetRangeUser(-8.0, 8.0);
-	h_dEdK->GetYaxis()->SetRangeUser(-8.0, 8.0);
+	h_dEdK->GetXaxis()->SetRangeUser(-6.0, 6.0);
+	h_dEdK->GetYaxis()->SetRangeUser(-6.0, 6.0);
 	
 	for(int xbin=1; xbin<=h_dEdK->GetXaxis()->GetNbins(); xbin++) {
 		for(int ybin=1; ybin<=h_dEdK->GetXaxis()->GetNbins(); ybin++) {
@@ -54,13 +55,20 @@ void plot_elas_tail() {
 		}
 	}
 	*/
-	TCanvas *c_dEdK = new TCanvas("c_dEdK", "dE_vs_dK", 650, 500);
+	TCanvas *c_dEdK = new TCanvas("c_dEdK", "dE_vs_dK", 550, 500);
 	c_dEdK->SetTopMargin(0.07);
 	c_dEdK->SetBottomMargin(0.13);
+	c_dEdK->SetRightMargin(0.12);
 	c_dEdK->SetTickx(); c_dEdK->SetTicky();
-	c_dEdK->SetLogz();
+	//c_dEdK->SetLogz();
 	c_dEdK->cd();
 	h_dEdK->Draw("COLZ");
+	
+	TLine *l1 = new TLine(-6.0, -6.0, 6.0, 6.0);
+	l1->SetLineColor(kRed);
+	l1->SetLineWidth(2);
+	l1->SetLineStyle(2);
+	l1->Draw("same");
 	
 	return;
 }

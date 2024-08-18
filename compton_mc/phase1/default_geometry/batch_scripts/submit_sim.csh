@@ -9,17 +9,18 @@ set submit_runs = go
 #=========================#
 #Job Resources:
 
-set workflow  = compton_sim
-set account   = halld
-set partition = production
-set ram       = 8GB
-set cores     = 10
-set time      = 500min
-set disk      = 12GB
+set workflow   = compton_mc_tof_veto
+set account    = halld
+set partition  = production
+set ram        = 8GB
+set cores      = 10
+set time       = 500min
+set disk       = 12GB
+set constraint = el9
 
 #=========================#
 
-set run_list = {"61321","61866"}
+set run_list = {"61866"}
 set tag_list = {"tagh","tagm"}
 
 foreach rnb ($run_list)
@@ -35,7 +36,7 @@ foreach rnb ($run_list)
 	foreach tag_sys ($tag_list)
 		
 		set max_counter = 230
-		if("$tag_sys" == "tagm") then 
+		if("$tag_sys" == "tagm") then
 			set max_counter = 102
 		endif
 		
@@ -88,7 +89,8 @@ foreach rnb ($run_list)
 					set command = "$command -name ${loc_jobname}"
 					set command = "$command -account ${account} -partition ${partition}"
 					set command = "$command -cores ${cores} -ram ${ram} -time ${time} -disk ${disk}"
-					set command = "$command $script $rnb $tag_sys $tag_counter $gendir $writedir $jf"
+					set command = "$command -constraint ${constraint}"
+					set command = "$command $script $rnb $tag_sys $counter $gendir $writedir $jf"
 					
 					echo "$command" > $jf
 					

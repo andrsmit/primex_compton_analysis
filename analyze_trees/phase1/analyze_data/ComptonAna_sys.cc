@@ -225,9 +225,6 @@ void ComptonAna::comptonAnalysis_systematics() {
 			}
 		}
 		
-		// lets place a 2degree cut on the angle of the FCAL shower:
-		//if((theta1*(180./TMath::Pi())) < 2.0) continue;
-		
 		// check if FCAL shower passes nominal energy, timing, and fiducial cuts:
 		
 		int fcal_e_cut_norm   = e1 > m_cut_fcalE ? 1 : 0;

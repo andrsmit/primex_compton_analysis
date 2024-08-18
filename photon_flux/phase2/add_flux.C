@@ -25,7 +25,7 @@ char pathName[256] = "/work/halld/home/andrsmit/primex_compton_analysis/photon_f
 	
 	sprintf(outfile_tagh, "Be_200nA_flux_tagh.txt");
 	sprintf(outfile_tagm, "Be_200nA_flux_tagm.txt");
-	vector<int> run_list = {81374, 81375, 81376, 81377, 81378, 81379, 81380, 81381}
+	vector<int> run_list = {81374, 81375, 81376, 81377, 81378, 81379, 81380, 81381};
 	
 	double tagh_flux[274], tagh_fluxE[274];
 	double tagm_flux[102], tagm_fluxE[102];

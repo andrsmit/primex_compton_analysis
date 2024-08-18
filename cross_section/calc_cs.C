@@ -35,6 +35,12 @@ void calc_cs(int tag_sys, int counter, double &loc_cs, double &loc_csE) {
 		}
 	}
 	
+	if(loc_flux<=0. || loc_acc<=0. || n_e<=0. || mb<=0. || loc_yield<=0.) {
+		loc_cs  = 0.;
+		loc_csE = 0.;
+		return;
+	}
+	
 	loc_accE = 0.;
 	if(loc_acc <= 0. || loc_flux <= 0.) {
 		loc_cs  = 0.;

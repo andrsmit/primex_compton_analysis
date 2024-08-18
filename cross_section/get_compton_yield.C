@@ -73,13 +73,17 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		
 		canvas_draw = new TCanvas("canvas_draw","canvas_draw",800,800);
 		canvas_draw->SetTickx(); canvas_draw->SetTicky();
+		canvas_draw->SetTopMargin(0.10);
+		canvas_draw->SetBottomMargin(0.10);
+		canvas_draw->SetRightMargin(0.05);
+		canvas_draw->SetLeftMargin(0.15);
 	}
 	
 	//------------------------------------------------------------------------------------------//
 	
 	int tagh_first = 1, tagm_first = 1;
 	
-	for(int tagh_counter = 1; tagh_counter <= 274; tagh_counter++) {
+	for(int tagh_counter = 1; tagh_counter <= 230; tagh_counter++) {
 		
 		int bad_val = 0;
 		for(int ic = 0; ic < bad_counters_tagh.size(); ic++) {
@@ -92,7 +96,7 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		double loc_flux_empty = tagh_flux_empty[tagh_counter-1];
 		double loc_fluxE      = tagh_fluxE[tagh_counter-1];
 		
-		if(eb<6.180) continue;
+		//if(eb<6.180) continue;
 		
 		// Skip bins that have no flux:
 		
@@ -137,6 +141,10 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		tagh_yield[tagh_counter-1]  = loc_yield;
 		tagh_yieldE[tagh_counter-1] = loc_yieldE;
 		tagh_chi2[tagh_counter-1]   = loc_chi2;
+		
+		if(SAVE_FITS_TAGH) {
+			canvas_draw->SaveAs(Form("yield_fit_tagh_%03d.pdf", tagh_counter), "pdf");
+		}
 		
 		tagh_counter_vec.push_back(tagh_counter);
 	}
@@ -199,6 +207,10 @@ void get_compton_yield(vector<int> &tagh_counter_vec, vector<int> &tagm_counter_
 		tagm_yield[tagm_counter-1]  = loc_yield;
 		tagm_yieldE[tagm_counter-1] = loc_yieldE;
 		tagm_chi2[tagm_counter-1]   = loc_chi2;
+		
+		if(SAVE_FITS_TAGM) {
+			canvas_draw->SaveAs(Form("yield_fit_tagm_%03d.pdf", tagm_counter), "pdf");
+		}
 		
 		tagm_counter_vec.push_back(tagm_counter);
 	}
