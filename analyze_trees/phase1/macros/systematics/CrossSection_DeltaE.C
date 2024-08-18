@@ -1,3 +1,5 @@
+"TEST"
+
 #include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.h"
 #include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_acc.h"
 #include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_yield.h"
