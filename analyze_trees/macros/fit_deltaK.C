@@ -1,6 +1,5 @@
-
-#include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.h"
-#include "/work/halld/home/andrsmit/primex_compton_analysis/include/get_phase1_energy_bin.h"
+#include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.cc"
+#include "/work/halld/home/andrsmit/primex_compton_analysis/include/get_phase1_energy_bin.cc"
 
 bool FIX_BACKGROUND;
 bool SUBTRACT_EMPTY;
@@ -119,7 +118,7 @@ void fit_deltaK(int loc_cut_index=0)
 		BEAM_CURRENT = 200;
 		
 		// Directory with histograms from Compton MC:
-		comp_mc_dir = Form("%s/analyze_trees/phase1/analyze_mc/rootFiles/Run061321/compton/%03dnA", loc_pathname, BEAM_CURRENT);
+		comp_mc_dir = Form("%s/analyze_trees/analyze_mc/rootFiles/phase1/Run061321/compton/%03dnA", loc_pathname, BEAM_CURRENT);
 		
 	} else {
 		
@@ -147,14 +146,14 @@ void fit_deltaK(int loc_cut_index=0)
 		
 		// Directory with histograms from Compton MC:
 		
-		comp_mc_dir = Form("%s/analyze_trees/phase1/analyze_mc/rootFiles/Run061866/compton/%03dnA", loc_pathname, BEAM_CURRENT);
+		comp_mc_dir = Form("%s/analyze_trees/analyze_mc/rootFiles/phase1/Run061866/compton/%03dnA", loc_pathname, BEAM_CURRENT);
 	}
 	
 	// ROOT filenames for full and empty target data:
 	
-	root_fname              = Form("%s/analyze_trees/phase1/analyze_data/rootFiles/%s_%03dnA_FIELDOFF.root", 
+	root_fname              = Form("%s/analyze_trees/analyze_data/rootFiles/phase1/%s_%03dnA_FIELDOFF.root", 
 		loc_pathname, TARGET_STR.Data(), BEAM_CURRENT);
-	empty_target_root_fname = Form("%s/analyze_trees/phase1/analyze_data/rootFiles/%s_empty_FIELDOFF.root", 
+	empty_target_root_fname = Form("%s/analyze_trees/analyze_data/rootFiles/phase1/%s_empty_FIELDOFF.root", 
 		loc_pathname, TARGET_STR.Data());
 	
 	// Filled target flux filenames:
@@ -196,7 +195,7 @@ void fit_deltaK(int loc_cut_index=0)
 	//------------------------------------------------//
 	// Get e+e- distributions:
 	
-	TString pair_mc_hist_fname = Form("%s/analyze_trees/phase1/analyze_mc/rootFiles/Run061321/pair/unsmeared/pair_rec.root", 
+	TString pair_mc_hist_fname = Form("%s/analyze_trees/analyze_mc/rootFiles/phase1/Run061321/pair/pair_rec_combined.root", 
 		loc_pathname);
 	TString pair_mc_flux_fname = Form("%s/bhgen_test/recRootTrees/Run061321/sum.root", loc_pathname);
 	if(get_pair_mc_hists(pair_mc_hist_fname, pair_mc_flux_fname)) return;
