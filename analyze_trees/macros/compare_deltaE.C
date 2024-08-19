@@ -1,4 +1,3 @@
-
 #include "/work/halld/home/andrsmit/primex_compton_analysis/include/compton_inputs.cc"
 
 //----------   Function Declarations   ----------//
@@ -42,9 +41,9 @@ void compare_deltaE(int loc_cut_index=0)
 		BEAM_CURRENT = 200;
 		
 		// ROOT filenames for full and empty target data:
-		root_fname = Form("%s/analyze_trees/phase1/analyze_data/rootFiles/Be_%03dnA_FIELDOFF.root", 
+		root_fname = Form("%s/analyze_trees/analyze_data/rootFiles/phase1/Be_%03dnA_FIELDOFF.root", 
 			loc_pathname, BEAM_CURRENT);
-		empty_target_root_fname = Form("%s/analyze_trees/phase1/analyze_data/rootFiles/Be_empty_FIELDOFF.root", 
+		empty_target_root_fname = Form("%s/analyze_trees/analyze_data/rootFiles/phase1/Be_empty_FIELDOFF.root", 
 			loc_pathname);
 		
 		// Filled target flux filenames:
@@ -56,7 +55,7 @@ void compare_deltaE(int loc_cut_index=0)
 		empty_target_tagm_flux_fname = Form("%s/photon_flux/phase1/Be_empty_FIELDOFF_flux_tagm.txt", loc_pathname);
 		
 		// Directory with histograms from Compton MC:
-		comp_mc_dir = Form("%s/analyze_trees/phase1/analyze_mc/rootFiles/Run061321/compton/200nA", loc_pathname);
+		comp_mc_dir = Form("%s/analyze_trees/analyze_mc/rootFiles/phase1/Run061321/compton/200nA", loc_pathname);
 		
 	} else {
 		
@@ -84,7 +83,7 @@ void compare_deltaE(int loc_cut_index=0)
 	get_theory_calc();
 	
 	cut_index = loc_cut_index;
-	hist_name = "deltaK/deltaK";
+	hist_name = "deltaE/deltaE";
 	
 	//------------------------------------------------//
 	// Get histograms from data:
@@ -94,7 +93,7 @@ void compare_deltaE(int loc_cut_index=0)
 	//------------------------------------------------//
 	// Get e+e- distributions (scaled to realistic flux):
 	
-	TString pair_mc_hist_fname = Form("%s/analyze_trees/phase1/analyze_mc/rootFiles/Run061321/pair/pair_rec_combined.root", 
+	TString pair_mc_hist_fname = Form("%s/analyze_trees/analyze_mc/rootFiles/phase1/Run061321/pair/pair_rec_combined.root", 
 		loc_pathname);
 	TString pair_mc_flux_fname = Form("%s/bhgen_test/recRootTrees/Run061321/sum.root", loc_pathname);
 	if(get_pair_mc_hists(pair_mc_hist_fname, pair_mc_flux_fname)) return;
@@ -106,41 +105,90 @@ void compare_deltaE(int loc_cut_index=0)
 	
 	//------------------------------------------------//
 	
-	int tag_sys     = 0;
-	int min_tag_counter = 54;
-	int max_tag_counter = 67;
-	
-	double loc_eb, loc_flux, loc_flux_empty;
-	double loc_eb_min, loc_eb_max;
-	if(tag_sys==0) {
-		loc_eb = 0., loc_flux = 0., loc_flux_empty = 0.;
-		for(int counter=min_tag_counter; counter<=max_tag_counter; counter++) {
-			loc_eb         += tagh_en[counter-1]*tagh_flux[counter-1];
-			loc_flux       += tagh_flux[counter-1];
-			loc_flux_empty += tagh_flux_empty[counter-1];
-		}
-		loc_eb /= loc_flux;
-		loc_eb_min = tagh_en[max_tag_counter-1];
-		loc_eb_max = tagh_en[min_tag_counter-1];
-	} else {
-		loc_eb = 0., loc_flux = 0., loc_flux_empty = 0.;
-		for(int counter=min_tag_counter; counter<=max_tag_counter; counter++) {
-			loc_eb         += tagm_en[counter-1]*tagm_flux[counter-1];
-			loc_flux       += tagm_flux[counter-1];
-			loc_flux_empty += tagm_flux_empty[counter-1];
-		}
-		loc_eb /= loc_flux;
-		loc_eb_min = tagm_en[max_tag_counter-1];
-		loc_eb_max = tagm_en[min_tag_counter-1];
-	}
-	
 	rebins = 2;
 	n_mev  = 8*rebins;
 	
-	TH1F *h_data  = (TH1F*)h2_tagh->ProjectionY("h_data", min_tag_counter, max_tag_counter);
+	int min_tagh_counter =  54;
+	int max_tagh_counter =  67;
+	int min_tagm_counter = 103;
+	int max_tagm_counter = 102;
+	
+	double min_eb   = 12.0;
+	double max_eb   =  6.0;
+	double avg_eb   =  0.0;
+	double sum_flux =  0.0;
+	
+	TH1F *h_data    = new TH1F("h_data",    ";#DeltaE = #left(E_{1}+E_{2}#right) - #left(E_{#gamma}-m_{e}#right) [GeV]", 
+		h2_tagh->GetYaxis()->GetNbins(),         -8.0, 8.0);
+	TH1F *h_pair    = new TH1F("h_pair",    ";#DeltaE = #left(E_{1}+E_{2}#right) - #left(E_{#gamma}-m_{e}#right) [GeV]", 
+		h2_tagh_pair->GetYaxis()->GetNbins(),    -8.0, 8.0);
+	TH1F *h_compton = new TH1F("h_compton", ";#DeltaE = #left(E_{1}+E_{2}#right) - #left(E_{#gamma}-m_{e}#right) [GeV]", 
+		h2_tagh_compton->GetYaxis()->GetNbins(), -8.0, 8.0);
+	
+	for(int tagh_counter=min_tagh_counter; tagh_counter<=max_tagh_counter; tagh_counter++) {
+		if(gSystem->AccessPathName(Form("%s/tagh_%03d.root",comp_mc_dir.Data(),tagh_counter))) continue;
+		
+		double loc_eb = tagh_en[tagh_counter-1];
+		if(loc_eb<min_eb) min_eb = loc_eb;
+		if(loc_eb>max_eb) max_eb = loc_eb;
+		
+		double loc_flux       = tagh_flux[tagh_counter-1];
+		double loc_flux_empty = tagh_flux_empty[tagh_counter-1];
+		
+		avg_eb               += loc_eb*loc_flux;
+		sum_flux             += loc_flux;
+		
+		TH1F *loc_h_data      = (TH1F*)h2_tagh->ProjectionY(Form("loc_h_data_tagh_%03d",tagh_counter), 
+			tagh_counter, tagh_counter);
+		TH1F *loc_h_empty     = (TH1F*)h2_tagh_empty->ProjectionY(Form("loc_h_empty_tagh_%03d",tagh_counter), 
+			tagh_counter, tagh_counter);
+		TH1F *loc_h_pair      = (TH1F*)h2_tagh_pair->ProjectionY(Form("loc_h_pair_tagh_%03d",tagh_counter), 
+			tagh_counter, tagh_counter);
+		TH1F *loc_h_compton   = (TH1F*)h2_tagh_compton->ProjectionY(Form("loc_h_compton_tagh_%03d",tagh_counter), 
+			tagh_counter, tagh_counter);
+		
+		loc_h_empty->Scale(loc_flux/loc_flux_empty);
+		
+		h_data->Add(loc_h_data);
+		h_data->Add(loc_h_empty, -1.0);
+		h_pair->Add(loc_h_pair);
+		h_compton->Add(loc_h_compton);
+	}
+	for(int tagm_counter=min_tagm_counter; tagm_counter<=max_tagm_counter; tagm_counter++) {
+		if(gSystem->AccessPathName(Form("%s/tagm_%03d.root",comp_mc_dir.Data(),tagm_counter))) continue;
+		
+		double loc_eb = tagm_en[tagm_counter-1];
+		if(loc_eb<min_eb) min_eb = loc_eb;
+		if(loc_eb>max_eb) max_eb = loc_eb;
+		
+		double loc_flux       = tagm_flux[tagm_counter-1];
+		double loc_flux_empty = tagm_flux_empty[tagm_counter-1];
+		
+		avg_eb               += loc_eb*loc_flux;
+		sum_flux             += loc_flux;
+		
+		TH1F *loc_h_data      = (TH1F*)h2_tagm->ProjectionY(Form("loc_h_data_tagm_%03d",tagm_counter), 
+			tagm_counter, tagm_counter);
+		TH1F *loc_h_empty     = (TH1F*)h2_tagm_empty->ProjectionY(Form("loc_h_empty_tagm_%03d",tagm_counter), 
+			tagm_counter, tagm_counter);
+		TH1F *loc_h_pair      = (TH1F*)h2_tagm_pair->ProjectionY(Form("loc_h_pair_tagm_%03d",tagm_counter), 
+			tagm_counter, tagm_counter);
+		TH1F *loc_h_compton   = (TH1F*)h2_tagm_compton->ProjectionY(Form("loc_h_compton_tagm_%03d",tagm_counter), 
+			tagm_counter, tagm_counter);
+		
+		loc_h_empty->Scale(loc_flux/loc_flux_empty);
+		
+		h_data->Add(loc_h_data);
+		h_data->Add(loc_h_empty, -1.0);
+		h_pair->Add(loc_h_pair);
+		h_compton->Add(loc_h_compton);
+	}
+	
+	avg_eb /= sum_flux;
+	
 	h_data->SetLineColor(kBlack);
 	h_data->SetLineWidth(2);
-	h_data->SetTitle("");//Form("%.2f GeV < E_{#gamma} < %.2f GeV", loc_eb_min, loc_eb_max));
+	h_data->SetTitle("");//Form("%.2f GeV < E_{#gamma} < %.2f GeV", min_eb, max_eb));
 	h_data->GetXaxis()->SetTitle("#DeltaE = #left(E_{1} + E_{2}#right) - #left(E_{#gamma} + m_{e}#right) [GeV]");
 	h_data->GetXaxis()->SetTitleSize(0.05);
 	h_data->GetXaxis()->CenterTitle(true);
@@ -149,20 +197,14 @@ void compare_deltaE(int loc_cut_index=0)
 	h_data->GetYaxis()->SetTitleOffset(1.25);
 	h_data->GetYaxis()->CenterTitle(false);
 	
-	TH1F *h_empty = (TH1F*)h2_tagh_empty->ProjectionY("h_empty", min_tag_counter, max_tag_counter);
-	h_empty->Scale(loc_flux/loc_flux_empty);
-	h_empty->SetLineColor(kBlue);
-	h_empty->SetMarkerColor(kBlue);
+	//h_data->Add(h_empty,-1.0);
 	
-	h_data->Add(h_empty,-1.0);
-	
-	TH1F *h_pair = (TH1F*)h2_tagh_pair->ProjectionY("h_pair", min_tag_counter, max_tag_counter);
 	h_pair->SetLineColor(kGreen);
 	h_pair->SetMarkerColor(kGreen);
 	h_pair->SetLineWidth(2);
 	h_pair->SetLineStyle(2);
 	
-	TH1F *h_compton = (TH1F*)h2_tagh_compton->ProjectionY("h_compton", min_tag_counter, max_tag_counter);
+	//TH1F *h_compton = (TH1F*)h2_tagh_compton->ProjectionY("h_compton", min_tag_counter, max_tag_counter);
 	h_compton->SetLineColor(kMagenta);
 	h_compton->SetMarkerColor(kMagenta);
 	h_compton->SetLineWidth(3);
@@ -200,18 +242,18 @@ void compare_deltaE(int loc_cut_index=0)
 	
 	double loc_mu = 0., loc_sig = 0.;
 	for(int ipar=0; ipar<4; ipar++) {
-		loc_mu += m_deltaE_mu_pars[ipar]*pow(loc_eb,(double)ipar);
+		loc_mu += m_deltaE_mu_pars[ipar]*pow(avg_eb,(double)ipar);
 	}
-	loc_sig = sqrt(pow(m_deltaE_sigma_pars[0],2.0) + pow(m_deltaE_sigma_pars[1]/sqrt(loc_eb), 2.0) 
-		+ pow(m_deltaE_sigma_pars[2]/loc_eb, 2.0));
+	loc_sig = sqrt(pow(m_deltaE_sigma_pars[0],2.0) + pow(m_deltaE_sigma_pars[1]/sqrt(avg_eb), 2.0) 
+		+ pow(m_deltaE_sigma_pars[2]/avg_eb, 2.0));
 	/*
-	h_sub->Scale(1.0/h_sub->Integral(h_sub->FindBin(loc_mu - 10.*loc_sig*loc_eb), 
-		h_sub->FindBin(loc_mu + 10.*loc_sig*loc_eb)));
-	h_compton->Scale(1.0/h_compton->Integral(h_compton->FindBin(loc_mu - 10.*loc_sig*loc_eb), 
-		h_compton->FindBin(loc_mu + 10.*loc_sig*loc_eb)));
+	h_sub->Scale(1.0/h_sub->Integral(h_sub->FindBin(loc_mu - 10.*loc_sig*avg_eb), 
+		h_sub->FindBin(loc_mu + 10.*loc_sig*avg_eb)));
+	h_compton->Scale(1.0/h_compton->Integral(h_compton->FindBin(loc_mu - 10.*loc_sig*avg_eb), 
+		h_compton->FindBin(loc_mu + 10.*loc_sig*avg_eb)));
 	
-	h_sub->GetXaxis()->SetRangeUser(loc_mu - 10.*loc_sig*loc_eb, loc_mu + 10.*loc_sig*loc_eb);
-	h_compton->GetXaxis()->SetRangeUser(loc_mu - 10.*loc_sig*loc_eb, loc_mu + 10.*loc_sig*loc_eb);
+	h_sub->GetXaxis()->SetRangeUser(loc_mu - 10.*loc_sig*avg_eb, loc_mu + 10.*loc_sig*avg_eb);
+	h_compton->GetXaxis()->SetRangeUser(loc_mu - 10.*loc_sig*avg_eb, loc_mu + 10.*loc_sig*avg_eb);
 	*/
 	
 	h_data->SetMinimum(0.);
@@ -230,7 +272,7 @@ void compare_deltaE(int loc_cut_index=0)
 	TLatex lat_new;
 	lat_new.SetTextColor(kRed-6);
 	lat_new.SetTextFont(52);
-	lat_new.DrawLatexNDC(0.1613, 0.8582, Form("#scale[0.75]{%.2f GeV < E_{#gamma} < %.2f GeV}", loc_eb_min, loc_eb_max));
+	lat_new.DrawLatexNDC(0.1613, 0.8582, Form("#scale[0.75]{%.2f GeV < E_{#gamma} < %.2f GeV}", min_eb, max_eb));
 	
 	/*
 	h_compton->Draw("same hist");
@@ -262,8 +304,8 @@ void compare_deltaE(int loc_cut_index=0)
 	vector<double> cut_sigs = {5.0};
 	for(int i=0; i<(int)cut_sigs.size(); i++) {
 		
-		double loc_x1 = loc_mu + loc_sig*loc_eb*cut_sigs[i];
-		double loc_x2 = loc_mu - loc_sig*loc_eb*cut_sigs[i];
+		double loc_x1 = loc_mu + loc_sig*avg_eb*cut_sigs[i];
+		double loc_x2 = loc_mu - loc_sig*avg_eb*cut_sigs[i];
 		
 		if(cut_sigs[i]<10.0) {
 			TLine *l1 = new TLine(loc_x1, gPad->GetUymin(), loc_x1, gPad->GetUymax());
@@ -339,9 +381,9 @@ int get_pair_mc_hists(TString hist_fname, TString flux_fname) {
 	}
 	
 	h2_tagh_pair = new TH2F("h2_tagh_pair", "#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]",
-		274, 0.5, 274.5, 1000, -8.0, 8.0);
+		274, 0.5, 274.5, 2000, -8.0, 8.0);
 	h2_tagm_pair = new TH2F("h2_tagm_pair", "#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]",
-		102, 0.5, 102.5, 1000, -8.0, 8.0);
+		102, 0.5, 102.5, 2000, -8.0, 8.0);
 	
 	TFile *f_pair = new TFile(hist_fname, "READ");
 	TH2F *loc_h2_tagh_pair = (TH2F*)f_pair->Get(Form("%s_tagh_%d",hist_name.Data(),cut_index))->Clone("h2_tagh_pair");
@@ -415,9 +457,9 @@ int get_pair_mc_hists(TString hist_fname, TString flux_fname) {
 int get_compton_mc_hists() {
 	
 	h2_tagh_compton = new TH2F("h2_tagh_compton", "#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]",
-		274, 0.5, 274.5, 1000, -8.0, 8.0);
+		274, 0.5, 274.5, 2000, -8.0, 8.0);
 	h2_tagm_compton = new TH2F("h2_tagm_compton", "#DeltaE; TAGH Counter; E_{1} + E_{2} - E_{#gamma} [GeV]",
-		102, 0.5, 102.5, 1000, -8.0, 8.0);
+		102, 0.5, 102.5, 2000, -8.0, 8.0);
 	
 	char loc_fname[256];
 	
@@ -498,7 +540,7 @@ int get_compton_mc_hists() {
 
 int loadCutParameters() {
 	
-	char cut_dir[256] = "/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/cuts/Be_target_phase1";
+	char cut_dir[256] = "/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/cuts/phase1/Run061321/200nA";
 	
 	char buf[256];
 	ifstream loc_inf;
