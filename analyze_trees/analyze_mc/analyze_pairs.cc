@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
 	int  loc_phase = locAna.getPrimexPhase(genSettings.run_number);
 	
 	// Directory where ROOT Trees are stored:
-	sprintf(rootTree_pathName, "%s/bhgen_test/recRootTrees/Run%06d/trees", loc_path, genSettings.run_number);
+	sprintf(rootTree_pathName, "%s/bhgen_mc/recRootTrees/Run%06d/trees", loc_path, genSettings.run_number);
 	
 	// Directory where output ROOT files will be stored:
 	sprintf(rootFile_pathName, 

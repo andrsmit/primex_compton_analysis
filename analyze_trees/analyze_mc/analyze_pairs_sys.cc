@@ -45,15 +45,7 @@ int main(int argc, char **argv) {
 	}
 	printUsage(genSettings, 1);
 	
-	// Directory where ROOT Trees are stored:
-	sprintf(rootTree_pathName, 
-		"/work/halld/home/andrsmit/primex_compton_analysis/bhgen_test/recRootTrees/Run%06d/trees", 
-		genSettings.run_number);
-	
-	// Directory where output ROOT files will be stored:
-	sprintf(rootFile_pathName, 
-		"/work/halld/home/andrsmit/primex_compton_analysis/analyze_trees/phase1/analyze_mc/rootFiles/Run%06d/pair/systematics", 
-		genSettings.run_number);
+	char loc_path[256] = "/work/halld/home/andrsmit/primex_compton_analysis";
 	
 	// Construct analysis object:
 	
@@ -67,6 +59,18 @@ int main(int argc, char **argv) {
 	// Initialize histograms to be filled:
 	
 	locAna.initHistograms_systematics();
+	
+	int loc_phase = locAna.getPrimexPhase(genSettings.run_number);
+	
+	// Directory where ROOT Trees are stored:
+	sprintf(rootTree_pathName, 
+		"%s/bhgen_mc/recRootTrees/Run%06d/trees", loc_path, genSettings.run_number);
+	
+	// Directory where output ROOT files will be stored:
+	sprintf(rootFile_pathName, 
+		"%s/analyze_trees/analyze_mc/rootFiles/phase%d/Run%06d/pair/systematics", 
+		loc_path, loc_phase, genSettings.run_number);
+	
 	//
 	// Check if an input filename was specificed at runtime. 
 	// If not, we'll do a loop over files from the rootTree directory above:
