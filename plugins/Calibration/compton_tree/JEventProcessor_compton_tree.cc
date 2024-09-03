@@ -27,7 +27,10 @@ JEventProcessor_compton_tree::JEventProcessor_compton_tree() {
 	gPARMS->SetDefaultParameter("compton_tree:BeamEnergyCut", m_BeamEnergyCut);
 	
 	m_DeltaECut = 8.0;
-	gPARMS->SetDefaultParameter("compton_tree:m_DeltaECut", m_DeltaECut);
+	gPARMS->SetDefaultParameter("compton_tree:DeltaECut", m_DeltaECut);
+	
+	m_SAVE_MC_NOHITS = 0;
+	gPARMS->SetDefaultParameter("compton_tree:m_SAVE_MC_NOHITS", m_SAVE_MC_NOHITS);
 }
 
 //------------------
@@ -219,11 +222,13 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 		m_MicroscopeFactorErr  = 0.01;
 		m_TAGMEnergyBoundHi    = 9.00;
 		m_TAGMEnergyBoundLo    = 8.00;
-		return NOERROR;
 		
+		return NOERROR;
+		/*
 		cerr << "Could not load ANALYSIS/accidental_scaling_factor from CCDB !" << endl;
 		gSystem->Exit(1);        // make sure we don't fail silently
 		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+		*/
 	}
 	
 	//get the first line
@@ -238,14 +243,17 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 		m_MicroscopeFactorErr  = 0.01;
 		m_TAGMEnergyBoundHi    = 9.00;
 		m_TAGMEnergyBoundLo    = 8.00;
-		return NOERROR;
 		
+		gSystem->ClosePipe(locInputFile);
+		return NOERROR;
+		/*
 		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
 		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
 		gSystem->ClosePipe(locInputFile);
 		cerr << "Could not parse ANALYSIS/accidental_scaling_factor from CCDB !" << endl;
 		gSystem->Exit(1);        // make sure we don't fail silently
 		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+		*/
 	}
 	
 	//get the second line (where the # is)
@@ -259,14 +267,17 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 		m_MicroscopeFactorErr  = 0.01;
 		m_TAGMEnergyBoundHi    = 9.00;
 		m_TAGMEnergyBoundLo    = 8.00;
-		return NOERROR;
 		
+		gSystem->ClosePipe(locInputFile);
+		return NOERROR;
+		/*
 		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
 		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
 		gSystem->ClosePipe(locInputFile);
 		cerr << "Could not parse ANALYSIS/accidental_scaling_factor from CCDB !" << endl;
 		gSystem->Exit(1);        // make sure we don't fail silently
 		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+		*/
 	}
 	
 	// catch some CCDB error conditions
@@ -280,8 +291,10 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 		m_MicroscopeFactorErr  = 0.01;
 		m_TAGMEnergyBoundHi    = 9.00;
 		m_TAGMEnergyBoundLo    = 8.00;
-		return NOERROR;
 		
+		gSystem->ClosePipe(locInputFile);
+		return NOERROR;
+		/*
 		// no assignment for this run
 		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
 		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
@@ -289,6 +302,7 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 		cerr << "No data available for ANALYSIS/accidental_scaling_factor, run " << runnumber << " from CCDB !" << endl;
 		gSystem->Exit(1);        // make sure we don't fail silently
 		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+		*/
 	}
 	
 	istringstream locStringStream(buff);
@@ -318,16 +332,7 @@ jerror_t JEventProcessor_compton_tree::brun(JEventLoop *eventLoop, int32_t runnu
 	m_MicroscopeFactorErr  = locMicroscopeFactorErr;
 	m_TAGMEnergyBoundHi    = locTAGMEnergyBoundHi;
 	m_TAGMEnergyBoundLo    = locTAGMEnergyBoundLo;
-	/*
-	cout << "\n\n\n\n\n";
-	cout << "==============================================================================" << endl;
-	cout << m_HodoscopeHiFactor << "; " << m_HodoscopeHiFactorErr << "; " 
-		<< m_HodoscopeLoFactor << "; " << m_HodoscopeLoFactorErr << "; " << m_MicroscopeFactor 
-		<< "; " << m_MicroscopeFactorErr << "; " << m_TAGMEnergyBoundHi << "; " 
-		<< m_TAGMEnergyBoundLo << endl;
-	cout << "==============================================================================" << endl;
-	cout << "\n\n\n\n\n";
-	*/
+	
 	return NOERROR;
 }
 
@@ -403,7 +408,7 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 	try { 
 		eventLoop->GetSingle(locRFBunch, "CalorimeterOnly");
 	} catch (...) { 
-		if(locIsMC) {
+		if(locIsMC && m_SAVE_MC_NOHITS) {
 			write_events(eventnumber, 0.0, locMCThrown, locMCReaction);
 			dTreeInterface->Fill(dTreeFillData);
 		}
@@ -411,7 +416,7 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 	}
 	double locRFTime = locRFBunch->dTime;
 	if(locRFBunch->dNumParticleVotes < 2) {
-		if(locIsMC) {
+		if(locIsMC && m_SAVE_MC_NOHITS) {
 			write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
 			dTreeInterface->Fill(dTreeFillData);
 		}
@@ -471,7 +476,7 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 			locMCThrown, locMCReaction);
 		dTreeInterface->Fill(dTreeFillData);
 	}
-	else if(locIsMC) {
+	else if(locIsMC && m_SAVE_MC_NOHITS) {
 		write_events(eventnumber, locRFTime, locMCThrown, locMCReaction);
 		dTreeInterface->Fill(dTreeFillData);
 	}
