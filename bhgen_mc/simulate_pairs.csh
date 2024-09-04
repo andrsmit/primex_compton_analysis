@@ -6,7 +6,7 @@ set seed   = $2
 set jfile  = $3
 
 # number of events to simulate in each iteration:
-set n_events = 7500000
+set n_events = 75000
 
 # convert run number into a 6-digit number:
 set run_number = $run_no
@@ -31,7 +31,6 @@ else if( $run_number > 81261 && $run_number < 81396 ) then
 else if( $run_number > 110445 && $run_number < 110622 ) then
 	set target_length = 1.775
 endif
-echo "target_length = $target_length"
 
 #==================================================================#
 # Get random number seeds:
@@ -62,6 +61,14 @@ else if ( $seed_val < 1000 ) then
 else if ( $seed_val < 10000 ) then
 	set seed_val = 0$seed
 endif
+
+echo ""
+echo "**************************************************************"
+echo "        Simulating e+e- pairs for Run ${run_number}"
+echo "                 target_length = $target_length"
+echo "                 random number seeds: $rnd1 $rnd2"
+echo "**************************************************************"
+echo ""
 
 #==================================================================#
 
@@ -99,13 +106,17 @@ set n_iterations = 5
 set loc_seed_base = `expr $seed \* $n_iterations`
 
 set add_cmd = "python ${pathname}/combine_hddm_files.py"
-set clean_cmd = "rm "
+set clean_cmd = "rm"
 
 set ctrl = control.in
 set hdg4 = ${HDGEANT4_HOME}/bin/Linux-g++/hdgeant4
 
 set ngen_val = 0
 while ( $ngen_val < $n_iterations )
+	
+	echo ""
+	echo "--------------------------------------------------------"
+	echo "ITERATION ${ngen_val}"
 	
 	set loc_seed = `expr $loc_seed_base + $ngen_val`
 	
@@ -116,11 +127,11 @@ while ( $ngen_val < $n_iterations )
 	set rnd3 = `expr $rnd3 + 1`
 	set rnd4 = `expr $rnd4 + 1`
 	
-	echo "RNDM $rnd3 $rnd4"
-	
 	#==================================================================#
 	# 1. Generate list of photons from python script:
 	
+	echo ""
+	echo "GENERATING PHOTON BEAM HDDM FILE:"
 	echo "python ${pathname}/simple_beam_generator.py $n_events $run_no"
 	python ${pathname}/simple_beam_generator.py $n_events $run_no
 	
@@ -143,10 +154,15 @@ while ( $ngen_val < $n_iterations )
 	
 	# run hdgeant4:
 	
+	echo ""
+	echo "GENERATING E+E- PAIRS WITH RNDM ${rnd3} ${rnd4}:"
 	echo "$hdg4 -t10"
 	$hdg4 -t10
 	
 	# Clean up:
+	
+	echo ""
+	echo "CLEANING DIRECTORY:"
 	
 	echo "rm BHgen_thread*.astate"
 	rm BHgen_thread*.astate
@@ -163,12 +179,16 @@ while ( $ngen_val < $n_iterations )
 	#==================================================================#
 	# 3. Run script to select e+e- pairs produced inside the target
 	
+	echo ""
+	echo "RUNNING ACCEPT-REJECT FILTER:"
 	echo "python $pathname/accept_pairs.py $pair_gen_fname"
 	python $pathname/accept_pairs.py $pair_gen_fname
 	
 	#==================================================================#
 	# 4. Delete hddm file from first pass of hdgeant4:
 	
+	echo ""
+	echo "CLEANING DIRECTORY AGAIN:"
 	echo "rm $pair_gen_fname"
 	rm $pair_gen_fname
 	
@@ -216,11 +236,17 @@ echo "END" >> $ctrl
 
 # run hdgeant4:
 
+echo ""
+echo "--------------------------------------------------------"
+echo ""
+echo "SIMULATING FILTERED E+E- PAIRS THROUGH EXPERIMENTAL SETUP:"
 echo "$hdg4 -t10"
 $hdg4 -t10
 
 # Clean up:
 
+echo ""
+echo "CLEANING DIRECTORY:"
 echo "rm BHgen_${seed_val}.hddm"
 rm BHgen_${seed_val}.hddm
 
@@ -249,8 +275,14 @@ mv pair_sim_${seed_val}_smeared.hddm $pair_sim_fname
 
 set hdrt = ${HALLD_RECON_HOME}/Linux_Alma9-x86_64-gcc11.4.1/bin/hd_root
 
+echo ""
+echo "PRODUCING TTREES FOR COMPTON SCATTERING ANALYSIS:"
+
 echo "$hdrt -PPLUGINS=compton_tree -PNTHREADS=10 ${pair_sim_fname}"
 $hdrt -PPLUGINS=compton_tree -PNTHREADS=10 ${pair_sim_fname}
+
+echo ""
+echo "CLEANING DIRECTORY:"
 
 echo "mv primex_compton.root $pathname/recRootTrees/Run${run_number}/trees/pair_rec_${seed_val}.root"
 mv primex_compton.root $pathname/recRootTrees/Run${run_number}/trees/pair_rec_${seed_val}.root

@@ -33,7 +33,7 @@ n_event = 0
 for rec in hddm_s.istream(infile_name):
     
     if n_event % 100000 == 0:
-        print("Processing event",n_event)
+        print("    processing event",n_event)
     
     for rea in rec.getReactions():
         
@@ -68,10 +68,10 @@ for rec in hddm_s.istream(infile_name):
     
     n_event = n_event+1
 
-print("total cs =",weight_sum/n_gen_total)
-print("pair cs =",weight_sum_pair/n_gen_total)
-print("triplet cs =",weight_sum_triplet/n_gen_total)
-print("number of nan weights = ",n_nans)
+print("  total cs =",weight_sum/n_gen_total)
+print("  pair cs =",weight_sum_pair/n_gen_total)
+print("  triplet cs =",weight_sum_triplet/n_gen_total)
+print("  number of nan weights = ",n_nans)
 
 n_pairs_thrown = 0
 n_pairs_kept   = 0

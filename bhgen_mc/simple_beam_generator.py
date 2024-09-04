@@ -14,7 +14,7 @@ random.seed()
 ROOT.gRandom.SetSeed(0)
 
 flux_file_name = "/work/halld/home/andrsmit/primex_compton_analysis/bhgen_mc/photon_flux/%06d_flux.root" % runNo
-print(flux_file_name)
+print("Reading photon flux from: ",flux_file_name)
 
 # set target according to run number:
 target_type = 14
@@ -63,7 +63,7 @@ fout = hddm_s.ostream("photonbeam.hddm")
 for eventNo in range(nevts):
     
     if eventNo % 1000000 == 0:
-        print("Processing event",eventNo)
+        print("  processing event",eventNo)
     
     eb = flux_hist.GetRandom()
     
