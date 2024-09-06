@@ -73,6 +73,7 @@ int main(int argc, char **argv) {
 		locAna.setRunNumber(genSettings.run_number);
 		locAna.setOutputFileName(Form("%s",genSettings.output_fname.c_str()));
 		locAna.runAnalysis(input_fname.Data());
+		locAna.writeHistograms();
 		
 	} else {
 		
