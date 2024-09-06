@@ -20,14 +20,51 @@ thread_local DTreeFillData JEventProcessor_compton_tree::dTreeFillData;
 
 JEventProcessor_compton_tree::JEventProcessor_compton_tree() {
 	
-	m_RFTimeCut = 6.0;
-	gPARMS->SetDefaultParameter("compton_tree:RFTimeCut", m_RFTimeCut);
+	/*
+	There are 2 options for writing out events to TTrees:
+	1. Apply very minimal cuts and write out as much information as needed for performing systematics studies.
+		This should be applied for select-run used for systematics studies, but doesn't need to be done
+		for all runs.
+	2. Apply more selective cuts to reduce the output file size.
 	
-	m_BeamEnergyCut = 6.0;
-	gPARMS->SetDefaultParameter("compton_tree:BeamEnergyCut", m_BeamEnergyCut);
+	These two options are selected by the parameter 'm_LOOSE_CUTS' which is either 0 (default) or 1, and 
+	can be changed at runtime in a jana config file.
+	*/
 	
-	m_DeltaECut = 8.0;
-	gPARMS->SetDefaultParameter("compton_tree:DeltaECut", m_DeltaECut);
+	m_LOOSE_CUTS = 0;
+	gPARMS->SetDefaultParameter("compton_tree:LOOSE_CUTS", m_LOOSE_CUTS);
+	
+	// set up event selection based:
+	if(m_LOOSE_CUTS) {
+		
+		// minimum energy cuts [GeV]:
+		m_cut_fcalE = 0.0;
+		m_cut_ccalE = 0.0;
+		m_cut_beamE = 6.0;
+		
+		// timing cuts [ns]:
+		m_cut_fcalrfdt = 1.e3;
+		m_cut_ccalrfdt = 1.e3;
+		m_cut_beamrfdt = 1.e3;
+		
+		// deltaE cut width [GeV]:
+		m_cut_deltaE = 8.0;
+		
+	} else {
+		
+		// minimum energy cuts [GeV]:
+		m_cut_fcalE = 0.35;
+		m_cut_ccalE = 3.0;
+		m_cut_beamE = 6.0;
+		
+		// timing cuts [ns]:
+		m_cut_fcalrfdt = 2.004;
+		m_cut_ccalrfdt = 2.004;
+		m_cut_beamrfdt = 2.004;
+		
+		// deltaE cut width [GeV]:
+		m_cut_deltaE = 3.0;
+	}
 	
 	m_SAVE_MC_NOHITS = 0;
 	gPARMS->SetDefaultParameter("compton_tree:m_SAVE_MC_NOHITS", m_SAVE_MC_NOHITS);
@@ -439,7 +476,8 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 		double e1     = (*show1)->getEnergy();
 		double t1     = (*show1)->getTime() - (pos1.Mag()/c);
 		
-		if(fabs(t1-locRFTime) > m_RFTimeCut) continue;
+		if(fabs(t1-locRFTime) >= m_cut_fcalrfdt) continue;
+		if(e1 <= m_cut_fcalE) continue;
 		
 		for(vector<const DCCALShower*>::const_iterator show2 = locCCALShowers.begin(); 
 			show2 != locCCALShowers.end(); show2++) {
@@ -449,19 +487,33 @@ jerror_t JEventProcessor_compton_tree::evnt(JEventLoop *eventLoop, uint64_t even
 			double t2 = (*show2)->time - (pos2.Mag()/c);
 			double e2 = (*show2)->E;
 			
-			if(fabs(t2-locRFTime) > m_RFTimeCut) continue;
+			if(fabs(t2-locRFTime) >= m_cut_ccalrfdt) continue;
+			if(e2 <= m_cut_ccalE) continue;
 			
 			for(vector<const DBeamPhoton*>::const_iterator gam = locBeamPhotons.begin();
 				gam != locBeamPhotons.end(); gam++) {
 				
 				double eb = (*gam)->lorentzMomentum().E();
-				if(eb < m_BeamEnergyCut) continue;
+				if(eb < m_cut_beamE) continue;
 				
-				//double tb = (*gam)->time();
-				//if(fabs(tb-locRFTime) > m_RFTimeCut) continue;
+				double brfdt = fabs((*gam)->time() - locRFTime);
+				
+				// only save events where there is a beam photon passing the cuts in the main RF bunch 
+				// OR in one of the accidental sidebands that will be used for subtraction. 
+				// NOTE: we need to use the exact same sidebands when analyzing the trees and doing the 
+				// accidental subtraction that are used in these cuts.
+				
+				int bunch_val = 0;
+				if(brfdt < (m_beam_bunches_main*m_cut_beamrfdt)) bunch_val = 1;
+				else if(
+					((m_beam_bunches_main+5.5)*4.008 < brfdt) &&
+					(brfdt < (m_beam_bunches_main+5.5+m_beam_bunches_acc)*4.008)
+				) bunch_val = 2;
+				
+				if(bunch_val==0) continue;
 				
 				double locDeltaE = e1+e2 - eb;
-				if(fabs(locDeltaE) < m_DeltaECut) {
+				if(fabs(locDeltaE) < m_cut_deltaE) {
 					locEventSelector = true;
 				}
 				
@@ -550,17 +602,20 @@ void JEventProcessor_compton_tree::write_events(uint64_t eventnumber, double rfT
 		// 7.23.24: 
 		// Only write out beam photons in the prompt RF peak, and the sidebands used for accidental subtraction:
 		//
+		// NOTE: we need to use the exact same sidebands when analyzing the trees and doing the 
+		// accidental subtraction that are used in these cuts.
 		
-		double tb = (*gam)->time() - rfTime;
-		double loc_beam_cut = 4.008*1.5;
+		double brfdt = fabs((*gam)->time() - rfTime);
+		
 		int bunch_val = 0;
-		if(fabs(tb) < loc_beam_cut) {
-			bunch_val = 1;
-		}
-		else if( ((6.5*4.008) < fabs(tb)) && (fabs(tb) < (11.5*4.008)) ) {
-			bunch_val = -1;
-		}
-		else continue;
+		//if(brfdt < (m_beam_bunches_main*m_cut_beamrfdt)) bunch_val = 1;
+		if(brfdt < (m_beam_bunches_main*2.004)) bunch_val = 1;
+		else if(
+			((m_beam_bunches_main+5.5)*4.008 < brfdt) &&
+			(brfdt < (m_beam_bunches_main+5.5+m_beam_bunches_acc)*4.008)
+		) bunch_val = 2;
+		
+		if(bunch_val==0) continue;
 		
 		int loc_counter = (*gam)->dCounter;
 		int loc_sys = -1;

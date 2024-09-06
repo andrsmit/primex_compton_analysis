@@ -88,8 +88,13 @@ class JEventProcessor_compton_tree:public jana::JEventProcessor{
 		
 		const double c = 29.9792458; // cm/ns
 		
-		double m_RFTimeCut, m_BeamEnergyCut, m_DeltaECut;
-		int m_SAVE_MC_NOHITS;
+		double m_beam_bunches_main = 1.0;
+		double m_beam_bunches_acc  = 5.0;
+		double m_cut_fcalE,    m_cut_ccalE,    m_cut_beamE;
+		double m_cut_fcalrfdt, m_cut_ccalrfdt, m_cut_beamrfdt;
+		double m_cut_deltaE;
+		
+		int m_LOOSE_CUTS, m_SAVE_MC_NOHITS;
 		
 		TH1F *h_gen_flux;
 		TH2F *h_gen_weight;
