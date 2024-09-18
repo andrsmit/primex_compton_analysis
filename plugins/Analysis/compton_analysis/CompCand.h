@@ -3,15 +3,11 @@
 
 typedef struct {
 	
-	int bunch_val;
+	double weight;
 	
-	double deltaT;	
-	double deltaPhi;
-	double dTheta;
-	double deltaR;
 	double deltaE;
+	double deltaPhi;
 	double deltaK;
-	double deltaK2;
 	
 	double e1;
 	double x1;
@@ -23,17 +19,22 @@ typedef struct {
 	double y2;
 	double z2;
 	
-	int ring;
-	int pair_cut;
-	int phi_slice;
-	
 	double eb, brfdt;
 	int tag_counter;
 	int tag_sys;
 	
+	/*
+	double deltaT;
+	double dTheta;
+	double deltaR;
+	
+	int ring;
+	int pair_cut;
+	int phi_slice;
+	
 	double vz;
 	double event_weight;
-	
+	*/
 } ComptonCandidate_t;
 
 #endif

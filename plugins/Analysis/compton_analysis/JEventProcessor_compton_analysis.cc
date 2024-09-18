@@ -9,27 +9,71 @@
 
 // Routine used to create our JEventProcessor
 extern "C"{
-void InitPlugin(JApplication *app){
-	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_compton_analysis());
-}
+	void InitPlugin(JApplication *app){
+		InitJANAPlugin(app);
+		app->AddProcessor(new JEventProcessor_compton_analysis());
+	}
 } // "C"
+
+//------------------
+// JEventProcessor_compton_analysis (Constructor)
+//------------------
+JEventProcessor_compton_analysis::JEventProcessor_compton_analysis()
+{
+	// default values for the RF timing cuts for each sub-detector:
+	m_cut_fcalrfdt = 2.004;
+	m_cut_ccalrfdt = 2.004;
+	m_cut_beamrfdt = 2.004;
+	
+	// default values for the minimum energy cuts:
+	m_cut_fcalE = 0.35;
+	m_cut_ccalE = 3.00;
+	m_cut_beamE = 6.00;
+	
+	// default values for the widths of the Compton cuts:
+	m_cut_deltaE   = 5.0;
+	m_cut_deltaPhi = 5.0;
+	m_cut_deltaK   = 5.0;
+	
+	// how many inner layers of the FCAL to cut:
+	m_cut_fcal_layers = 1.0;
+	
+	// how many beam bunches to use for accidental subtraction:
+	m_beam_bunches_acc = 5;
+	
+	//-------------------------------------------------------------------------------------//
+	// allow for command-line overriding of the default values:
+	
+	gPARMS->SetDefaultParameter("compton_analysis:cut_fcalrfdt",     m_cut_fcalrfdt);
+	gPARMS->SetDefaultParameter("compton_analysis:cut_ccalrfdt",     m_cut_ccalrfdt);
+	gPARMS->SetDefaultParameter("compton_analysis:cut_beamrfdt",     m_cut_beamrfdt);
+	gPARMS->SetDefaultParameter("compton_analysis:cut_fcalE",        m_cut_fcalE);
+	gPARMS->SetDefaultParameter("compton_analysis:cut_ccalE",        m_cut_ccalE);
+	gPARMS->SetDefaultParameter("compton_analysis:cut_beamE",        m_cut_beamE);
+	gPARMS->SetDefaultParameter("compton_analysis:cut_fcal_layers",  m_cut_fcal_layers);
+	gPARMS->SetDefaultParameter("compton_analysis:cut_deltaE",       m_cut_deltaE);
+	gPARMS->SetDefaultParameter("compton_analysis:cut_deltaPhi",     m_cut_deltaPhi);
+	gPARMS->SetDefaultParameter("compton_analysis:cut_deltaK",       m_cut_deltaK);
+	gPARMS->SetDefaultParameter("compton_analysis:beam_bunches_acc", m_beam_bunches_acc);
+}
 
 //------------------
 // init
 //------------------
 jerror_t JEventProcessor_compton_analysis::init(void)
 {
-	TDirectory *dir_compton = new TDirectoryFile("compton_analysis", 
-		"compton_analysis");
+	TDirectory *dir_compton = new TDirectoryFile("compton_analysis", "compton_analysis");
 	dir_compton->cd();
 	
-	h_trig   = new TH1F("trig",    "GTP Trigger Bits", 34, -0.5, 33.5);
-	h_fptrig = new TH1F("fp_trig", "FP Trigger Bits",  34, -0.5, 33.5);
+	h_trig   = new TH1F("trig",   "GTP Trigger Bits", 34, -0.5, 33.5);
+	h_fptrig = new TH1F("fp_trig", "FP Trigger Bits", 34, -0.5, 33.5);
 	
-	h_fcal_rf_dt  = new TH1F("fcal_rf_dt", "t_{FCAL} - t_{RF}; [ns]", 2000, -100., 100.);
-	h_ccal_rf_dt  = new TH1F("ccal_rf_dt", "t_{CCAL} - t_{RF}; [ns]", 2000, -100., 100.);
-	h_beam_rf_dt  = new TH1F("beam_rf_dt", "t_{Beam} - t_{RF}; [ns]", 2000, -100., 100.);
+	TDirectory *dir_timing = new TDirectoryFile("timing", "timing");
+	dir_timing->cd();
+	
+	h_fcal_rf_dt     = new TH1F("fcal_rf_dt", "t_{FCAL} - t_{RF}; [ns]", 2000, -100., 100.);
+	h_ccal_rf_dt     = new TH1F("ccal_rf_dt", "t_{CCAL} - t_{RF}; [ns]", 2000, -100., 100.);
+	h_beam_rf_dt     = new TH1F("beam_rf_dt", "t_{Beam} - t_{RF}; [ns]", 2000, -100., 100.);
 	h_beam_rf_dt_cut = new TH1F("beam_rf_dt_cut", "t_{Beam} - t_{RF} (Compton Cuts); [ns]", 
 		2000, -100., 100.);
 	h_beam_rf_dt_tagh = new TH2F("beam_rf_dt_tagh", "t_{Beam} - t_{RF}; TAGH Counter; [ns]", 
@@ -37,14 +81,18 @@ jerror_t JEventProcessor_compton_analysis::init(void)
 	h_beam_rf_dt_tagm = new TH2F("beam_rf_dt_tagm", "t_{Beam} - t_{RF}; TAGM Counter; [ns]", 
 		102, 0.5, 102.5, 2000, -100., 100.);
 	
+	dir_timing->cd("../");
+	
 	//--------------------------------------------------------------------//
 	
-	h_nccal = new TH1F("nccal", "number of CCAL Showers", 10, -0.5, 9.5);
-	h_nfcal = new TH1F("nfcal", "number of FCAL Showers", 10, -0.5, 9.5);
-	h_n_ccal_fcal     = new TH1F("n_ccal_fcal",     
-		"Is there a shower in both CCAL+FCAL", 2, -0.5, 1.5);
-	h_n_ccal_fcal_cut = new TH1F("n_ccal_fcal_cut", 
-		"Is there a shower in both CCAL+FCAL", 2, -0.5, 1.5);
+	TDirectory *dir_multiplicity = new TDirectoryFile("multiplicity", "multiplicity");
+	dir_multiplicity->cd();
+	
+	h_nccal = new TH1F("nccal", "Number of CCAL Showers", 10, -0.5, 9.5);
+	h_nfcal = new TH1F("nfcal", "Number of FCAL Showers", 10, -0.5, 9.5);
+	
+	h_n_ccal_fcal     = new TH1F("n_ccal_fcal",     "Is there a shower in both CCAL+FCAL", 2, -0.5, 1.5);
+	h_n_ccal_fcal_cut = new TH1F("n_ccal_fcal_cut", "Is there a shower in both CCAL+FCAL", 2, -0.5, 1.5);
 	
 	h_ccalE     = new TH2F("ccalE", "Energy of CCAL Shower; E_{Beam} [GeV]; E_{CCAL} [GeV]", 
 		120, 0., 12., 1200, 0., 12.);
@@ -55,60 +103,68 @@ jerror_t JEventProcessor_compton_analysis::init(void)
 	h_fcalE_cut = new TH2F("fcalE_cut", "Energy of FCAL Shower; E_{Beam} [GeV]; E_{FCAL} [GeV]", 
 		120, 0., 12., 1200, 0., 12.);
 	
+	dir_multiplicity->cd("../");
+	
 	//--------------------------------------------------------------------//
 	
-	h_deltaE_vs_deltaK = new TH2F("deltaE_vs_deltaK", 
-	"#DeltaE vs. #DeltaK; E_{Compton} - E_{#gamma} [GeV]; E_{1} + E_{2} - E_{#gamma} [GeV]", 
-	500, -8.0, 8.0, 500, -4.0, 4.0);
-	/*
-	h_deltaR_tagh = new TH2F("deltaR_tagh", 
-		"Cluster Separation; TAGH Counter; #DeltaR [cm]", 274, 0.5, 274.5, 2000, 0., 100.);
-	h_deltaR_tagm = new TH2F("deltaR_tagm", 
-		"Cluster Separation; TAGM Counter; #DeltaR [cm]", 274, 0.5, 274.5, 2000, 0., 100.);
-	h_deltaR = new TH2F("deltaR", 
-		"Cluster Separation; E_{#gamma} [GeV]; #DeltaR [cm]", 120, 0., 12., 2000, 0., 100.);
-	*/
+	h_deltaK_vs_deltaE = new TH2F("deltaK_vs_deltaE", 
+		"#DeltaK vs. #DeltaE", 500, -8.0, 8.0, 500, -8.0, 8.0);
+	h_deltaK_vs_deltaE->GetXaxis()->SetTitle("#left(E_{1}+E_{2}#right) - #left(E_{#gamma}+m_{e}#right) [GeV]");
+	h_deltaK_vs_deltaE->GetYaxis()->SetTitle("E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]");
+	
 	h_deltaE_tagh = new TH2F("deltaE_tagh", 
-		"#DeltaE; TAGH Counter; E_{1}+E_{2} - E_{#gamma} [GeV]", 
+		"#DeltaE; TAGH Counter; #left(E_{1}+E_{2}#right) - #left(E_{#gamma}+m_{e}#right) [GeV]", 
 		274, 0.5, 274.5, 2000, -4.0, 4.0);
 	h_deltaE_tagm = new TH2F("deltaE_tagm", 
-		"#DeltaE; TAGM Counter; E_{1}+E_{2} - E_{#gamma} [GeV]", 
+		"#DeltaE; TAGM Counter; #left(E_{1}+E_{2}#right) - #left(E_{#gamma}+m_{e}#right) [GeV]", 
 		102, 0.5, 102.5, 2000, -4.0, 4.0);
+	h_deltaE_tagh->Sumw2();
+	h_deltaE_tagm->Sumw2();
 	
 	h_deltaPhi_tagh = new TH2F("deltaPhi_tagh", 
-		"#Delta#phi; TAGH Counter; |#phi_{1}-#phi_{2}| [deg.]", 
+		"#Delta#phi; TAGH Counter; #left|#phi_{1}-#phi_{2}#right| [deg.]", 
 		274, 0.5, 274.5, 3600, 0.0, 360.0);
 	h_deltaPhi_tagm = new TH2F("deltaPhi_tagm", 
-		"#Delta#phi; TAGM Counter; |#phi_{1}-#phi_{2}| [deg.]", 
+		"#Delta#phi; TAGM Counter; #left|#phi_{1}-#phi_{2}#right| [deg.]", 
 		102, 0.5, 102.5, 3600, 0.0, 360.0);
+	h_deltaPhi_tagh->Sumw2();
+	h_deltaPhi_tagm->Sumw2();
 	
 	h_deltaK_tagh = new TH2F("deltaK_tagh", 
-		"#DeltaK; TAGH Counter; E_{Comp} - E_{#gamma} [GeV]", 
+		"#DeltaK; TAGH Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
 		274, 0.5, 274.5, 2000, -8.0, 8.0);
 	h_deltaK_tagm = new TH2F("deltaK_tagm", 
-		"#DeltaK; TAGM Counter; E_{Comp} - E_{#gamma} [GeV]", 
+		"#DeltaK; TAGM Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
 		102, 0.5, 102.5, 2000, -8.0, 8.0);
+	h_deltaK_tagh->Sumw2();
+	h_deltaK_tagm->Sumw2();
 	
 	h_deltaK_tagh_cut = new TH2F("deltaK_tagh_cut", 
-		"#DeltaK; TAGH Counter; E_{Comp} - E_{#gamma} [GeV]", 
+		"#DeltaK; TAGH Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
 		274, 0.5, 274.5, 2000, -8.0, 8.0);
 	h_deltaK_tagm_cut = new TH2F("deltaK_tagm_cut", 
-		"#DeltaK; TAGM Counter; E_{Comp} - E_{#gamma} [GeV]", 
+		"#DeltaK; TAGM Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
 		102, 0.5, 102.5, 2000, -8.0, 8.0);
+	h_deltaK_tagh_cut->Sumw2();
+	h_deltaK_tagm_cut->Sumw2();
 	
-	h_deltaK_tagh_cut_main = new TH2F("deltaK_tagh_cut_main", 
-		"#DeltaK; TAGH Counter; E_{Comp} - E_{#gamma} [GeV]", 
+	h_deltaK_tagh_main = new TH2F("deltaK_tagh_main", 
+		"#DeltaK; TAGH Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
 		274, 0.5, 274.5, 2000, -8.0, 8.0);
-	h_deltaK_tagm_cut_main = new TH2F("deltaK_tagm_cut_main", 
-		"#DeltaK; TAGM Counter; E_{Comp} - E_{#gamma} [GeV]", 
+	h_deltaK_tagm_main = new TH2F("deltaK_tagm_main", 
+		"#DeltaK; TAGM Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
 		102, 0.5, 102.5, 2000, -8.0, 8.0);
+	h_deltaK_tagh_main->Sumw2();
+	h_deltaK_tagm_main->Sumw2();
 	
-	h_deltaK_tagh_cut_acc = new TH2F("deltaK_tagh_cut_acc", 
-		"#DeltaK; TAGH Counter; E_{Comp} - E_{#gamma} [GeV]", 
+	h_deltaK_tagh_acc = new TH2F("deltaK_tagh_acc", 
+		"#DeltaK; TAGH Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
 		274, 0.5, 274.5, 2000, -8.0, 8.0);
-	h_deltaK_tagm_cut_acc = new TH2F("deltaK_tagm_cut_acc", 
-		"#DeltaK; TAGM Counter; E_{Comp} - E_{#gamma} [GeV]", 
+	h_deltaK_tagm_acc = new TH2F("deltaK_tagm_acc", 
+		"#DeltaK; TAGM Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
 		102, 0.5, 102.5, 2000, -8.0, 8.0);
+	h_deltaK_tagh_acc->Sumw2();
+	h_deltaK_tagm_acc->Sumw2();
 	
 	h_fcal_xy = new TH2F("fcal_xy", 
 		"FCAL Y vs. X; x_{FCAL} [cm]; y_{FCAL} [cm]", 500, -100., 100., 500, -100., 100.);
@@ -130,10 +186,20 @@ jerror_t JEventProcessor_compton_analysis::brun(JEventLoop *eventLoop, int32_t r
 	DApplication* dapp = dynamic_cast< DApplication* >(eventLoop->GetJApplication());
 	if(dapp)     dgeom = dapp->GetDGeometry(runnumber);
 	
+	double loc_targetZ = 65.0;
+	
 	if(dgeom){
-		dgeom->GetTargetZ(m_beamZ);
-		dgeom->GetFCALPosition(m_fcalX, m_fcalY, m_fcalZ);
-		dgeom->GetCCALPosition(m_ccalX, m_ccalY, m_ccalZ);
+		
+		dgeom->GetTargetZ(loc_targetZ);
+		
+		double loc_x, loc_y, loc_z;
+		
+		dgeom->GetFCALPosition(loc_x, loc_y, loc_z);
+		m_fcalFace.SetXYZ(loc_x, loc_y, loc_z);
+		
+		dgeom->GetCCALPosition(loc_x, loc_y, loc_z);
+		m_ccalFace.SetXYZ(loc_x, loc_y, loc_z);
+		
 	} else{
 		cerr << "No geometry accessbile to PrimExComptonAnalysis plugin." << endl;
 		return RESOURCE_UNAVAILABLE;
@@ -142,127 +208,248 @@ jerror_t JEventProcessor_compton_analysis::brun(JEventLoop *eventLoop, int32_t r
 	jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
 	std::map<string, float> beam_spot;
 	jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
-	m_beamX = beam_spot.at("x");
-	m_beamY = beam_spot.at("y");
+	m_beamSpot.SetXYZ(beam_spot.at("x"), beam_spot.at("y"), loc_targetZ);
 	
 	if(runnumber>60000 && runnumber<69999) {
 		
-		phase_val = 1;
+		m_phase_val  = 1;
+		m_bfield_val = 0;
 		
 		if(runnumber<61355) {
+			m_Target         = Be9;
 			m_target_length  = 1.7755;
 			m_target_density = 1.85;
 			m_atten          = 0.01172;
 		} else {
+			m_Target         = Helium;
 			m_target_length  = 29.535;
 			m_target_density = 0.1217;
 			m_atten          = 0.00821;
 		}
+		
+		//--------------------------------------------------------------------//
+		// For phase 1, update the geometry from Compton alignment studies:
 		
 		// (2/4/2024): Correction to alignment after Simon updated beam spot with new CDC alignment:
 		
-		m_fcalX_new =  0.455;
-		m_fcalY_new = -0.032;
+		m_fcal_correction.SetXYZ(0.455 - m_fcalFace.X(), -0.032 - m_fcalFace.Y(), 0.0);
+		m_fcalFace += m_fcal_correction;
 		
-		m_ccalX_new = -0.082;
+		m_ccal_correction.SetXYZ(-0.082 - m_ccalFace.X(), 0.061 - m_ccalFace.Y(), 0.0);
+		if(runnumber>=61483) m_ccal_correction.SetY(0.051 - m_ccalFace.Y());
+		m_ccalFace += m_ccal_correction;
+		
 		if(runnumber<61483) 
-			m_ccalY_new =  0.061;
-		else
-			m_ccalY_new =  0.051;
-		
-		if(runnumber<61483) {
-			m_beamX =  0.027;
-			m_beamY = -0.128;
-		} else if(runnumber<61774) {
-			m_beamX =  0.001;
-			m_beamY = -0.077;
-		} else {
-			m_beamX =  0.038;
-			m_beamY = -0.095;
+		{
+			m_beamSpot.SetX( 0.027);
+			m_beamSpot.SetY(-0.128);
+		} else if(runnumber<61774) 
+		{
+			m_beamSpot.SetX( 0.001);
+			m_beamSpot.SetY(-0.077);
+		} else 
+		{
+			m_beamSpot.SetX( 0.038);
+			m_beamSpot.SetY(-0.095);
 		}
+		//--------------------------------------------------------------------//
 		
-		/*
-		m_fcalX_new =  0.617;
-		m_fcalY_new = -0.002;
-		
-		if(runnumber<61483) {
-			m_ccalX_new = 0.083;
-			m_ccalY_new = 0.148;
-		} else {
-			m_ccalX_new = 0.083;
-			m_ccalY_new = 0.119;
-		}
-		
-		if(runnumber<61483) {
-			m_beamX =  0.190;
-			m_beamY = -0.074;
-		} else if(runnumber<61774) {
-			m_beamX =  0.165;
-			m_beamY = -0.024;
-		} else {
-			m_beamX =  0.202;
-			m_beamY = -0.042;
-		}
-		*/
 	} else if(runnumber>80000 && runnumber<89999) {
 		
-		phase_val = 2;
+		m_phase_val = 2;
 		
 		if(runnumber<81384) {
+			m_Target         = Be9;
 			m_target_length  = 1.7755;
 			m_target_density = 1.85;
 			m_atten          = 0.01172;
 		} else {
+			m_Target         = Helium;
 			m_target_length  = 29.535;
 			m_target_density = 0.1217;
 			m_atten          = 0.00821;
 		}
 		
-		m_fcalX_new = 0.408;
-		m_fcalY_new = 0.027;
+		if(runnumber<81471) m_bfield_val = 0;
+		else m_bfield_val = 1;
 		
-		m_ccalX_new = 0.108;
-		m_ccalY_new = 0.130;
+		m_fcal_correction.SetXYZ(0.0, 0.0, 0.0);
+		m_ccal_correction.SetXYZ(0.0, 0.0, 0.0);
 		
-		if(runnumber<81471) {
-			m_beamX =  0.129;
-			m_beamY = -0.038;
-		} else {
-			bfield_val = 1;
-			m_beamX =  0.139874;
-			m_beamY = -0.040895;
-		}
-	} else {
+	} else if(runnumber>110000 && runnumber<119999) {
 		
-		phase_val = 3;
+		m_phase_val = 3;
 		
 		if(runnumber<110622) {
+			m_Target         = Be9;
 			m_target_length  = 1.7755;
 			m_target_density = 1.85;
 			m_atten          = 0.01172;
 		} else {
+			m_Target         = Helium;
 			m_target_length  = 29.535;
 			m_target_density = 0.1217;
 			m_atten          = 0.00821;
 		}
-		/*
-		m_fcalX_new = 0.408;
-		m_fcalY_new = 0.027;
-		m_ccalX_new = 0.135;
-		m_ccalY_new = 0.135;
-		m_beamX     = 0.146;
-		m_beamY     = 0.017;
-		*/
-		m_fcalX_new = 0.408;
-		m_fcalY_new = 0.027;
-		m_ccalX_new = 0.184;
-		m_ccalY_new = 0.110;
-		m_beamX     = 0.151;
-		m_beamY     = 0.012;
+		
+		if(
+			((110476<=runnumber) && (runnumber<=110482)) || // Be empty
+			((110600<=runnumber) && (runnumber<=110621)) || // Be target
+			((111969<=runnumber) && (runnumber<=112001))    // He target
+		)    m_bfield_val = 0;
+		else m_bfield_val = 1;
+		
+		m_fcal_correction.SetXYZ(0.0, 0.0, 0.0);
+		m_ccal_correction.SetXYZ(0.0, 0.0, 0.0);
+		
+	} else {
+		
+		// non-PrimEx runs - use defaults:
+		
+		m_phase_val = 0;
+		
+		// these are for Helium, we should really change the default to Proton, but for now it doesn't matter:
+		m_Target         = Helium;
+		m_target_length  = 29.535;
+		m_target_density = 0.1217;
+		m_atten          = 0.00821;
+		
+		// assume solenoid is on:
+		m_bfield_val = 1;
+		
+		m_fcal_correction.SetXYZ(0.0, 0.0, 0.0);
+		m_ccal_correction.SetXYZ(0.0, 0.0, 0.0);
 	}
 	
-	fcal_correction.SetXYZ(m_fcalX_new-m_fcalX, m_fcalY_new-m_fcalY, 0.);
-	ccal_correction.SetXYZ(m_ccalX_new-m_ccalX, m_ccalY_new-m_ccalY, 0.);
+	/*------------------------------------------------------------------------------------------------------*/
+	// Code to obtain the scaling factors for accidental beam bunches 
+	//     (copied from DAnalysisUtilities.cc in gluex_root_analysis)
+	
+	ostringstream locCommandStream;
+	locCommandStream << "ccdb dump ANALYSIS/accidental_scaling_factor -r " << runnumber;
+	FILE* locInputFile = gSystem->OpenPipe(locCommandStream.str().c_str(), "r");
+	if(locInputFile == NULL) {
+		
+		m_HodoscopeHiFactor    = 1.00;
+		m_HodoscopeHiFactorErr = 0.01;
+		m_HodoscopeLoFactor    = 1.00;
+		m_HodoscopeLoFactorErr = 0.01;
+		m_MicroscopeFactor     = 1.00;
+		m_MicroscopeFactorErr  = 0.01;
+		m_TAGMEnergyBoundHi    = 9.00;
+		m_TAGMEnergyBoundLo    = 8.00;
+		
+		return NOERROR;
+		/*
+		cerr << "Could not load ANALYSIS/accidental_scaling_factor from CCDB !" << endl;
+		gSystem->Exit(1);        // make sure we don't fail silently
+		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+		*/
+	}
+	
+	//get the first line
+	char buff[1024]; // I HATE char buffers
+	if(fgets(buff, sizeof(buff), locInputFile) == NULL)
+	{
+		m_HodoscopeHiFactor    = 1.00;
+		m_HodoscopeHiFactorErr = 0.01;
+		m_HodoscopeLoFactor    = 1.00;
+		m_HodoscopeLoFactorErr = 0.01;
+		m_MicroscopeFactor     = 1.00;
+		m_MicroscopeFactorErr  = 0.01;
+		m_TAGMEnergyBoundHi    = 9.00;
+		m_TAGMEnergyBoundLo    = 8.00;
+		
+		gSystem->ClosePipe(locInputFile);
+		return NOERROR;
+		/*
+		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
+		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
+		gSystem->ClosePipe(locInputFile);
+		cerr << "Could not parse ANALYSIS/accidental_scaling_factor from CCDB !" << endl;
+		gSystem->Exit(1);        // make sure we don't fail silently
+		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+		*/
+	}
+	
+	//get the second line (where the # is)
+	if(fgets(buff, sizeof(buff), locInputFile) == NULL)
+	{
+		m_HodoscopeHiFactor    = 1.00;
+		m_HodoscopeHiFactorErr = 0.01;
+		m_HodoscopeLoFactor    = 1.00;
+		m_HodoscopeLoFactorErr = 0.01;
+		m_MicroscopeFactor     = 1.00;
+		m_MicroscopeFactorErr  = 0.01;
+		m_TAGMEnergyBoundHi    = 9.00;
+		m_TAGMEnergyBoundLo    = 8.00;
+		
+		gSystem->ClosePipe(locInputFile);
+		return NOERROR;
+		/*
+		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
+		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
+		gSystem->ClosePipe(locInputFile);
+		cerr << "Could not parse ANALYSIS/accidental_scaling_factor from CCDB !" << endl;
+		gSystem->Exit(1);        // make sure we don't fail silently
+		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+		*/
+	}
+	
+	// catch some CCDB error conditions
+	if(strncmp(buff, "Cannot", 6) == 0) 
+	{
+		m_HodoscopeHiFactor    = 1.00;
+		m_HodoscopeHiFactorErr = 0.01;
+		m_HodoscopeLoFactor    = 1.00;
+		m_HodoscopeLoFactorErr = 0.01;
+		m_MicroscopeFactor     = 1.00;
+		m_MicroscopeFactorErr  = 0.01;
+		m_TAGMEnergyBoundHi    = 9.00;
+		m_TAGMEnergyBoundLo    = 8.00;
+		
+		gSystem->ClosePipe(locInputFile);
+		return NOERROR;
+		/*
+		// no assignment for this run
+		//vector<double> locCachedValues = { -1., -1., -1., -1., -1., -1., -1., -1. };
+		//dAccidentalScalingFactor_Cache[runnumber] = locCachedValues;   // give up for this run
+		gSystem->ClosePipe(locInputFile);
+		cerr << "No data available for ANALYSIS/accidental_scaling_factor, run " << runnumber << " from CCDB !" << endl;
+		gSystem->Exit(1);        // make sure we don't fail silently
+		return RESOURCE_UNAVAILABLE;    // sanity check, this shouldn't be executed!
+		*/
+	}
+	
+	istringstream locStringStream(buff);
+	
+	double locHodoscopeHiFactor    = -1.0;
+	double locHodoscopeHiFactorErr = -1.0;
+	double locHodoscopeLoFactor    = -1.0;
+	double locHodoscopeLoFactorErr = -1.0;
+	double locMicroscopeFactor     = -1.0;
+	double locMicroscopeFactorErr  = -1.0;
+	double locTAGMEnergyBoundHi    = -1.0;
+	double locTAGMEnergyBoundLo    = -1.0;
+	
+	//extract it
+	locStringStream >> locHodoscopeHiFactor >> locHodoscopeHiFactorErr >> locHodoscopeLoFactor
+		>> locHodoscopeLoFactorErr >> locMicroscopeFactor >> locMicroscopeFactorErr
+		>> locTAGMEnergyBoundHi >> locTAGMEnergyBoundLo;
+	
+	//Close the pipe
+	gSystem->ClosePipe(locInputFile);
+	
+	m_HodoscopeHiFactor    = locHodoscopeHiFactor;
+	m_HodoscopeHiFactorErr = locHodoscopeHiFactorErr;
+	m_HodoscopeLoFactor    = locHodoscopeLoFactor;
+	m_HodoscopeLoFactorErr = locHodoscopeLoFactorErr;
+	m_MicroscopeFactor     = locMicroscopeFactor;
+	m_MicroscopeFactorErr  = locMicroscopeFactorErr;
+	m_TAGMEnergyBoundHi    = locTAGMEnergyBoundHi;
+	m_TAGMEnergyBoundLo    = locTAGMEnergyBoundLo;
+	
+	/*------------------------------------------------------------------------------------------------------*/
 	
 	set_cuts(runnumber);
 	
@@ -274,109 +461,148 @@ jerror_t JEventProcessor_compton_analysis::brun(JEventLoop *eventLoop, int32_t r
 //------------------
 jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 {
-	//-----   Data Objects   -----//
+	//-----------------------------------------------------//
+	// Get RF Time
 	
-	DVector3 vertex;
-	vertex.SetXYZ(m_beamX, m_beamY, m_beamZ);
+	const DEventRFBunch *locRFBunch = NULL;
+	try {
+		eventLoop->GetSingle(locRFBunch, "CalorimeterOnly");
+	} catch(...) {return NOERROR;}
+	double locRFTime = locRFBunch->dTime;
 	
-	vector<const DBeamPhoton*> beam_photons;
-	eventLoop->Get(beam_photons);
+	//-----------------------------------------------------//
+	// Data objects
 	
-	vector<const DCCALShower*> ccal_showers;
-	eventLoop->Get(ccal_showers);
+	vector<const DBeamPhoton*> locBeamPhotons;
+	eventLoop->Get(locBeamPhotons);
 	
-	vector<const DFCALShower*> fcal_showers;
-	eventLoop->Get(fcal_showers);
+	vector<const DCCALShower*> locCCALShowers;
+	eventLoop->Get(locCCALShowers);
 	
-	vector<const DFCALShower*> good_fcal_showers;
-	vector<const DCCALShower*> good_ccal_showers;
+	vector<const DFCALShower*> locFCALShowers;
+	eventLoop->Get(locFCALShowers);
 	
+	// filtered vectors of objects used for analysis:
+	
+	vector<pair<double,const DBeamPhoton*>> locGoodBeamPhotons;
+	vector<const DCCALShower*> locGoodCCALShowers;
+	vector<const DFCALShower*> locGoodFCALShowers;
+	
+	//-----------------------------------------------------//
+	// Trigger information
+	
+	uint32_t trigmask, fp_trigmask;
 	const DL1Trigger *trig = NULL;
 	try {
 		eventLoop->GetSingle(trig);
 	} catch (...) {}
-	if (trig == NULL) { return NOERROR; }
-	
-	uint32_t trigmask    = trig->trig_mask;
-	uint32_t fp_trigmask = trig->fp_trig_mask;
-	
-	//-----   RF Bunch   -----//
-	
-	const DEventRFBunch *locRFBunch = NULL;
-	try { 
-		eventLoop->GetSingle(locRFBunch, "CalorimeterOnly");
-	} catch (...) { 
-		return NOERROR;
+	if (trig == NULL) { 
+		trigmask    = 0;
+		fp_trigmask = 0;
+	} else {
+		trigmask    = trig->trig_mask;
+		fp_trigmask = trig->fp_trig_mask;
 	}
-	double rfTime = locRFBunch->dTime;
 	
-	japp->RootFillLock(this);  // Acquire root lock
+	//-----------------------------------------------------//
+	// Apply fill lock for multi-threaded running:
+	
+	japp->RootFillLock(this);
+	
+	//-----------------------------------------------------//
+	// Fill trigger histograms:
 	
 	for(int ibit = 0; ibit < 34; ibit++) {
 		if(trigmask & (1 << ibit))    h_trig->Fill(ibit);
 		if(fp_trigmask & (1 << ibit)) h_fptrig->Fill(ibit);
 	}
 	
-	for(vector< const DBeamPhoton* >::const_iterator gam = beam_photons.begin();
-		gam != beam_photons.end(); gam++) {
+	//-----------------------------------------------------//
+	// Fill timing histograms:
+	
+	int locNBeamPhotons = 0;
+	for(vector<const DBeamPhoton*>::const_iterator gam = locBeamPhotons.begin();
+		gam != locBeamPhotons.end(); gam++) {
+		
+		double eb = (*gam)->lorentzMomentum().E();
+		if(eb < m_cut_beamE) continue;
 		
 		int counter = (*gam)->dCounter;
+		double loc_t = (*gam)->time() - locRFTime;
 		
-		h_beam_rf_dt->Fill((*gam)->time() - rfTime);
+		h_beam_rf_dt->Fill(loc_t);
 		
 		DetectorSystem_t sys = (*gam)->dSystem;
-		if(sys==SYS_TAGH) h_beam_rf_dt_tagh->Fill(counter, (*gam)->time()-rfTime);
-		if(sys==SYS_TAGM) h_beam_rf_dt_tagm->Fill(counter, (*gam)->time()-rfTime);
+		if(sys==SYS_TAGH) h_beam_rf_dt_tagh->Fill(counter, loc_t);
+		if(sys==SYS_TAGM) h_beam_rf_dt_tagm->Fill(counter, loc_t);
+		
+		double loc_weight = 0.0;
+		if(fabs(loc_t) < m_cut_beamrfdt) loc_weight = 1.0;
+		else if(
+			(6.5*4.008 < fabs(loc_t)) &&
+			(fabs(loc_t) < (6.5+(double)m_beam_bunches_acc)*4.008)
+		) loc_weight = -1.0*get_acc_scaling_factor(eb)/(2.0*(double)m_beam_bunches_acc);
+		else continue;
+		
+		locNBeamPhotons++;
+		locGoodBeamPhotons.push_back({loc_weight, (*gam)});
 	}
 	
-	int n_fcal_showers = 0, n_fcal_showers_cut = 0;	
-	for(vector<const DFCALShower*>::const_iterator show = fcal_showers.begin(); 
-		show != fcal_showers.end(); show++) {
+	int locNFCALShowers = 0, locNGoodFCALShowers = 0;	
+	for(vector<const DFCALShower*>::const_iterator show = locFCALShowers.begin(); 
+		show != locFCALShowers.end(); show++) {
 		
-		DVector3 loc_pos = (*show)->getPosition_log() - vertex + fcal_correction;
-		double loc_t     = (*show)->getTime() - (loc_pos.Mag()/c) - rfTime;
+		DVector3 loc_pos = (*show)->getPosition() - m_beamSpot + m_fcal_correction;
+		double loc_t     = (*show)->getTime() - (loc_pos.Mag()/m_c) - locRFTime;
 		
-		int fid_cut = fcal_fiducial_cut(loc_pos, vertex);
+		int loc_fid_cut  = fcal_fiducial_cut(loc_pos);
 		
-		if((fabs(loc_t) < FCAL_RF_time_cut) && !fid_cut) {
-			n_fcal_showers_cut++;
-			good_fcal_showers.push_back((*show));
-			if((*show)->getEnergy() > FCAL_min_energy_cut) {
-				n_fcal_showers++;
+		if(fabs(loc_t) < m_cut_fcalrfdt) {
+			locNFCALShowers++;
+			if((*show)->getEnergy() > m_cut_fcalE) {
+				locNGoodFCALShowers++;
+				if(!loc_fid_cut) {
+					locGoodFCALShowers.push_back((*show));
+				}
 			}
 		}
 		h_fcal_rf_dt->Fill(loc_t);
 	}
 	
-	int n_ccal_showers = 0, n_ccal_showers_cut = 0;
-	for(vector<const DCCALShower*>::const_iterator show = ccal_showers.begin();
-		show != ccal_showers.end(); show++) {
+	int locNCCALShowers = 0, locNGoodCCALShowers = 0;
+	for(vector<const DCCALShower*>::const_iterator show = locCCALShowers.begin();
+		show != locCCALShowers.end(); show++) {
 		
 		DVector3 loc_pos((*show)->x1, (*show)->y1, (*show)->z);
-		loc_pos = loc_pos - vertex + ccal_correction;
-		double loc_t = (*show)->time - (loc_pos.Mag()/c) - rfTime;
+		loc_pos = loc_pos - m_beamSpot + m_ccal_correction;
+		double loc_t = (*show)->time - (loc_pos.Mag()/m_c) - locRFTime;
 		
-		int fid_cut = ccal_fiducial_cut(loc_pos, vertex);
+		int loc_fid_cut = ccal_fiducial_cut(loc_pos);
 		
-		if((fabs(loc_t) < CCAL_RF_time_cut) && !fid_cut) {
-			n_ccal_showers_cut++;
-			good_ccal_showers.push_back((*show));
-			if((*show)->E > CCAL_min_energy_cut) {
-				n_ccal_showers++;
+		if(fabs(loc_t) < m_cut_ccalrfdt) {
+			locNCCALShowers++;
+			if((*show)->E > m_cut_ccalE) {
+				locNGoodCCALShowers++;
+				if(!loc_fid_cut) {
+					locGoodCCALShowers.push_back((*show));
+				}
 			}
 		}
 		h_ccal_rf_dt->Fill(loc_t);
 	}
 	
-	h_nccal->Fill(n_ccal_showers);
-	h_nfcal->Fill(n_fcal_showers);
+	//-----------------------------------------------------//
+	// Fill multiplicity histograms:
 	
-	if(ccal_showers.size() && fcal_showers.size())
+	h_nccal->Fill(locNCCALShowers);
+	h_nfcal->Fill(locNFCALShowers);
+	
+	if((locNCCALShowers>0) && (locNFCALShowers>0))
 		h_n_ccal_fcal->Fill(1.);
 	else 
 		h_n_ccal_fcal->Fill(0.);
 	
-	if(n_ccal_showers && n_fcal_showers)
+	if((locNGoodCCALShowers>0) && (locNGoodFCALShowers>0))
 		h_n_ccal_fcal_cut->Fill(1.);
 	else 
 		h_n_ccal_fcal_cut->Fill(0.);
@@ -388,64 +614,45 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 	
 	//----------     Check FCAL-CCAL Pairs     ----------//
 	
-	vector<ComptonCandidate_t> candidates;
+	vector<ComptonCandidate_t> locCandidates;
 	
-	for(vector< const DFCALShower* >::const_iterator show1 = good_fcal_showers.begin(); 
-		show1 != good_fcal_showers.end(); show1++) {
+	for(vector<const DFCALShower*>::const_iterator show1 = locGoodFCALShowers.begin(); 
+		show1 != locGoodFCALShowers.end(); show1++) {
 		
 		double e1     = (*show1)->getEnergy();
-		DVector3 pos1 = (*show1)->getPosition_log() - vertex + fcal_correction;
+		DVector3 pos1 = (*show1)->getPosition() - m_beamSpot + m_fcal_correction;
 		
-		double t1     = (*show1)->getTime() - (pos1.Mag()/c);
 		double phi1   = pos1.Phi() * (180./TMath::Pi());
 		double theta1 = pos1.Theta();
 		
-		for(vector<const DCCALShower*>::const_iterator show2 = good_ccal_showers.begin(); 
-			show2 != good_ccal_showers.end(); show2++) {
+		for(vector<const DCCALShower*>::const_iterator show2 = locGoodCCALShowers.begin(); 
+			show2 != locGoodCCALShowers.end(); show2++) {
 			
 			double e2  = (*show2)->E;
 			DVector3 pos2( (*show2)->x1, (*show2)->y1, (*show2)->z );
-			pos2       = pos2 - vertex + ccal_correction;
+			pos2       = pos2 - m_beamSpot + m_ccal_correction;
 			
-			double t2     = (*show2)->time - (pos2.Mag()/c);
 			double phi2   = pos2.Phi() * (180./TMath::Pi());
 			double theta2 = pos2.Theta();
 			
 			// calculate deltaPhi and deltaT:
 			
 			double deltaPhi = fabs(phi2 - phi1);
-			double deltaT   = t2 - t1;
 			
 			// loop over beam photons:
 			
-			for(vector<const DBeamPhoton*>::const_iterator gam = beam_photons.begin();
-				gam != beam_photons.end(); gam++) {
+			for(auto gam_it = locGoodBeamPhotons.begin(); gam_it != locGoodBeamPhotons.end(); gam_it++) {
 				
-				double eb = (*gam)->lorentzMomentum().E();
-				double tb = (*gam)->time();
+				double fill_weight     = gam_it->first;
+				const DBeamPhoton *gam = gam_it->second;
 				
-				double brfdt = tb - rfTime;
+				double eb = gam->lorentzMomentum().E();
+				double tb = gam->time();
 				
-				int bunch_val;
+				double brfdt = tb - locRFTime;
 				
-				if(fabs(brfdt) < 2.004)
-					bunch_val = 1;
-				else if((-(2.004 + 10.*4.008)<=brfdt && brfdt<=-(2.004 + 5.*4.008))
-					||((2.004 + 5.*4.008)<=brfdt && brfdt<=(2.004 + 10.*4.008)))
-					bunch_val = 0;
-				else 
-					continue;
-				
-				if(eb < BEAM_min_energy_cut) continue;
-				/*
-				double ecomp1 =  1. / ((1./eb) + (1./m_e)*(1.-cos(theta1)));
-				double ecomp2 =  1. / ((1./eb) + (1./m_e)*(1.-cos(theta2)));
-				double deltaK = (ecomp1 + ecomp2) - (eb + m_e);
-				*/
 				double deltaE = (e1 + e2) - (eb + m_e);
-				double deltaK = m_e * sin(theta1+theta2) 
-					/ (sin(theta1) + sin(theta2) - sin(theta1+theta2));
-				deltaK       -= eb;
+				double deltaK = m_e*(sin(theta1) / (2.*pow(sin(theta1/2.),2.)*tan(theta2))) - m_e - eb;
 				
 				ComptonCandidate_t loc_Cand;
 				
@@ -459,62 +666,43 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 				loc_Cand.z2 = pos2.Z();
 				
 				loc_Cand.deltaPhi    = deltaPhi;
-				loc_Cand.deltaT      = deltaT;
 				loc_Cand.deltaE      = deltaE;
 				loc_Cand.deltaK      = deltaK;
 				
-				loc_Cand.bunch_val   = bunch_val;
+				loc_Cand.weight      = fill_weight;
 				loc_Cand.eb          = eb;
 				loc_Cand.brfdt       = brfdt;
-				loc_Cand.tag_counter = (*gam)->dCounter;
+				loc_Cand.tag_counter = gam->dCounter;
 				
-				DetectorSystem_t sys = (*gam)->dSystem;
+				DetectorSystem_t sys = gam->dSystem;
 				if(sys==SYS_TAGH)      loc_Cand.tag_sys = 0;
 				else if(sys==SYS_TAGM) loc_Cand.tag_sys = 1;
 				
-				candidates.push_back(loc_Cand);
+				locCandidates.push_back(loc_Cand);
 				
 			} // end DBeamPhoton loop
 		} // end DCCALShower loop
 	} // end DFCALShower loop
 	
-	fill_histograms(candidates, vertex);
+	fill_histograms(locCandidates);
 	
 	japp->RootFillUnLock(this);  // Release root lock
 	
 	return NOERROR;
 }
 
-//------------------
-// erun
-//------------------
-jerror_t JEventProcessor_compton_analysis::erun(void)
-{
-	
-	return NOERROR;
-}
 
-//------------------
-// fini
-//------------------
-jerror_t JEventProcessor_compton_analysis::fini(void)
-{
-	
-	return NOERROR;
-}
-
-
-int JEventProcessor_compton_analysis::fcal_fiducial_cut(DVector3 pos, DVector3 vertex)
+int JEventProcessor_compton_analysis::fcal_fiducial_cut(DVector3 pos)
 {
 	int fid_cut = 0;
 	
-	double fcal_inner_layer_cut = 2.5 * 4.0157;
+	double fcal_inner_layer_cut = (1.5 + m_cut_fcal_layers) * 4.0157;
 	
-	double fcal_face_x = vertex.X() + (pos.X() * (m_fcalZ - vertex.Z())/pos.Z());
-	double fcal_face_y = vertex.Y() + (pos.Y() * (m_fcalZ - vertex.Z())/pos.Z());
+	double fcal_face_x = m_beamSpot.X() + (pos.X() * (m_fcalFace.Z() - m_beamSpot.Z())/pos.Z());
+	double fcal_face_y = m_beamSpot.Y() + (pos.Y() * (m_fcalFace.Z() - m_beamSpot.Z())/pos.Z());
 	
-	fcal_face_x -= m_fcalX_new;
-	fcal_face_y -= m_fcalY_new;
+	fcal_face_x -= m_fcalFace.X();
+	fcal_face_y -= m_fcalFace.Y();
 	
 	if((-1.*fcal_inner_layer_cut < fcal_face_x && fcal_face_x < fcal_inner_layer_cut)
 		&& (-1.*fcal_inner_layer_cut < fcal_face_y 
@@ -522,27 +710,25 @@ int JEventProcessor_compton_analysis::fcal_fiducial_cut(DVector3 pos, DVector3 v
 	
 	// only apply the next fiducial cut for runs from phase-I:
 	
-	if(phase_val < 2) {
-	
-	if((-32.<fcal_face_y && fcal_face_y<-20.) && (-8.<fcal_face_x && fcal_face_x<4.))
-			fid_cut = 1;
+	if(m_phase_val==1) {
+		if((-32.<fcal_face_y && fcal_face_y<-20.) && (-8.<fcal_face_x && fcal_face_x<4.)) fid_cut = 1;
 	}
 	
 	return fid_cut;
 }
 
 
-int JEventProcessor_compton_analysis::ccal_fiducial_cut(DVector3 pos, DVector3 vertex)
+int JEventProcessor_compton_analysis::ccal_fiducial_cut(DVector3 pos)
 {
 	int fid_cut = 0;
 	
 	double ccal_inner_layer_cut = 2.0 * 2.09;
 	
-	double ccal_face_x = vertex.X() + (pos.X() * (m_ccalZ - vertex.Z())/pos.Z());
-	double ccal_face_y = vertex.Y() + (pos.Y() * (m_ccalZ - vertex.Z())/pos.Z());
+	double ccal_face_x = m_beamSpot.X() + (pos.X() * (m_ccalFace.Z() - m_beamSpot.Z())/pos.Z());
+	double ccal_face_y = m_beamSpot.Y() + (pos.Y() * (m_ccalFace.Z() - m_beamSpot.Z())/pos.Z());
 	
-	ccal_face_x -= m_ccalX_new;
-	ccal_face_y -= m_ccalY_new;
+	ccal_face_x -= m_ccalFace.X();
+	ccal_face_y -= m_ccalFace.Y();
 	
 	if((-1.*ccal_inner_layer_cut < ccal_face_x && ccal_face_x < ccal_inner_layer_cut)
 		&& (-1.*ccal_inner_layer_cut < ccal_face_y 
@@ -555,9 +741,18 @@ int JEventProcessor_compton_analysis::ccal_fiducial_cut(DVector3 pos, DVector3 v
 }
 
 
+double JEventProcessor_compton_analysis::get_acc_scaling_factor(double eb)
+{
+	if(eb > m_TAGMEnergyBoundHi)
+		return m_HodoscopeHiFactor;
+	else if(eb > m_TAGMEnergyBoundLo)
+		return m_MicroscopeFactor;
+	else
+		return m_HodoscopeLoFactor;
+}
 
-void JEventProcessor_compton_analysis::fill_histograms(
-	vector<ComptonCandidate_t> Comp_Candidates, DVector3 vertex) 
+
+void JEventProcessor_compton_analysis::fill_histograms(vector<ComptonCandidate_t> Comp_Candidates) 
 {
 	int n_candidates = static_cast<int>(Comp_Candidates.size());
 	
@@ -567,7 +762,7 @@ void JEventProcessor_compton_analysis::fill_histograms(
 		
 		//-------------------------------------------//
 		
-		int bunch_val   = loc_Cand.bunch_val;
+		double weight   = loc_Cand.weight;
 		double eb       = loc_Cand.eb;
 		double brfdt    = loc_Cand.brfdt;
 		int tag_sys     = loc_Cand.tag_sys;
@@ -586,85 +781,47 @@ void JEventProcessor_compton_analysis::fill_histograms(
 		
 		//--------------     Cuts      --------------//
 		
-		double deltaE_mu_data  = f_deltaE_mu_data->Eval(eb);
-		double deltaE_sig_data = eb * f_deltaE_sig_data->Eval(eb);
-		
-		int e_cut = 0;
-		if(fabs(deltaE - deltaE_mu_data) < 5.0*deltaE_sig_data) e_cut = 1;
-		
-		double deltaPhi_mu_data  = f_deltaPhi_mu_data->Eval(eb);
-		double deltaPhi_sig_data = f_deltaPhi_sig_data->Eval(eb);
-		
-		int p_cut = 0;
-		if(bfield_val) {
-			if(fabs(deltaPhi - 180.) < 50.) {
-				p_cut = 1;
-			}
-		} else {
-			if(fabs(deltaPhi - deltaPhi_mu_data) < 5.0*deltaPhi_sig_data) p_cut = 1;
-		}
-		
-		double deltaK_mu_data  = f_deltaK_mu_data->Eval(eb);
-		double deltaK_sig_data = f_deltaK_sig_data->Eval(eb);
-		
-		int k_cut = 0;
-		if(fabs(deltaK - deltaK_mu_data) < 5.0*deltaK_sig_data) k_cut = 1;
-		
-		int fcal_e_cut = 0;
-		if(e1 > FCAL_min_energy_cut) fcal_e_cut = 1;
-		
-		int ccal_e_cut = 0;
-		if(e2 > CCAL_min_energy_cut) ccal_e_cut = 1;
+		int   e_cut = cut_deltaE(  deltaE,   eb, m_cut_deltaE,   1.e2);
+		int phi_cut = cut_deltaPhi(deltaPhi, eb, m_cut_deltaPhi, m_cut_deltaPhi);
+		int   k_cut = cut_deltaK(  deltaK,   eb, m_cut_deltaK,   m_cut_deltaK);
 		
 		//-------------------------------------------//
 		
-		double fill_weight;
-		if(bunch_val) fill_weight =  1.0;
-		else          fill_weight = -0.1;
-		
-		h_fcalE->Fill(eb, e1);
-		h_ccalE->Fill(eb, e2);
-		if(e_cut && p_cut && k_cut && fcal_e_cut && ccal_e_cut) {
-			h_fcalE_cut->Fill(eb, e1);
-			h_ccalE_cut->Fill(eb, e2);
-			h_fcal_xy->Fill(x1, y1, fill_weight);
-			h_ccal_xy->Fill(x2, y2, fill_weight);
+		h_fcalE->Fill(eb, e1, weight);
+		h_ccalE->Fill(eb, e2, weight);
+		if(e_cut && phi_cut && k_cut) {
+			h_fcalE_cut->Fill(eb, e1, weight);
+			h_ccalE_cut->Fill(eb, e2, weight);
+			h_fcal_xy->Fill(x1, y1, weight);
+			h_ccal_xy->Fill(x2, y2, weight);
+			h_beam_rf_dt_cut->Fill(brfdt);
 		}
-		if(!fcal_e_cut || !ccal_e_cut) continue;
 		
-		h_deltaE_vs_deltaK->Fill(deltaK, deltaE, fill_weight);
+		h_deltaK_vs_deltaE->Fill(deltaE, deltaK, weight);
 		
 		if(tag_sys==0) {
-			h_deltaE_tagh->Fill(tag_counter, deltaE, fill_weight);
+			h_deltaE_tagh->Fill(tag_counter, deltaE, weight);
 			if(e_cut) {
-				h_deltaPhi_tagh->Fill(tag_counter, deltaPhi, fill_weight);
-				if(p_cut) {
-					h_deltaK_tagh->Fill(tag_counter, deltaK, fill_weight);
+				h_deltaPhi_tagh->Fill(tag_counter, deltaPhi, weight);
+				if(phi_cut) {
+					h_deltaK_tagh->Fill(tag_counter, deltaK, weight);
+					if(weight > 0.0) h_deltaK_tagh_main->Fill(tag_counter, deltaK);
+					else h_deltaK_tagh_acc->Fill(tag_counter, deltaK, -1.0*weight);
 					if(k_cut) {
-						h_deltaK_tagh_cut->Fill(tag_counter, deltaK, fill_weight);
-						if(bunch_val) { 
-							h_deltaK_tagh_cut_main->Fill(tag_counter, deltaK);
-						} else {
-							h_deltaK_tagh_cut_acc->Fill(tag_counter, deltaK, 0.5);
-						}
-						h_beam_rf_dt_cut->Fill(brfdt);
+						h_deltaK_tagh_cut->Fill(tag_counter, deltaK, weight);
 					}
 				}
 			}
 		} else {
-			h_deltaE_tagm->Fill(tag_counter, deltaE, fill_weight);
+			h_deltaE_tagm->Fill(tag_counter, deltaE, weight);
 			if(e_cut) {
-				h_deltaPhi_tagm->Fill(tag_counter, deltaPhi, fill_weight);
-				if(p_cut) {
-					h_deltaK_tagm->Fill(tag_counter, deltaK, fill_weight);
+				h_deltaPhi_tagm->Fill(tag_counter, deltaPhi, weight);
+				if(phi_cut) {
+					h_deltaK_tagm->Fill(tag_counter, deltaK, weight);
+					if(weight > 0.0) h_deltaK_tagh_main->Fill(tag_counter, deltaK);
+					else h_deltaK_tagm_acc->Fill(tag_counter, deltaK, -1.0*weight);
 					if(k_cut) {
-						h_deltaK_tagm_cut->Fill(tag_counter, deltaK, fill_weight);
-						if(bunch_val) { 
-							h_deltaK_tagm_cut_main->Fill(tag_counter, deltaK);
-						} else {
-							h_deltaK_tagm_cut_acc->Fill(tag_counter, deltaK, 0.5);
-						}
-						h_beam_rf_dt_cut->Fill(brfdt);
+						h_deltaK_tagm_cut->Fill(tag_counter, deltaK, weight);
 					}
 				}
 			}
@@ -675,369 +832,152 @@ void JEventProcessor_compton_analysis::fill_histograms(
 }
 
 
+int JEventProcessor_compton_analysis::cut_deltaE(double deltaE, double eb, double n_sigma_left, double n_sigma_right) 
+{
+	double loc_mu = 0.;
+	for(int ipar=0; ipar<4; ipar++) loc_mu += (m_deltaE_mu_pars[ipar]*pow(eb,(double)ipar));
+	
+	double loc_sigma = sqrt(pow(m_deltaE_sigma_pars[0],2.0) + pow(m_deltaE_sigma_pars[1]/sqrt(eb),2.0) 
+		+ pow(m_deltaE_sigma_pars[2]/eb,2.0));
+	loc_sigma *= eb;
+	
+	double loc_diff = deltaE - loc_mu;
+	if((-1.*n_sigma_left*loc_sigma < loc_diff) && (loc_diff < n_sigma_right*loc_sigma)) return 1;
+	else return 0;
+}
+
+
+int JEventProcessor_compton_analysis::cut_deltaPhi(double deltaPhi, double eb, double n_sigma_left, double n_sigma_right) 
+{
+	if(m_bfield_val==1) {
+		if(fabs(deltaPhi-180.) < 50.) return 1;
+		else return 0;
+	}
+	
+	double loc_mu = 0.;
+	for(int ipar=0; ipar<4; ipar++) loc_mu += (m_deltaPhi_mu_pars[ipar]*pow(eb,(double)ipar));
+	
+	double loc_sigma = 0.;
+	for(int ipar=0; ipar<4; ipar++) loc_sigma += (m_deltaPhi_sigma_pars[ipar]*pow(eb,(double)ipar));
+	
+	double loc_diff = deltaPhi - loc_mu;
+	if((-1.*n_sigma_left*loc_sigma < loc_diff) && (loc_diff < n_sigma_right*loc_sigma)) return 1;
+	else return 0;
+}
+
+
+int JEventProcessor_compton_analysis::cut_deltaK(double deltaK, double eb, double n_sigma_left, double n_sigma_right) 
+{
+	double loc_mu = 0.;
+	for(int ipar=0; ipar<4; ipar++) loc_mu += (m_deltaE_mu_pars[ipar]*pow(eb,(double)ipar));
+	
+	double loc_sigma = 0.;
+	for(int ipar=0; ipar<4; ipar++) loc_sigma += (m_deltaK_sigma_pars[ipar]*pow(eb,(double)ipar));
+	
+	double loc_diff = deltaK - loc_mu;
+	if((-1.*n_sigma_left*loc_sigma < loc_diff) && (loc_diff < n_sigma_right*loc_sigma)) return 1;
+	else return 0;
+}
+
+
 void JEventProcessor_compton_analysis::set_cuts(int32_t runnumber)
 {
-	if(runnumber>60000 && runnumber<61355) {
-	  
-		// Phase I, Be Target
+	if(m_Target==Be9) {
 		
-		deltaE_mu_p0_data    =  8.33517e-03;
-		deltaE_mu_p1_data    =  2.09025e-03;
-		deltaE_mu_p2_data    = -1.09342e-04;
-		deltaE_mu_p3_data    =  0.;
+		m_deltaE_mu_pars[0] =  2.80447e-02;
+		m_deltaE_mu_pars[1] = -9.73792e-03;
+		m_deltaE_mu_pars[2] =  6.27229e-04;
+		m_deltaE_mu_pars[3] = -1.11857e-05;
 		
-		deltaE_sig_p0_data   =  8.37004e-03;
-		deltaE_sig_p1_data   =  4.56259e-02;
-		deltaE_sig_p2_data   =  0.;
-		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.79943e+02;
-		deltaPhi_mu_p1_data  = -2.11766e-02;
-		deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_data  =  0.;
+		m_deltaE_sigma_pars[0] = 9.19528e-03;
+		m_deltaE_sigma_pars[1] = 4.44202e-02;
+		m_deltaE_sigma_pars[2] = 1.70059e-06;
+		//----------------------------------//
+		m_deltaPhi_mu_pars[0] = 180.0;
+		m_deltaPhi_mu_pars[1] = 0.0;
+		m_deltaPhi_mu_pars[2] = 0.0;
+		m_deltaPhi_mu_pars[3] = 0.0;
 		
-		deltaPhi_sig_p0_data =  1.20139e+01;
-		deltaPhi_sig_p1_data = -1.75486e+00;
-		deltaPhi_sig_p2_data =  1.67515e-01;
-		deltaPhi_sig_p3_data = -5.48316e-03;
-		//--------------------------------//
-		deltaK_mu_p0_data    = -9.36095e-02;
-		deltaK_mu_p1_data    =  5.48923e-02;
-		deltaK_mu_p2_data    = -1.19844e-02;
-		deltaK_mu_p3_data    =  4.38188e-04;
+		m_deltaPhi_sigma_pars[0] = 6.0;
+		m_deltaPhi_sigma_pars[1] = 0.0;
+		m_deltaPhi_sigma_pars[2] = 0.0;
+		m_deltaPhi_sigma_pars[3] = 0.0;
+		//----------------------------------//
+		m_deltaK_mu_pars[0] =  4.11025e-01;
+		m_deltaK_mu_pars[1] = -8.98612e-02;
+		m_deltaK_mu_pars[2] =  1.90051e-03;
+		m_deltaK_mu_pars[3] =  0.0;
 		
-		deltaK_sig_p0_data   =  6.68283e-01;
-		deltaK_sig_p1_data   = -8.45642e-02;
-		deltaK_sig_p2_data   =  1.61255e-02;
-		deltaK_sig_p3_data   = -5.93363e-04;
+		m_deltaK_sigma_pars[0] =  5.05212e-01;
+		m_deltaK_sigma_pars[1] = -4.77652e-02;
+		m_deltaK_sigma_pars[2] =  1.25422e-02;
+		m_deltaK_sigma_pars[3] = -4.75279e-04;
 		
-	} else if(runnumber>60000 && runnumber<69999) {
+	} else if(m_Target==Helium) {
 		
-		// Phase I, He Target
+		m_deltaE_mu_pars[0] =  3.74024e-02;
+		m_deltaE_mu_pars[1] = -1.12178e-02;
+		m_deltaE_mu_pars[2] =  5.70029e-04;
+		m_deltaE_mu_pars[3] =  5.02307e-07;
 		
-		deltaE_mu_p0_data    =  4.07223e-02;
-		deltaE_mu_p1_data    = -1.78574e-02;
-		deltaE_mu_p2_data    =  1.71081e-03;
-		deltaE_mu_p3_data    = -5.38583e-05;
+		m_deltaE_sigma_pars[0] = 1.10937e-02;
+		m_deltaE_sigma_pars[1] = 4.09888e-02;
+		m_deltaE_sigma_pars[2] = 2.79658e-02;
+		//----------------------------------//
+		m_deltaPhi_mu_pars[0] = 180.0;
+		m_deltaPhi_mu_pars[1] = 0.0;
+		m_deltaPhi_mu_pars[2] = 0.0;
+		m_deltaPhi_mu_pars[3] = 0.0;
 		
-		deltaE_sig_p0_data   =  1.08608e-02;
-		deltaE_sig_p1_data   =  4.32721e-02;
-		deltaE_sig_p2_data   =  4.73705e-08;
-		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.79797e+02;
-		deltaPhi_mu_p1_data  = -9.76515e-03;
-		deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_data  =  0.;
+		m_deltaPhi_sigma_pars[0] = 6.0;
+		m_deltaPhi_sigma_pars[1] = 0.0;
+		m_deltaPhi_sigma_pars[2] = 0.0;
+		m_deltaPhi_sigma_pars[3] = 0.0;
+		//----------------------------------//
+		m_deltaK_mu_pars[0] =  4.17999e-01;
+		m_deltaK_mu_pars[1] = -8.43377e-02;
+		m_deltaK_mu_pars[2] =  1.59661e-03;
+		m_deltaK_mu_pars[3] =  0.0;
 		
-		deltaPhi_sig_p0_data =  1.21151e+01;
-		deltaPhi_sig_p1_data = -1.84430e+00;
-		deltaPhi_sig_p2_data =  1.75617e-01;
-		deltaPhi_sig_p3_data = -5.68551e-03;
-		//--------------------------------//
-		deltaK_mu_p0_data    = -5.93615e-01;
-		deltaK_mu_p1_data    =  2.57995e-01;
-		deltaK_mu_p2_data    = -3.70844e-02;
-		deltaK_mu_p3_data    =  1.44465e-03;
-		
-		deltaK_sig_p0_data   =  3.80560e-01;
-		deltaK_sig_p1_data   =  2.15649e-02;
-		deltaK_sig_p2_data   =  3.03526e-03;
-		deltaK_sig_p3_data   = -4.06248e-05;
-		
-	} else if(runnumber>80000 && runnumber<81400) {
-		
-		// Phase II, Be Target
-		
-		deltaE_mu_p0_data    = -0.05;
-		deltaE_mu_p1_data    =  0.0;
-		deltaE_mu_p2_data    =  0.0;
-		deltaE_mu_p3_data    =  0.0;
-		
-		deltaE_sig_p0_data   =  1.40025e-02;
-		deltaE_sig_p1_data   =  3.55640e-02;
-		deltaE_sig_p2_data   =  5.15193e-04;
-		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.79816e+02;
-		deltaPhi_mu_p1_data  = -7.06279e-03;
-		deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_data  =  0.;
-		
-		deltaPhi_sig_p0_data =  1.21214e+01;
-		deltaPhi_sig_p1_data = -1.84405e+00;
-		deltaPhi_sig_p2_data =  1.81923e-01;
-		deltaPhi_sig_p3_data = -6.13418e-03;
-		//--------------------------------//
-		deltaK_mu_p0_data    = -1.74619e-01;
-		deltaK_mu_p1_data    =  1.01328e-01;
-		deltaK_mu_p2_data    = -1.84593e-02;
-		deltaK_mu_p3_data    =  7.13390e-04;
-		
-		deltaK_sig_p0_data   =  3.88777e-01;
-		deltaK_sig_p1_data   =  2.50588e-02;
-		deltaK_sig_p2_data   =  2.20573e-03;
-		deltaK_sig_p3_data   = -2.76677e-05;
-		
-	} else if(runnumber>80000 && runnumber<81473) {
-		
-		// Phase II, He Target, Field OFF (stand-in values, adjust later)
-		
-		deltaE_mu_p0_data    = -0.05;
-		deltaE_mu_p1_data    =  0.0;
-		deltaE_mu_p2_data    =  0.0;
-		deltaE_mu_p3_data    =  0.0;
-		
-		deltaE_sig_p0_data   =  1.40025e-02;
-		deltaE_sig_p1_data   =  3.55640e-02;
-		deltaE_sig_p2_data   =  5.15193e-04;
-		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.79816e+02;
-		deltaPhi_mu_p1_data  = -7.06279e-03;
-		deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_data  =  0.;
-		
-		deltaPhi_sig_p0_data =  1.21214e+01;
-		deltaPhi_sig_p1_data = -1.84405e+00;
-		deltaPhi_sig_p2_data =  1.81923e-01;
-		deltaPhi_sig_p3_data = -6.13418e-03;
-		//--------------------------------//
-		deltaK_mu_p0_data    = -1.74619e-01;
-		deltaK_mu_p1_data    =  1.01328e-01;
-		deltaK_mu_p2_data    = -1.84593e-02;
-		deltaK_mu_p3_data    =  7.13390e-04;
-		
-		deltaK_sig_p0_data   =  3.88777e-01;
-		deltaK_sig_p1_data   =  2.50588e-02;
-		deltaK_sig_p2_data   =  2.20573e-03;
-		deltaK_sig_p3_data   = -2.76677e-05;
-		
-	} else if(runnumber>80000 && runnumber<89999) {
-		
-		// Phase II, He Target, Field ON (stand-in values, adjust later)
-		
-		deltaE_mu_p0_data    = -0.05;
-		deltaE_mu_p1_data    =  0.0;
-		deltaE_mu_p2_data    =  0.0;
-		deltaE_mu_p3_data    =  0.0;
-		
-		deltaE_sig_p0_data   =  1.40025e-02;
-		deltaE_sig_p1_data   =  3.55640e-02;
-		deltaE_sig_p2_data   =  5.15193e-04;
-		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.79816e+02;
-		deltaPhi_mu_p1_data  = -7.06279e-03;
-		deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_data  =  0.;
-		
-		deltaPhi_sig_p0_data =  1.21214e+01;
-		deltaPhi_sig_p1_data = -1.84405e+00;
-		deltaPhi_sig_p2_data =  1.81923e-01;
-		deltaPhi_sig_p3_data = -6.13418e-03;
-		//--------------------------------//
-		deltaK_mu_p0_data    = -1.74619e-01;
-		deltaK_mu_p1_data    =  1.01328e-01;
-		deltaK_mu_p2_data    = -1.84593e-02;
-		deltaK_mu_p3_data    =  7.13390e-04;
-		
-		deltaK_sig_p0_data   =  3.88777e-01;
-		deltaK_sig_p1_data   =  2.50588e-02;
-		deltaK_sig_p2_data   =  2.20573e-03;
-		deltaK_sig_p3_data   = -2.76677e-05;
-		
-	} else if(runnumber>110000 && runnumber<110584) {
-		
-		// Phase III, Be Target, Field ON (stand-in values, adjust later)
-		
-		deltaE_mu_p0_data    = -2.85756e-01;
-		deltaE_mu_p1_data    =  8.91005e-02;
-		deltaE_mu_p2_data    = -8.73318e-03;
-		deltaE_mu_p3_data    =  2.45143e-04;
-		
-		deltaE_sig_p0_data   =  1.81080e-02;
-		deltaE_sig_p1_data   =  1.38460e-02;
-		deltaE_sig_p2_data   =  5.76009e-02;
-		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.80011e+02;
-		deltaPhi_mu_p1_data  = -8.18407e-03;
-		deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_data  =  0.;
-		
-		deltaPhi_sig_p0_data =  1.22089e+01;
-		deltaPhi_sig_p1_data = -1.81467e+00;
-		deltaPhi_sig_p2_data =  1.72870e-01;
-		deltaPhi_sig_p3_data = -5.55077e-03;
-		//--------------------------------//
-		deltaK_mu_p0_data    =  3.22415e-01;
-		deltaK_mu_p1_data    = -8.24914e-02;
-		deltaK_mu_p2_data    =  4.25586e-03;
-		deltaK_mu_p3_data    = -1.88916e-04;
-		
-		deltaK_sig_p0_data   =  5.70095e-01;
-		deltaK_sig_p1_data   = -4.93059e-02;
-		deltaK_sig_p2_data   =  1.19542e-02;
-		deltaK_sig_p3_data   = -4.17058e-04;
-		
-	} else if(runnumber>110000 && runnumber<110622) {
-		
-		// Phase III, Be Target, Field OFF
-		
-		deltaE_mu_p0_data    = -2.85756e-01;
-		deltaE_mu_p1_data    =  8.91005e-02;
-		deltaE_mu_p2_data    = -8.73318e-03;
-		deltaE_mu_p3_data    =  2.45143e-04;
-		
-		deltaE_sig_p0_data   =  1.81080e-02;
-		deltaE_sig_p1_data   =  1.38460e-02;
-		deltaE_sig_p2_data   =  5.76009e-02;
-		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.80011e+02;
-		deltaPhi_mu_p1_data  = -8.18407e-03;
-		deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_data  =  0.;
-		
-		deltaPhi_sig_p0_data =  1.22089e+01;
-		deltaPhi_sig_p1_data = -1.81467e+00;
-		deltaPhi_sig_p2_data =  1.72870e-01;
-		deltaPhi_sig_p3_data = -5.55077e-03;
-		//--------------------------------//
-		deltaK_mu_p0_data    =  3.22415e-01;
-		deltaK_mu_p1_data    = -8.24914e-02;
-		deltaK_mu_p2_data    =  4.25586e-03;
-		deltaK_mu_p3_data    = -1.88916e-04;
-		
-		deltaK_sig_p0_data   =  5.70095e-01;
-		deltaK_sig_p1_data   = -4.93059e-02;
-		deltaK_sig_p2_data   =  1.19542e-02;
-		deltaK_sig_p3_data   = -4.17058e-04;
-		
-	} else if(runnumber>110000 && runnumber<111969) {
-		
-		// Phase III, He Target, Field ON (stand-in values, adjust later)
-		
-		deltaE_mu_p0_data    = -2.85756e-01;
-		deltaE_mu_p1_data    =  8.91005e-02;
-		deltaE_mu_p2_data    = -8.73318e-03;
-		deltaE_mu_p3_data    =  2.45143e-04;
-		
-		deltaE_sig_p0_data   =  1.81080e-02;
-		deltaE_sig_p1_data   =  1.38460e-02;
-		deltaE_sig_p2_data   =  5.76009e-02;
-		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.80011e+02;
-		deltaPhi_mu_p1_data  = -8.18407e-03;
-		deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_data  =  0.;
-		
-		deltaPhi_sig_p0_data =  1.22089e+01;
-		deltaPhi_sig_p1_data = -1.81467e+00;
-		deltaPhi_sig_p2_data =  1.72870e-01;
-		deltaPhi_sig_p3_data = -5.55077e-03;
-		//--------------------------------//
-		deltaK_mu_p0_data    =  3.22415e-01;
-		deltaK_mu_p1_data    = -8.24914e-02;
-		deltaK_mu_p2_data    =  4.25586e-03;
-		deltaK_mu_p3_data    = -1.88916e-04;
-		
-		deltaK_sig_p0_data   =  5.70095e-01;
-		deltaK_sig_p1_data   = -4.93059e-02;
-		deltaK_sig_p2_data   =  1.19542e-02;
-		deltaK_sig_p3_data   = -4.17058e-04;
-		
-	} else if(runnumber>110000 && runnumber<119999) {
-		
-		// Phase III, He Target, Field OFF (stand-in values, adjust later)
-		
-		deltaE_mu_p0_data    = -2.85756e-01;
-		deltaE_mu_p1_data    =  8.91005e-02;
-		deltaE_mu_p2_data    = -8.73318e-03;
-		deltaE_mu_p3_data    =  2.45143e-04;
-		
-		deltaE_sig_p0_data   =  1.81080e-02;
-		deltaE_sig_p1_data   =  1.38460e-02;
-		deltaE_sig_p2_data   =  5.76009e-02;
-		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.80011e+02;
-		deltaPhi_mu_p1_data  = -8.18407e-03;
-		deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_data  =  0.;
-		
-		deltaPhi_sig_p0_data =  1.22089e+01;
-		deltaPhi_sig_p1_data = -1.81467e+00;
-		deltaPhi_sig_p2_data =  1.72870e-01;
-		deltaPhi_sig_p3_data = -5.55077e-03;
-		//--------------------------------//
-		deltaK_mu_p0_data    =  3.22415e-01;
-		deltaK_mu_p1_data    = -8.24914e-02;
-		deltaK_mu_p2_data    =  4.25586e-03;
-		deltaK_mu_p3_data    = -1.88916e-04;
-		
-		deltaK_sig_p0_data   =  5.70095e-01;
-		deltaK_sig_p1_data   = -4.93059e-02;
-		deltaK_sig_p2_data   =  1.19542e-02;
-		deltaK_sig_p3_data   = -4.17058e-04;
+		m_deltaK_sigma_pars[0] =  3.72050e-01;
+		m_deltaK_sigma_pars[1] =  6.44563e-03;
+		m_deltaK_sigma_pars[2] =  5.72365e-03;
+		m_deltaK_sigma_pars[3] = -1.73985e-04;
 		
 	} else {
 		
-		// Placeholder for non-PrimEx runs:
+		// copy Helium target runs from above:
 		
-		deltaE_mu_p0_data    = -2.85756e-01;
-		deltaE_mu_p1_data    =  8.91005e-02;
-		deltaE_mu_p2_data    = -8.73318e-03;
-		deltaE_mu_p3_data    =  2.45143e-04;
+		m_deltaE_mu_pars[0] =  3.74024e-02;
+		m_deltaE_mu_pars[1] = -1.12178e-02;
+		m_deltaE_mu_pars[2] =  5.70029e-04;
+		m_deltaE_mu_pars[3] =  5.02307e-07;
 		
-		deltaE_sig_p0_data   =  1.81080e-02;
-		deltaE_sig_p1_data   =  1.38460e-02;
-		deltaE_sig_p2_data   =  5.76009e-02;
-		//--------------------------------//
-		deltaPhi_mu_p0_data  =  1.80011e+02;
-		deltaPhi_mu_p1_data  = -8.18407e-03;
-		deltaPhi_mu_p2_data  =  0.;
-		deltaPhi_mu_p3_data  =  0.;
+		m_deltaE_sigma_pars[0] = 1.10937e-02;
+		m_deltaE_sigma_pars[1] = 4.09888e-02;
+		m_deltaE_sigma_pars[2] = 2.79658e-02;
+		//----------------------------------//
+		m_deltaPhi_mu_pars[0] = 180.0;
+		m_deltaPhi_mu_pars[1] = 0.0;
+		m_deltaPhi_mu_pars[2] = 0.0;
+		m_deltaPhi_mu_pars[3] = 0.0;
 		
-		deltaPhi_sig_p0_data =  1.22089e+01;
-		deltaPhi_sig_p1_data = -1.81467e+00;
-		deltaPhi_sig_p2_data =  1.72870e-01;
-		deltaPhi_sig_p3_data = -5.55077e-03;
-		//--------------------------------//
-		deltaK_mu_p0_data    =  3.22415e-01;
-		deltaK_mu_p1_data    = -8.24914e-02;
-		deltaK_mu_p2_data    =  4.25586e-03;
-		deltaK_mu_p3_data    = -1.88916e-04;
+		m_deltaPhi_sigma_pars[0] = 6.0;
+		m_deltaPhi_sigma_pars[1] = 0.0;
+		m_deltaPhi_sigma_pars[2] = 0.0;
+		m_deltaPhi_sigma_pars[3] = 0.0;
+		//----------------------------------//
+		m_deltaK_mu_pars[0] =  4.17999e-01;
+		m_deltaK_mu_pars[1] = -8.43377e-02;
+		m_deltaK_mu_pars[2] =  1.59661e-03;
+		m_deltaK_mu_pars[3] =  0.0;
 		
-		deltaK_sig_p0_data   =  5.70095e-01;
-		deltaK_sig_p1_data   = -4.93059e-02;
-		deltaK_sig_p2_data   =  1.19542e-02;
-		deltaK_sig_p3_data   = -4.17058e-04;
+		m_deltaK_sigma_pars[0] =  3.72050e-01;
+		m_deltaK_sigma_pars[1] =  6.44563e-03;
+		m_deltaK_sigma_pars[2] =  5.72365e-03;
+		m_deltaK_sigma_pars[3] = -1.73985e-04;
+		
 	}
-	
-	
-	f_deltaE_mu_data = new TF1("f_deltaE_mu_data", "pol3", 3.0, 12.0);
-	f_deltaE_mu_data->SetParameters(deltaE_mu_p0_data, deltaE_mu_p1_data, 
-		deltaE_mu_p2_data, deltaE_mu_p3_data);
-	
-	f_deltaE_sig_data = new TF1("f_deltaE_sig_data", 
-		"sqrt([0]*[0] + ([1]/sqrt(x))*([1]/sqrt(x)) + ([2]/x)*([2]/x))", 3.0, 12.0);
-	f_deltaE_sig_data->SetParameters(deltaE_sig_p0_data, deltaE_sig_p1_data, 
-		deltaE_sig_p2_data);
-	
-	//--------------------------------------------------------------------------------------//
-	
-	f_deltaPhi_mu_data = new TF1("f_deltaPhi_mu_data", "pol3", 3.0, 12.0);
-	f_deltaPhi_mu_data->SetParameters(deltaPhi_mu_p0_data, deltaPhi_mu_p1_data, 
-		deltaPhi_mu_p2_data, deltaPhi_mu_p3_data);
-	
-	f_deltaPhi_sig_data = new TF1("f_deltaPhi_sig_data", "pol3", 3.0, 12.0);
-	f_deltaPhi_sig_data->SetParameters(deltaPhi_sig_p0_data, deltaPhi_sig_p1_data, 
-		deltaPhi_sig_p2_data, deltaPhi_sig_p3_data);
-	
-	//--------------------------------------------------------------------------------------//
-	
-	f_deltaK_mu_data = new TF1("f_deltaK_mu_data", "pol3", 3.0, 12.0);
-	f_deltaK_mu_data->SetParameters(deltaK_mu_p0_data, deltaK_mu_p1_data, 
-		deltaK_mu_p2_data, deltaK_mu_p3_data);
-	
-	f_deltaK_sig_data = new TF1("f_deltaK_sig_data", "pol3", 3.0, 12.0);
-	f_deltaK_sig_data->SetParameters(deltaK_sig_p0_data, deltaK_sig_p1_data, 
-		deltaK_sig_p2_data, deltaK_sig_p3_data);
-	
 	
 	return;
 }
