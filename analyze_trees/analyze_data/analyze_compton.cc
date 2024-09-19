@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
 			if(gSystem->AccessPathName(rootTree_pathName)) continue;
 			
 			// check if output file already exists for this runnumber:
-			TString output_fname = Form("%s/phase%d/%d.root", rootFile_pathName, loc_phase, loc_run);
+			TString output_fname = Form("%s/phase%d/%06d.root", rootFile_pathName, loc_phase, loc_run);
 			if(!gSystem->AccessPathName(output_fname.Data())) continue;
 			
 			locAna.setRunNumber(loc_run);

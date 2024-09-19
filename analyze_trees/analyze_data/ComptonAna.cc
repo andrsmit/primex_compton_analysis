@@ -184,8 +184,6 @@ void ComptonAna::comptonAnalysis() {
 		}
 	}
 	
-	if(locNGoodFCALShowers!=1 || locNGoodCCALShowers!=1) return;
-	
 	for(auto &ifcal : locGoodFCALShowers) {
 		
 		double e1 = m_fcal_e[ifcal];
@@ -240,9 +238,7 @@ void ComptonAna::comptonAnalysis() {
 				int loc_tag_counter = m_tag_counter[loc_beam_index];
 				
 				double deltaE = (e1+e2) - (eb+m_e);
-				
-				double deltaK = m_e*(sin(theta1) / (2.*pow(sin(theta1/2.),2.)*tan(theta2))) - m_e;
-				deltaK       -= eb;
+				double deltaK = m_e*(sin(theta1) / (2.*pow(sin(theta1/2.),2.)*tan(theta2))) - m_e - eb;
 				
 				//-------------------------------------------------------------//
 				// Cuts:
@@ -258,37 +254,154 @@ void ComptonAna::comptonAnalysis() {
 				if(e_cut && k_cut && phi_cut) {
 					h_beam_rf_dt_cut->Fill(m_beam_t[loc_beam_index] - m_rfTime);
 				}
-				if(fill_weight==0.0) continue;
 				
+				//-------------------------------------------------------------//
+				//
+				// We want to look at how the following set of cuts change the data:
+				//
+				//    1. Multiplicity cut (3 options)
+				//        a. No extra showers
+				//        b. Allow extra showers if they are below some energy threshold
+				//        c. Allow any ammount of extra showers
+				//    2. TOF Veto
+				//        a. No match betweeen FCAL and TOF
+				//        b. Maybe a match, maybe not (no information)
+				//    3. FCAL fiducial cut
+				//        a. One layer cut
+				//        b. Two layer cut
+				//
 				
-				if(e_cut && phi_cut) {
+				int cut_vals[m_n_cuts];
+				for(int icut=0; icut<m_n_cuts; icut++) cut_vals[icut] = 0;
+				
+				int loc_fid_cut = fcal_fiducial_cut(pos1, 2.0);
+				
+				cut_vals[0] = 1;
+				if(!tof_match) {
+					cut_vals[1] = 1;
+					if(!loc_fid_cut) {
+						cut_vals[2] = 1;
+					}
+				}
+				if(!loc_fid_cut) cut_vals[3] = 1;
+				
+				if(locNGoodFCALShowers==1 && locNGoodCCALShowers==1) {
+					cut_vals[4] = 1;
+					if(!tof_match) {
+						cut_vals[5] = 1;
+						if(!loc_fid_cut) {
+							cut_vals[6] = 1;
+						}
+					}
+					if(!loc_fid_cut) cut_vals[7] = 1;
+				}
+				
+				if(locNFCALShowers==1 && locNCCALShowers==1) {
+					cut_vals[8] = 1;
+					if(!tof_match) {
+						cut_vals[9] = 1;
+						if(!loc_fid_cut) {
+							cut_vals[10] = 1;
+						}
+					}
+					if(!loc_fid_cut) cut_vals[11] = 1;
+				}
+				
+				for(int icut = 0; icut < m_n_cuts; icut++) {
+					
+					int loc_e_cut   = e_cut;
+					int loc_phi_cut = phi_cut;
+					int loc_k_cut   = k_cut;
+					
+					if(icut%4==2 || icut%4==3) {
+						loc_e_cut = e_cut_two;
+						loc_phi_cut = phi_cut_two;
+						loc_k_cut = k_cut_two;
+					}
 					
 					if(loc_tag_sys==0) {
-						if(fill_weight>0.) {
-							h_deltaK_tagh[0]->Fill(loc_tag_counter, deltaK);
-						} else {
-							h_deltaK_tagh[1]->Fill(loc_tag_counter, deltaK);
-						}
-						if(k_cut) {
-							if(fill_weight>0.) {
-								h_deltaK_tagh[2]->Fill(loc_tag_counter, deltaK);
-							} else {
-								h_deltaK_tagh[3]->Fill(loc_tag_counter, deltaK);
+						
+						h_opangle_tagh[icut]->Fill(loc_tag_counter, opangle, fill_weight);
+						if(loc_e_cut) {
+							h_opangle_tagh_ecut[icut]->Fill(loc_tag_counter, opangle, fill_weight);
+							if(loc_k_cut) {
+								h_opangle_tagh_ekcut[icut]->Fill(loc_tag_counter, opangle, fill_weight);
 							}
 						}
-					} else {
-						if(fill_weight>0.) {
-							h_deltaK_tagm[0]->Fill(loc_tag_counter, deltaK);
-						} else {
-							h_deltaK_tagm[1]->Fill(loc_tag_counter, deltaK);
-						}
-						if(k_cut) {
-							if(fill_weight>0.) {
-								h_deltaK_tagm[2]->Fill(loc_tag_counter, deltaK);
-							} else {
-								h_deltaK_tagm[3]->Fill(loc_tag_counter, deltaK);
+						
+						if(cut_vals[icut]) {
+							h_deltaE_tagh[icut]->Fill(loc_tag_counter, deltaE, fill_weight);
+							if(loc_e_cut) {
+								h_deltaPhi_tagh[icut]->Fill(loc_tag_counter, deltaPhi, fill_weight);
+								if(loc_phi_cut) {
+									h_deltaK_tagh[icut]->Fill(loc_tag_counter, deltaK, fill_weight);
+								}
 							}
 						}
+					} else if(loc_tag_sys==1) {
+						
+						h_opangle_tagm[icut]->Fill(loc_tag_counter, opangle, fill_weight);
+						if(loc_e_cut) {
+							h_opangle_tagm_ecut[icut]->Fill(loc_tag_counter, opangle, fill_weight);
+							if(loc_k_cut) {
+								h_opangle_tagm_ekcut[icut]->Fill(loc_tag_counter, opangle, fill_weight);
+							}
+						}
+						
+						if(cut_vals[icut]) {
+							h_deltaE_tagm[icut]->Fill(loc_tag_counter, deltaE, fill_weight);
+							if(loc_e_cut) {
+								h_deltaPhi_tagm[icut]->Fill(loc_tag_counter, deltaPhi, fill_weight);
+								if(loc_phi_cut) {
+									h_deltaK_tagm[icut]->Fill(loc_tag_counter, deltaK, fill_weight);
+								}
+							}
+						}
+					}
+					
+					double deltaKCCAL = e2 - (1. / (1./eb + (1.-cos(pos2.Theta()))/m_e));
+					double deltaKFCAL = e1 - (1. / (1./eb + (1.-cos(pos1.Theta()))/m_e));
+					
+					if(cut_vals[icut]) {
+						h_elas_vs_deltaE[icut]->Fill(deltaE, (deltaE-deltaK), fill_weight);
+						
+						//h_mgg_vs_deltaE[icut]->Fill(deltaE, invmass, fill_weight);
+						//h_mgg_vs_deltaK[icut]->Fill(deltaK, invmass, fill_weight);
+						
+						h_deltaK_vs_deltaE[icut]->Fill(deltaE, deltaK, fill_weight);
+						
+						h_deltaCCAL_vs_deltaE[icut]->Fill(deltaE, deltaKCCAL, fill_weight);
+						h_deltaCCAL_vs_deltaK[icut]->Fill(deltaK, deltaKCCAL, fill_weight);
+						h_deltaFCAL_vs_deltaE[icut]->Fill(deltaE, deltaKFCAL, fill_weight);
+						h_deltaFCAL_vs_deltaK[icut]->Fill(deltaK, deltaKFCAL, fill_weight);
+						
+						h_deltaFCAL_vs_deltaCCAL[icut]->Fill(deltaKCCAL, deltaKFCAL, fill_weight);
+						
+						if(loc_e_cut && loc_k_cut && loc_phi_cut) {
+							h_ccal_xy[icut]->Fill(pos2.X(), pos2.Y(), fill_weight);
+							h_fcal_xy[icut]->Fill(pos1.X(), pos1.Y(), fill_weight);
+						}
+					}
+				}
+				
+				if(cut_vals[4]) {
+					
+					if(e_cut) {
+						double sumPhi = (pos2.Phi()+ pos1.Phi()) * (180./TMath::Pi());
+						h_sumPhi_vs_deltaPhi->Fill(deltaPhi/2.0, sumPhi/2.0, fill_weight);
+					}
+					
+					h_ccal_nblocks->Fill(m_ccal_nblocks[iccal], fill_weight);
+					h_fcal_nblocks->Fill(m_fcal_nblocks[ifcal], fill_weight);
+					if(deltaE > 0.65) {
+						h_ccal_xy_highdeltaE->Fill(pos2.X(), pos2.Y(), fill_weight);
+						h_fcal_xy_highdeltaE->Fill(pos1.X(), pos1.Y(), fill_weight);
+						h_ccal_nblocks_cut->Fill(m_ccal_nblocks[iccal], fill_weight);
+						h_fcal_nblocks_cut->Fill(m_fcal_nblocks[ifcal], fill_weight);
+					}
+					if(deltaE < -3.5 && eb>8.5) {
+						h_ccal_xy_lowdeltaE->Fill(pos2.X(), pos2.Y(), fill_weight);
+						h_fcal_xy_lowdeltaE->Fill(pos1.X(), pos1.Y(), fill_weight);
 					}
 				}
 				
@@ -862,7 +975,6 @@ void ComptonAna::initHistograms() {
 		120, 0., 12., 1200, 0., 12.);
 	h_fcal_energy  = new TH2F("fcal_energy", "Energy of FCAL Shower (All Cuts Applied); E_{#gamma} [GeV]; E_{FCAL} [GeV]",
 		120, 0., 12., 1200, 0., 12.);
-	
 	
 	//---------------------------------------------//
 	for(int ihist=0; ihist<m_n_cuts; ihist++) {
