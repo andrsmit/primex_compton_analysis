@@ -23,7 +23,7 @@ JEventProcessor_compton_tree::JEventProcessor_compton_tree() {
 	/*
 	There are 2 options for writing out events to TTrees:
 	1. Apply very minimal cuts and write out as much information as needed for performing systematics studies.
-		This should be applied for select-run used for systematics studies, but doesn't need to be done
+		This should only be applied for select runs used for systematics studies, and doesn't need to be done
 		for all runs.
 	2. Apply more selective cuts to reduce the output file size.
 	

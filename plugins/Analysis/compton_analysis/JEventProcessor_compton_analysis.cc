@@ -114,62 +114,62 @@ jerror_t JEventProcessor_compton_analysis::init(void)
 	
 	h_deltaE_tagh = new TH2F("deltaE_tagh", 
 		"#DeltaE; TAGH Counter; #left(E_{1}+E_{2}#right) - #left(E_{#gamma}+m_{e}#right) [GeV]", 
-		274, 0.5, 274.5, 2000, -4.0, 4.0);
+		274, 0.5, 274.5, 2000, -8.0, 8.0);
 	h_deltaE_tagm = new TH2F("deltaE_tagm", 
 		"#DeltaE; TAGM Counter; #left(E_{1}+E_{2}#right) - #left(E_{#gamma}+m_{e}#right) [GeV]", 
-		102, 0.5, 102.5, 2000, -4.0, 4.0);
+		102, 0.5, 102.5, 2000, -8.0, 8.0);
 	h_deltaE_tagh->Sumw2();
 	h_deltaE_tagm->Sumw2();
 	
 	h_deltaPhi_tagh = new TH2F("deltaPhi_tagh", 
 		"#Delta#phi; TAGH Counter; #left|#phi_{1}-#phi_{2}#right| [deg.]", 
-		274, 0.5, 274.5, 3600, 0.0, 360.0);
+		274, 0.5, 274.5, 1800, 0.0, 360.0);
 	h_deltaPhi_tagm = new TH2F("deltaPhi_tagm", 
 		"#Delta#phi; TAGM Counter; #left|#phi_{1}-#phi_{2}#right| [deg.]", 
-		102, 0.5, 102.5, 3600, 0.0, 360.0);
+		102, 0.5, 102.5, 1800, 0.0, 360.0);
 	h_deltaPhi_tagh->Sumw2();
 	h_deltaPhi_tagm->Sumw2();
 	
 	h_deltaK_tagh = new TH2F("deltaK_tagh", 
 		"#DeltaK; TAGH Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
-		274, 0.5, 274.5, 2000, -8.0, 8.0);
+		274, 0.5, 274.5, 1000, -8.0, 8.0);
 	h_deltaK_tagm = new TH2F("deltaK_tagm", 
 		"#DeltaK; TAGM Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
-		102, 0.5, 102.5, 2000, -8.0, 8.0);
+		102, 0.5, 102.5, 1000, -8.0, 8.0);
 	h_deltaK_tagh->Sumw2();
 	h_deltaK_tagm->Sumw2();
 	
 	h_deltaK_tagh_cut = new TH2F("deltaK_tagh_cut", 
 		"#DeltaK; TAGH Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
-		274, 0.5, 274.5, 2000, -8.0, 8.0);
+		274, 0.5, 274.5, 1000, -8.0, 8.0);
 	h_deltaK_tagm_cut = new TH2F("deltaK_tagm_cut", 
 		"#DeltaK; TAGM Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
-		102, 0.5, 102.5, 2000, -8.0, 8.0);
+		102, 0.5, 102.5, 1000, -8.0, 8.0);
 	h_deltaK_tagh_cut->Sumw2();
 	h_deltaK_tagm_cut->Sumw2();
 	
 	h_deltaK_tagh_main = new TH2F("deltaK_tagh_main", 
 		"#DeltaK; TAGH Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
-		274, 0.5, 274.5, 2000, -8.0, 8.0);
+		274, 0.5, 274.5, 1000, -8.0, 8.0);
 	h_deltaK_tagm_main = new TH2F("deltaK_tagm_main", 
 		"#DeltaK; TAGM Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
-		102, 0.5, 102.5, 2000, -8.0, 8.0);
+		102, 0.5, 102.5, 1000, -8.0, 8.0);
 	h_deltaK_tagh_main->Sumw2();
 	h_deltaK_tagm_main->Sumw2();
 	
 	h_deltaK_tagh_acc = new TH2F("deltaK_tagh_acc", 
 		"#DeltaK; TAGH Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
-		274, 0.5, 274.5, 2000, -8.0, 8.0);
+		274, 0.5, 274.5, 1000, -8.0, 8.0);
 	h_deltaK_tagm_acc = new TH2F("deltaK_tagm_acc", 
 		"#DeltaK; TAGM Counter; E_{Comp}#left(#theta_{1},#theta_{2}#right) - E_{#gamma} [GeV]", 
-		102, 0.5, 102.5, 2000, -8.0, 8.0);
+		102, 0.5, 102.5, 1000, -8.0, 8.0);
 	h_deltaK_tagh_acc->Sumw2();
 	h_deltaK_tagm_acc->Sumw2();
 	
 	h_fcal_xy = new TH2F("fcal_xy", 
 		"FCAL Y vs. X; x_{FCAL} [cm]; y_{FCAL} [cm]", 500, -100., 100., 500, -100., 100.);
 	h_ccal_xy = new TH2F("ccal_xy", 
-		"CCAL Y vs. X; x_{CCAL} [cm]; y_{CCAL} [cm]", 500,  -15.,  15., 500,  -15.,  15.);
+		"CCAL Y vs. X; x_{CCAL} [cm]; y_{CCAL} [cm]", 500,  -13.,  13., 500,  -13.,  13.);
 	
 	dir_compton->cd("../");
 	
@@ -612,7 +612,16 @@ jerror_t JEventProcessor_compton_analysis::evnt(JEventLoop *eventLoop, uint64_t 
 		return NOERROR;
 	}
 	
-	//----------     Check FCAL-CCAL Pairs     ----------//
+	//-----------------------------------------------------//
+	// Multiplicity cut on number of 'Good' Showers in FCAL and CCAL:
+	
+	if((locNGoodCCALShowers!=1) || (locNGoodFCALShowers!=1)) {
+		japp->RootFillUnLock(this);
+		return NOERROR;
+	}
+	
+	//-----------------------------------------------------//
+	// Check FCAL+CCAL+Beam Combinations:
 	
 	vector<ComptonCandidate_t> locCandidates;
 	
