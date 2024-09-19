@@ -1,16 +1,13 @@
 #!/usr/bin/sh
 #
 
-submit_runs=go
+submit_runs=no
 
 # base directory where output will be stored:
 outdir=/work/halld/home/andrsmit/primex_compton_analysis/data
 
 ####################################################
 # Modify these parameters:
-
-# set which run period to analyze:
-phase=1
 
 # get list of runs we want to analyze:
 run_list=${outdir}/run_list.dat
@@ -23,32 +20,13 @@ script=${outdir}/run_rec.csh
 # JANA configuration file:
 cfg_file=${outdir}/jana.config
 
-#-----------------------------------#
-
-run_period="2019-01"
-if [[ $phase == "1" ]]; then
-	run_period="2019-01"
-elif [[ $phase == "2" ]]; then
-	run_period="2021-08"
-elif [[ $phiase == "3" ]]; then
-	run_period="2022-08"
-else
-	echo "Non-primex run period specified. Example syntax: ./submit.csh [1-3]"
-	exit 1
-fi
-
-#-----------------------------------#
-
-# directoy where rawdata evio files are stored:
-dir_mss=/mss/halld/RunPeriod-${run_period}/rawdata
-
 # this variable will count how many jobs are submitted:
 ij=0
 
 #=========================#
 #Job Resources:
 
-workflow=compton_tree_production_phase$phase
+workflow=compton_tree_production_phase1 # will change depending on run number
 account=halld
 partition=production
 ram=12GB
@@ -67,14 +45,42 @@ fi
 
 while read run; do
 	
+	#-----------------------------------#
+	# Get run period from run number:
+	
+	phase=0
+	run_period=""
+	if [ $run -gt 60000 ] && [ $run -lt 69999 ]; then
+		phase=1
+		run_period="2019-01"
+	elif [ $run -gt 80000 ] && [ $run -lt 89999 ]; then
+		phase=2
+		run_period="2021-08"
+	elif [ $run -gt 110000 ] && [ $run -lt 119999 ]; then
+		phase=3
+		run_period="2022-08"
+	else
+		echo "Non-primex run specified. Skipping"
+		continue
+	fi
+	
+	#-----------------------------------#
+	
+	# directoy where rawdata evio files are stored:
+	dir_mss=/mss/halld/RunPeriod-${run_period}/rawdata
+	
+	# adust workflow according to run number:
+	workflow=compton_tree_production_phase${phase}
+	
+	#-----------------------------------#
+	
 	# Convert run number into 6 digit variable:
 	
 	run_number=$run
 	if [[ $run_number -lt "100000" ]]; then
 		run_number="0$run"
 	fi
-	echo "run ${run_number}"
-	
+	echo "Run${run_number}, Phase ${phase}, RunPeriod-${run_period}"
 	
 	# set up output directory where rootTrees will be written:
 	dir_tree=${outdir}/rootTrees/phase${phase}/${run_number}
